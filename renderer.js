@@ -5,3 +5,15 @@
  * `contextIsolation` is turned on. Use the contextBridge API in `preload.js`
  * to expose Node.js functionality from the main process.
  */
+const setText = (id, value) => {
+  const element = document.getElementById(id)
+  if (element) {
+    element.textContent = value
+  }
+}
+
+const jiminy = window.jiminy || {}
+setText('platform', jiminy.platform || 'unknown')
+setText('electron-version', jiminy.electronVersion || 'unknown')
+setText('node-version', jiminy.nodeVersion || 'unknown')
+setText('started-at', new Date().toLocaleString())

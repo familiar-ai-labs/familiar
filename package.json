@@ -1,20 +1,20 @@
 {
-  "name": "minimal-repro",
+  "name": "jiminy-desktopapp",
   "version": "1.0.0",
-  "description": "A minimal Electron application",
+  "description": "Jiminy menu bar app shell (macOS)",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "test": "node --test"
   },
-  "repository": "https://github.com/electron/minimal-repro",
+  "repository": "https://github.com/jiminy-org/jiminy",
   "keywords": [
     "Electron",
-    "quick",
-    "start",
-    "tutorial",
-    "demo"
+    "menu bar",
+    "macOS",
+    "Jiminy"
   ],
-  "author": "GitHub",
+  "author": "Jiminy",
   "license": "CC0-1.0",
   "devDependencies": {
     "electron": "^40.0.0"

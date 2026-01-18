@@ -1,42 +1,127 @@
 // Modules to control application life and create native browser window
-const { app, BrowserWindow } = require('electron')
+const { app, BrowserWindow, Menu, Tray, dialog, nativeImage } = require('electron')
 const path = require('node:path')
+const { buildTrayMenuTemplate } = require('./menu')
+const trayIconPath = path.join(__dirname, 'icon.png')
 
-function createWindow () {
-  // Create the browser window.
-  const mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
+let tray = null
+let settingsWindow = null
+let isQuitting = false
+
+function createSettingsWindow () {
+  const window = new BrowserWindow({
+    width: 420,
+    height: 320,
+    resizable: false,
+    fullscreenable: false,
+    minimizable: false,
+    show: false,
+    title: 'Jiminy Settings',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js')
     }
   })
 
-  // and load the index.html of the app.
-  mainWindow.loadFile('index.html')
+  window.loadFile('index.html')
 
-  // Open the DevTools.
-  // mainWindow.webContents.openDevTools()
+  window.on('close', (event) => {
+    if (!isQuitting) {
+      event.preventDefault()
+      window.hide()
+      console.log('Settings window hidden')
+    }
+  })
+
+  window.on('closed', () => {
+    settingsWindow = null
+  })
+
+  console.log('Settings window created')
+  return window
+}
+
+function showSettingsWindow () {
+  if (!settingsWindow) {
+    settingsWindow = createSettingsWindow()
+  }
+
+  if (settingsWindow.isMinimized()) {
+    settingsWindow.restore()
+  }
+
+  settingsWindow.show()
+  settingsWindow.focus()
+  console.log('Settings window shown')
+}
+
+function showAboutDialog () {
+  dialog.showMessageBox({
+    type: 'info',
+    title: 'About Jiminy',
+    message: 'Jiminy',
+    detail: 'Menu bar app shell (macOS).',
+    buttons: ['OK']
+  })
+}
+
+function restartApp () {
+  console.log('Restarting app')
+  app.relaunch()
+  app.exit(0)
+}
+
+function quitApp () {
+  console.log('Quitting app')
+  app.quit()
+}
+
+function createTray () {
+  const trayIconBase = nativeImage.createFromPath(trayIconPath)
+  if (trayIconBase.isEmpty()) {
+    console.error(`Tray icon failed to load from ${trayIconPath}`)
+  }
+
+  const trayIcon = trayIconBase.resize({ width: 16, height: 16 })
+
+  tray = new Tray(trayIcon)
+  tray.setToolTip('Jiminy')
+
+  const trayMenu = Menu.buildFromTemplate(
+    buildTrayMenuTemplate({
+      onOpenSettings: showSettingsWindow,
+      onAbout: showAboutDialog,
+      onRestart: restartApp,
+      onQuit: quitApp
+    })
+  )
+
+  tray.setContextMenu(trayMenu)
+
+  console.log('Tray created')
 }
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
-  createWindow()
+  if (process.platform !== 'darwin') {
+    console.error('Jiminy desktop app is macOS-only right now.')
+    app.quit()
+    return
+  }
 
-  app.on('activate', function () {
-    // On macOS it's common to re-create a window in the app when the
-    // dock icon is clicked and there are no other windows open.
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+  app.dock.hide()
+  app.setLoginItemSettings({ openAtLogin: true, openAsHidden: true })
+
+  createTray()
+
+  app.on('activate', () => {
+    // Keep background-only behavior; open Settings only from the tray menu.
   })
 })
 
-// Quit when all windows are closed, except on macOS. There, it's common
-// for applications and their menu bar to stay active until the user quits
-// explicitly with Cmd + Q.
-app.on('window-all-closed', function () {
-  if (process.platform !== 'darwin') app.quit()
+app.on('before-quit', () => {
+  isQuitting = true
 })
 
 // In this file you can include the rest of your app's specific main process
