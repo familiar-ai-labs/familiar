@@ -3,7 +3,7 @@ const path = require('node:path')
 const crypto = require('node:crypto')
 const { FileNode, FolderNode, createNodeId, normalizeRelativePath } = require('./nodes')
 
-const MAX_NODES = 100
+const MAX_NODES = 300
 const ALLOWED_EXTENSIONS = new Set(['.md', '.txt'])
 
 const hashBuffer = (buffer) => (
@@ -31,11 +31,12 @@ const scanContextFolder = (rootPath, { logger = console, maxNodes = MAX_NODES } 
   const warnings = []
   const visitedDirs = new Set()
   let totalNodes = 0
+  let exceededLimit = false
 
   const registerNode = () => {
     totalNodes += 1
     if (totalNodes > maxNodes) {
-      throw new Error(`Context graph exceeds MAX_NODES (${maxNodes}).`)
+      exceededLimit = true
     }
   }
 
@@ -163,6 +164,10 @@ const scanContextFolder = (rootPath, { logger = console, maxNodes = MAX_NODES } 
   }
 
   const rootId = walk(rootPath, '', 0)
+
+  if (exceededLimit) {
+    throw new Error(`Context graph has ${totalNodes} nodes, exceeding MAX_NODES (${maxNodes}).`)
+  }
 
   return {
     nodes,
