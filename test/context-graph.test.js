@@ -26,6 +26,16 @@ const writeManyFilesFixture = (rootPath, count) => {
   }
 }
 
+const writeJsMdFixture = (rootPath) => {
+  for (let i = 0; i < 7; i += 1) {
+    fs.writeFileSync(path.join(rootPath, `script-${i}.js`), `console.log(${i})`, 'utf-8')
+  }
+
+  for (let i = 0; i < 2; i += 1) {
+    fs.writeFileSync(path.join(rootPath, `note-${i}.md`), `Note ${i}`, 'utf-8')
+  }
+}
+
 const writeSkipFixture = (rootPath) => {
   fs.mkdirSync(path.join(rootPath, 'docs'), { recursive: true })
   fs.writeFileSync(path.join(rootPath, 'docs', 'keep.md'), '# Keep', 'utf-8')
@@ -151,6 +161,28 @@ test('sync fails when MAX_NODES is exceeded', async () => {
     }),
     /MAX_NODES/
   )
+})
+
+test('sync ignores unsupported files when MAX_NODES is low', async () => {
+  const contextRoot = createTempDir('jiminy-context-')
+  writeJsMdFixture(contextRoot)
+
+  const store = createStore()
+  const summarizer = {
+    model: 'test-model',
+    summarizeFile: async ({ relativePath }) => `Summary for ${relativePath}`,
+    summarizeFolder: async ({ relativePath }) => `Folder summary for ${relativePath || '.'}`
+  }
+
+  const result = await syncContextGraph({
+    rootPath: contextRoot,
+    store,
+    summarizer,
+    maxNodes: 5
+  })
+
+  assert.equal(result.graph.counts.files, 2)
+  assert.equal(result.graph.counts.folders, 1)
 })
 
 test('sync skips non-md/txt files and logs a warning', async () => {
