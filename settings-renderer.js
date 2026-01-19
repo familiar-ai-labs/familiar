@@ -5,6 +5,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const saveButton = document.getElementById('context-folder-save')
   const errorMessage = document.getElementById('context-folder-error')
   const statusMessage = document.getElementById('context-folder-status')
+  const llmKeyInput = document.getElementById('llm-api-key')
+  const llmKeySaveButton = document.getElementById('llm-api-key-save')
+  const llmKeyError = document.getElementById('llm-api-key-error')
+  const llmKeyStatus = document.getElementById('llm-api-key-status')
   const syncButton = document.getElementById('context-graph-sync')
   const syncStatus = document.getElementById('context-graph-status')
   const syncProgress = document.getElementById('context-graph-progress')
@@ -41,17 +45,24 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const result = await jiminy.getSettings()
       contextFolderInput.value = result.contextFolderPath || ''
+      if (llmKeyInput) {
+        llmKeyInput.value = result.llmProviderApiKey || ''
+      }
       setMessage(errorMessage, result.validationMessage || '')
       setMessage(statusMessage, '')
+      setMessage(llmKeyError, '')
+      setMessage(llmKeyStatus, '')
       updateSaveState()
     } catch (error) {
       console.error('Failed to load settings', error)
       setMessage(errorMessage, 'Failed to load settings.')
+      setMessage(llmKeyError, 'Failed to load settings.')
     }
   }
 
   if (!jiminy.pickContextFolder || !jiminy.saveSettings || !jiminy.getSettings) {
     setMessage(errorMessage, 'Settings bridge unavailable. Restart the app.')
+    setMessage(llmKeyError, 'Settings bridge unavailable. Restart the app.')
     updateSaveState()
     return
   }
@@ -102,7 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
       setMessage(errorMessage, '')
 
       try {
-        const result = await jiminy.saveSettings(contextFolderInput.value)
+        const result = await jiminy.saveSettings({ contextFolderPath: contextFolderInput.value })
         if (result && result.ok) {
           setMessage(statusMessage, 'Saved.')
         } else {
@@ -113,6 +124,31 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error('Failed to save settings', error)
         setMessage(statusMessage, '')
         setMessage(errorMessage, 'Failed to save settings.')
+      }
+    })
+  }
+
+  if (llmKeySaveButton) {
+    llmKeySaveButton.addEventListener('click', async () => {
+      if (!llmKeyInput) {
+        return
+      }
+
+      setMessage(llmKeyStatus, 'Saving...')
+      setMessage(llmKeyError, '')
+
+      try {
+        const result = await jiminy.saveSettings({ llmProviderApiKey: llmKeyInput.value })
+        if (result && result.ok) {
+          setMessage(llmKeyStatus, 'Saved.')
+        } else {
+          setMessage(llmKeyStatus, '')
+          setMessage(llmKeyError, result?.message || 'Failed to save LLM key.')
+        }
+      } catch (error) {
+        console.error('Failed to save LLM key', error)
+        setMessage(llmKeyStatus, '')
+        setMessage(llmKeyError, 'Failed to save LLM key.')
       }
     })
   }

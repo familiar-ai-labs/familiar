@@ -108,6 +108,7 @@ ipcMain.handle('settings:get', () => {
     try {
         const settings = loadSettings();
         const contextFolderPath = settings.contextFolderPath || '';
+        const llmProviderApiKey = settings?.llm_provider?.api_key || '';
         let validationMessage = '';
 
         if (contextFolderPath) {
@@ -121,10 +122,10 @@ ipcMain.handle('settings:get', () => {
             }
         }
 
-        return { contextFolderPath, validationMessage };
+        return { contextFolderPath, validationMessage, llmProviderApiKey };
     } catch (error) {
         console.error('Failed to load settings', error);
-        return { contextFolderPath: '', validationMessage: 'Failed to load settings.' };
+        return { contextFolderPath: '', validationMessage: 'Failed to load settings.', llmProviderApiKey: '' };
     }
 });
 
@@ -177,20 +178,38 @@ ipcMain.handle('settings:pickContextFolder', async (event) => {
 });
 
 ipcMain.handle('settings:save', (event, payload) => {
-    const contextFolderPath = payload?.contextFolderPath || '';
-    const validation = validateContextFolderPath(contextFolderPath);
+    const hasContextFolderPath = Object.prototype.hasOwnProperty.call(payload || {}, 'contextFolderPath');
+    const hasLlmProviderApiKey = Object.prototype.hasOwnProperty.call(payload || {}, 'llmProviderApiKey');
+    const settingsPayload = {};
 
-    if (!validation.ok) {
-        console.warn('Context folder validation failed', {
-            contextFolderPath,
-            message: validation.message,
-        });
-        return { ok: false, message: validation.message };
+    if (!hasContextFolderPath && !hasLlmProviderApiKey) {
+        return { ok: false, message: 'No settings provided.' };
+    }
+
+    if (hasContextFolderPath) {
+        const contextFolderPath = payload?.contextFolderPath || '';
+        const validation = validateContextFolderPath(contextFolderPath);
+
+        if (!validation.ok) {
+            console.warn('Context folder validation failed', {
+                contextFolderPath,
+                message: validation.message,
+            });
+            return { ok: false, message: validation.message };
+        }
+
+        settingsPayload.contextFolderPath = validation.path;
+    }
+
+    if (hasLlmProviderApiKey) {
+        settingsPayload.llmProviderApiKey = typeof payload.llmProviderApiKey === 'string'
+            ? payload.llmProviderApiKey
+            : '';
     }
 
     try {
-        saveSettings({ contextFolderPath: validation.path });
-        console.log('Settings saved', { contextFolderPath: validation.path });
+        saveSettings(settingsPayload);
+        console.log('Settings saved');
         return { ok: true };
     } catch (error) {
         console.error('Failed to save settings', error);
@@ -201,6 +220,7 @@ ipcMain.handle('settings:save', (event, payload) => {
 ipcMain.handle('contextGraph:sync', async (event) => {
     const settings = loadSettings();
     const contextFolderPath = settings.contextFolderPath || '';
+    const llmProviderApiKey = settings?.llm_provider?.api_key || '';
     const validation = validateContextFolderPath(contextFolderPath);
 
     if (!validation.ok) {
@@ -209,12 +229,12 @@ ipcMain.handle('contextGraph:sync', async (event) => {
     }
 
     try {
-        if (process.env.JIMINY_LLM_MOCK !== '1' && !process.env.LLM_API_KEY) {
-            return { ok: false, message: 'LLM_API_KEY is not set.' };
+        if (process.env.JIMINY_LLM_MOCK !== '1' && !llmProviderApiKey) {
+            return { ok: false, message: 'LLM API key is not configured. Set it in Settings.' };
         }
 
         const store = new JsonContextGraphStore();
-        const summarizer = createSummarizer({ model: DEFAULT_MODEL });
+        const summarizer = createSummarizer({ model: DEFAULT_MODEL, apiKey: llmProviderApiKey });
         const result = await syncContextGraph({
             rootPath: validation.path,
             store,

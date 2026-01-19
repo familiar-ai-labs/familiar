@@ -41,9 +41,26 @@ const loadSettings = (options = {}) => {
 const saveSettings = (settings, options = {}) => {
   const settingsDir = resolveSettingsDir(options.settingsDir)
   const settingsPath = path.join(settingsDir, SETTINGS_FILE_NAME)
+  const existing = loadSettings(options)
+  const hasContextFolderPath = Object.prototype.hasOwnProperty.call(settings, 'contextFolderPath')
+  const hasLlmProviderApiKey = Object.prototype.hasOwnProperty.call(settings, 'llmProviderApiKey')
+  const existingProvider = existing && typeof existing.llm_provider === 'object'
+    ? existing.llm_provider
+    : {}
+  const contextFolderPath = hasContextFolderPath
+    ? (typeof settings.contextFolderPath === 'string' ? settings.contextFolderPath : '')
+    : (typeof existing.contextFolderPath === 'string' ? existing.contextFolderPath : '')
 
   fs.mkdirSync(settingsDir, { recursive: true })
-  const payload = { contextFolderPath: settings.contextFolderPath || '' }
+  const payload = { contextFolderPath }
+  if (hasLlmProviderApiKey) {
+    payload.llm_provider = {
+      ...existingProvider,
+      api_key: typeof settings.llmProviderApiKey === 'string' ? settings.llmProviderApiKey : ''
+    }
+  } else if (Object.keys(existingProvider).length > 0) {
+    payload.llm_provider = { ...existingProvider }
+  }
   fs.writeFileSync(settingsPath, JSON.stringify(payload, null, 2), 'utf-8')
 
   return settingsPath

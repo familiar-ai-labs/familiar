@@ -22,6 +22,34 @@ test('saveSettings persists contextFolderPath', () => {
   assert.equal(loaded.contextFolderPath, contextDir)
 })
 
+test('saveSettings persists llm_provider api_key and preserves context', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-'))
+  const settingsDir = path.join(tempRoot, 'settings')
+  const contextDir = path.join(tempRoot, 'context')
+  fs.mkdirSync(contextDir)
+
+  saveSettings({ contextFolderPath: contextDir }, { settingsDir })
+  saveSettings({ llmProviderApiKey: 'test-key' }, { settingsDir })
+
+  const loaded = loadSettings({ settingsDir })
+  assert.equal(loaded.contextFolderPath, contextDir)
+  assert.equal(loaded.llm_provider?.api_key, 'test-key')
+})
+
+test('saveSettings preserves llm_provider api_key when updating context path', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-'))
+  const settingsDir = path.join(tempRoot, 'settings')
+  const contextDir = path.join(tempRoot, 'context')
+  fs.mkdirSync(contextDir)
+
+  saveSettings({ llmProviderApiKey: 'keep-me' }, { settingsDir })
+  saveSettings({ contextFolderPath: contextDir }, { settingsDir })
+
+  const loaded = loadSettings({ settingsDir })
+  assert.equal(loaded.contextFolderPath, contextDir)
+  assert.equal(loaded.llm_provider?.api_key, 'keep-me')
+})
+
 test('validateContextFolderPath rejects missing directory', () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-'))
   const missingPath = path.join(tempRoot, 'missing')

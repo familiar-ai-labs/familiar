@@ -9,14 +9,6 @@ npm install
 npm start
 ```
 
-## Run (with .env)
-
-```bash
-npm run dev
-```
-
-Loads `code/desktopapp/.env` and starts Electron with those variables.
-
 ## Tests
 
 ```bash
@@ -39,7 +31,7 @@ E2E helpers:
 
 ## Notes
 
--   The app runs from the macOS menu bar with a Settings window that stores the Context Folder Path in `~/.jiminy/settings.json`.
+-   The app runs from the macOS menu bar with a Settings window that stores the Context Folder Path and LLM API key in `~/.jiminy/settings.json`.
 -   The Settings window includes a Context Graph sync action that writes summaries to `~/.jiminy/context-tree.json`.
 -   Auto-launch on login is enabled via Electron login item settings.
 
@@ -55,11 +47,46 @@ E2E helpers:
 
 ## Context Graph Dev Notes
 
--   **LLM config:** Uses `LLM_API_KEY` and the default Gemini model in `code/desktopapp/llms.js`. For tests or local runs, set `JIMINY_LLM_MOCK=1` (optionally `JIMINY_LLM_MOCK_TEXT`) to bypass live calls.
+-   **LLM config:** Uses the API key saved in `~/.jiminy/settings.json` under `llm_provider.api_key` (configure it in the Settings window). For tests or local runs, set `JIMINY_LLM_MOCK=1` (optionally `JIMINY_LLM_MOCK_TEXT`) to bypass live calls.
 -   **IPC surface:** Main process exposes `contextGraph:sync` and streams progress via `contextGraph:progress`. Renderer subscribes through `window.jiminy.onContextGraphProgress`.
 -   **Schema reference:** See `code/desktopapp/context-graph/nodes.js` for node fields and `code/desktopapp/context-graph/sync.js` for the graph root shape.
 -   **Errors vs warnings:** Sync returns `errors` (fatal issues like unreadable files or empty LLM responses) and `warnings` (cycle detections). Renderer shows warnings but allows completion.
--   **Tests:** `code/desktopapp/test/llms.test.js` makes a live Gemini call and will fail without a network connection and a valid `LLM_API_KEY`.
+-   **Tests:** `code/desktopapp/test/llms.test.js` makes a live Gemini call and will fail without a network connection and a valid `LLM_API_KEY` in the environment.
+
+## Example Context Graph
+
+```json
+{
+  "version": 1,
+  "rootPath": "/Users/example/context",
+  "generatedAt": "2026-01-19T13:51:11.637Z",
+  "model": "gemini-1.5-flash",
+  "rootId": "n_19ec2fb35088",
+  "counts": { "files": 1, "folders": 1 },
+  "nodes": {
+    "n_19ec2fb35088": {
+      "id": "n_19ec2fb35088",
+      "type": "folder",
+      "name": "context",
+      "relativePath": "",
+      "summary": "High-level overview of the context folder.",
+      "summaryUpdatedAt": "2026-01-19T13:51:11.637Z",
+      "children": ["n_9f5b84d1a86b"]
+    },
+    "n_9f5b84d1a86b": {
+      "id": "n_9f5b84d1a86b",
+      "type": "file",
+      "name": "README.md",
+      "relativePath": "README.md",
+      "summary": "Summary of the README contents.",
+      "summaryUpdatedAt": "2026-01-19T13:51:10.123Z",
+      "sizeBytes": 1024,
+      "modifiedAt": "2026-01-18T10:00:00.000Z",
+      "contentHash": "2d32b5591b300d8407c94f12abcd5c6e4412883915d6b0a8b5ae3b6203b30abe"
+    }
+  }
+}
+```
 
 ## License
 

@@ -6,7 +6,10 @@ contextBridge.exposeInMainWorld('jiminy', {
   nodeVersion: process.versions.node,
   getSettings: () => ipcRenderer.invoke('settings:get'),
   pickContextFolder: () => ipcRenderer.invoke('settings:pickContextFolder'),
-  saveSettings: (contextFolderPath) => ipcRenderer.invoke('settings:save', { contextFolderPath }),
+  saveSettings: (payload) => {
+    const data = typeof payload === 'string' ? { contextFolderPath: payload } : payload
+    return ipcRenderer.invoke('settings:save', data)
+  },
   syncContextGraph: () => ipcRenderer.invoke('contextGraph:sync'),
   onContextGraphProgress: (handler) => {
     const listener = (_event, payload) => handler(payload)

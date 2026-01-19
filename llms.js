@@ -30,7 +30,7 @@ const extractText = (payload) => {
 
 const generateContent = async ({ apiKey, model, prompt }) => {
     if (!apiKey) {
-        throw new Error('LLM_API_KEY is required for Gemini summaries.');
+        throw new Error('LLM API key is required for Gemini summaries.');
     }
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
@@ -51,7 +51,7 @@ const generateContent = async ({ apiKey, model, prompt }) => {
     return extractText(payload).trim();
 };
 
-const createGeminiSummarizer = ({ apiKey = process.env.LLM_API_KEY, model = DEFAULT_MODEL } = {}) => ({
+const createGeminiSummarizer = ({ apiKey, model = DEFAULT_MODEL } = {}) => ({
     model,
     summarizeFile: async ({ relativePath, content }) =>
         generateContent({

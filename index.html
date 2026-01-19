@@ -37,6 +37,22 @@
         </div>
 
         <div class="field">
+          <label for="llm-api-key">Configure LLM Key</label>
+          <div class="field-row">
+            <input
+              id="llm-api-key"
+              class="field-input"
+              type="password"
+              placeholder="Not set"
+              autocomplete="off"
+            >
+            <button id="llm-api-key-save" class="button primary" type="button">Save</button>
+          </div>
+          <p id="llm-api-key-error" class="field-error" role="alert" aria-live="polite"></p>
+          <span id="llm-api-key-status" class="field-status" aria-live="polite"></span>
+        </div>
+
+        <div class="field">
           <label>Context Graph</label>
           <div class="field-actions">
             <button id="context-graph-sync" class="button" type="button">Sync now</button>
