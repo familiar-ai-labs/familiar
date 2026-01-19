@@ -5,6 +5,7 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "dev": "node dev.js",
     "test": "node --test test/**/*.test.js",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"
@@ -19,6 +20,7 @@
   "author": "Jiminy",
   "license": "CC0-1.0",
   "devDependencies": {
+    "dotenv": "^17.2.3",
     "electron": "^40.0.0",
     "playwright": "^1.55.0"
   }

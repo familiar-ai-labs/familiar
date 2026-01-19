@@ -76,5 +76,6 @@ const validateContextFolderPath = (contextFolderPath) => {
 module.exports = {
   loadSettings,
   saveSettings,
-  validateContextFolderPath
+  validateContextFolderPath,
+  resolveSettingsDir
 }

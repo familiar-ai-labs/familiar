@@ -5,6 +5,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const saveButton = document.getElementById('context-folder-save')
   const errorMessage = document.getElementById('context-folder-error')
   const statusMessage = document.getElementById('context-folder-status')
+  const syncButton = document.getElementById('context-graph-sync')
+  const syncStatus = document.getElementById('context-graph-status')
+  const syncProgress = document.getElementById('context-graph-progress')
+  const syncWarning = document.getElementById('context-graph-warning')
+  const syncError = document.getElementById('context-graph-error')
 
   const setMessage = (element, message) => {
     if (!element) {
@@ -20,6 +25,12 @@ document.addEventListener('DOMContentLoaded', () => {
       return
     }
     saveButton.disabled = !contextFolderInput.value
+  }
+
+  const setSyncState = (isSyncing) => {
+    if (syncButton) {
+      syncButton.disabled = isSyncing
+    }
   }
 
   const loadSettings = async () => {
@@ -43,6 +54,18 @@ document.addEventListener('DOMContentLoaded', () => {
     setMessage(errorMessage, 'Settings bridge unavailable. Restart the app.')
     updateSaveState()
     return
+  }
+
+  if (jiminy.onContextGraphProgress && syncProgress) {
+    jiminy.onContextGraphProgress((payload) => {
+      if (!payload) {
+        return
+      }
+
+      const progressText = `${payload.completed}/${payload.total}` +
+        (payload.relativePath ? ` • ${payload.relativePath}` : '')
+      setMessage(syncProgress, progressText)
+    })
   }
 
   if (chooseButton) {
@@ -90,6 +113,52 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error('Failed to save settings', error)
         setMessage(statusMessage, '')
         setMessage(errorMessage, 'Failed to save settings.')
+      }
+    })
+  }
+
+  if (syncButton) {
+    syncButton.addEventListener('click', async () => {
+      if (!jiminy.syncContextGraph) {
+        setMessage(syncError, 'Sync bridge unavailable. Restart the app.')
+        return
+      }
+
+      setMessage(syncError, '')
+      setMessage(syncStatus, 'Syncing...')
+      setMessage(syncWarning, '')
+      setMessage(syncProgress, '0/0')
+      setSyncState(true)
+
+      try {
+        const result = await jiminy.syncContextGraph()
+        if (result && result.ok) {
+          const warnings = Array.isArray(result.warnings) ? result.warnings : []
+          const errorCount = Array.isArray(result.errors) ? result.errors.length : 0
+          const message = errorCount > 0
+            ? `Sync completed with ${errorCount} error${errorCount === 1 ? '' : 's'}.`
+            : warnings.length > 0
+              ? 'Sync completed with warnings.'
+              : 'Sync complete.'
+          setMessage(syncStatus, message)
+          if (warnings.length > 0) {
+            const warningText = warnings[0]?.path
+              ? `Warning: cycle detected at ${warnings[0].path}.`
+              : 'Warning: cycle detected in context folder.'
+            setMessage(syncWarning, warningText)
+          }
+        } else {
+          setMessage(syncStatus, '')
+          setMessage(syncWarning, '')
+          setMessage(syncError, result?.message || 'Failed to sync context graph.')
+        }
+      } catch (error) {
+        console.error('Failed to sync context graph', error)
+        setMessage(syncStatus, '')
+        setMessage(syncWarning, '')
+        setMessage(syncError, 'Failed to sync context graph.')
+      } finally {
+        setSyncState(false)
       }
     })
   }

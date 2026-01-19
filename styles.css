@@ -113,6 +113,19 @@ body {
   color: #2f6f3e;
 }
 
+.field-help {
+  margin: 0;
+  font-size: 12px;
+  color: #5a5a64;
+}
+
+.field-warning {
+  margin: 0;
+  font-size: 12px;
+  color: #a66a00;
+  display: none;
+}
+
 .meta {
   display: grid;
   gap: 8px;
