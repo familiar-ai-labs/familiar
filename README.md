@@ -38,11 +38,32 @@ Use `act` from the repo root to run the CI job:
 act -W .github/workflows/ci.yml -s LLM_API_KEY=YOUR_KEY
 ```
 
+## GitHub CI (exact run details)
+
+CI runs on `ubuntu-latest` with Node.js 20 and uses the `code/desktopapp` working directory. Steps:
+
+```bash
+npm ci
+npx playwright install --with-deps
+npm test
+xvfb-run --auto-servernum -- npm run test:e2e
+```
+
+Environment:
+
+- `CI=true`
+- `LLM_API_KEY` from GitHub secrets (used by unit tests)
+- E2E tests also launch Electron with `--no-sandbox --disable-gpu --disable-dev-shm-usage` on Linux/CI.
+  - `--no-sandbox`: required in many CI/container setups where the Chromium sandbox cannot initialize (no user namespaces).
+  - `--disable-gpu`: avoids GPU initialization failures under Xvfb/headless Linux.
+  - `--disable-dev-shm-usage`: avoids crashes when `/dev/shm` is tiny in containers (uses disk instead).
+
 ## Notes
 
 -   The app runs from the macOS menu bar with a Settings window that stores the Context Folder Path and LLM API key in `~/.jiminy/settings.json`.
 -   The Settings window includes a Context Graph sync action that writes summaries to `~/.jiminy/context-tree.json`.
 -   Auto-launch on login is enabled via Electron login item settings.
+-   The tray menu includes a **Capture Selection** overlay (drag to select, click the action button). It requires macOS Screen Recording permission in **System Settings > Privacy & Security > Screen Recording**.
 
 ## Context Graph (Current Implementation)
 
