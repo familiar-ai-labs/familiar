@@ -28,7 +28,7 @@ test('choose button sets the context folder path', async () => {
     await window.getByRole('button', { name: 'Choose...' }).click()
     await expect(window.getByLabel('Context Folder Path')).toHaveValue(expectedContextPath)
 
-    await window.getByRole('button', { name: 'Save' }).click()
+    await window.locator('#context-folder-save').click()
     await expect(window.locator('#context-folder-status')).toHaveText('Saved.')
 
     const settingsPath = path.join(settingsDir, 'settings.json')

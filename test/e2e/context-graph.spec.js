@@ -27,7 +27,7 @@ test('sync now builds context graph with mocked summaries', async () => {
     await window.waitForLoadState('domcontentloaded')
 
     await window.getByRole('button', { name: 'Choose...' }).click()
-    await window.getByRole('button', { name: 'Save' }).click()
+    await window.locator('#context-folder-save').click()
 
     await window.getByRole('button', { name: 'Sync now' }).click()
     await expect(window.locator('#context-graph-status')).toHaveText(/Sync complete/)
