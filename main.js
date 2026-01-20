@@ -322,18 +322,26 @@ ipcMain.handle('contextGraph:sync', async (event) => {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
-    if (process.platform !== 'darwin') {
+    const isE2E = process.env.JIMINY_E2E === '1';
+
+    if (process.platform !== 'darwin' && !isE2E) {
         console.error('Jiminy desktop app is macOS-only right now.');
         app.quit();
         return;
     }
 
+    if (process.platform === 'darwin') {
+        if (app.dock) {
     app.dock.hide();
+        }
     app.setLoginItemSettings({ openAtLogin: true, openAsHidden: true });
 
     createTray();
+    } else if (isE2E) {
+        console.log('E2E mode: running on non-macOS platform');
+    }
 
-    if (process.env.JIMINY_E2E === '1') {
+    if (isE2E) {
         console.log('E2E mode: opening settings window');
         showSettingsWindow();
     }
