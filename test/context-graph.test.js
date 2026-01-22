@@ -55,6 +55,12 @@ const writeExtraContextFolderFixture = (rootPath) => {
   fs.mkdirSync(extraFolder, { recursive: true })
   fs.writeFileSync(path.join(extraFolder, 'analysis.md'), 'Generated analysis', 'utf-8')
 }
+
+const writeHiddenFolderFixture = (rootPath) => {
+  const hiddenFolder = path.join(rootPath, '.git')
+  fs.mkdirSync(hiddenFolder, { recursive: true })
+  fs.writeFileSync(path.join(hiddenFolder, 'config.md'), 'Hidden config', 'utf-8')
+}
 const createStore = () => {
   const settingsDir = createTempDir('jiminy-settings-')
   return new JsonContextGraphStore({ settingsDir })
@@ -279,4 +285,29 @@ test('sync ignores jiminy extra context folders', async () => {
   const stored = JSON.parse(fs.readFileSync(store.getPath(), 'utf-8'))
   const extraNode = Object.values(stored.nodes).find((node) => node.relativePath === path.join(`notes-${EXTRA_CONTEXT_SUFFIX}`, 'analysis.md'))
   assert.equal(extraNode, undefined)
+})
+
+test('sync ignores hidden folders like .git', async () => {
+  const contextRoot = createTempDir('jiminy-context-')
+  writeFixtureFiles(contextRoot)
+  writeHiddenFolderFixture(contextRoot)
+
+  const store = createStore()
+  const summarizer = {
+    model: 'test-model',
+    summarizeFile: async ({ relativePath }) => `Summary for ${relativePath}`,
+    summarizeFolder: async ({ relativePath }) => `Folder summary for ${relativePath || '.'}`
+  }
+
+  const result = await syncContextGraph({
+    rootPath: contextRoot,
+    store,
+    summarizer
+  })
+
+  assert.equal(result.graph.counts.files, 2)
+
+  const stored = JSON.parse(fs.readFileSync(store.getPath(), 'utf-8'))
+  const hiddenNode = Object.values(stored.nodes).find((node) => node.relativePath === path.join('.git', 'config.md'))
+  assert.equal(hiddenNode, undefined)
 })

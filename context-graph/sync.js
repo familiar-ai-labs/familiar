@@ -112,6 +112,11 @@ const scanContextFolder = (rootPath, { logger = console, maxNodes = MAX_NODES, e
         continue
       }
 
+      if (entry.isDirectory() && entry.name.startsWith('.')) {
+        logger.log('Skipping hidden folder', { path: normalizedEntryRelative })
+        continue
+      }
+
       if (entry.isDirectory() && isExtraContextDirName(entry.name)) {
         logger.log('Skipping generated context folder', { path: normalizedEntryRelative })
         continue

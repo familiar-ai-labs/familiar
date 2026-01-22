@@ -72,6 +72,7 @@ Environment:
 -   **Source of truth:** The Context Folder Path saved in `~/.jiminy/settings.json`.
 -   **Scan scope:** Recursively walks the context folder and only includes `.md` and `.txt` files. Other files are skipped with a log entry.
 -   **Capture exclusions:** The `jiminy-captures` folder under the context root is ignored during scans.
+-   **Hidden folders:** Directories starting with `.` (for example `.git` or `.vscode`) are ignored during scans.
 -   **Analysis exclusions:** Any folder whose name ends with `jiminy-extra-context` is ignored during scans.
 -   **Cycle safety:** Keeps a visited set of resolved directory paths and warns when a cycle is detected (including symlink loops).
 -   **Node limit:** Hard cap of 100 nodes (folders + files). Sync fails with an error if exceeded.
