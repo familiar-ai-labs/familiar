@@ -2,6 +2,7 @@ const SETTINGS_DIR_NAME = '.jiminy'
 const SETTINGS_FILE_NAME = 'settings.json'
 const CONTEXT_GRAPH_FILE_NAME = 'context-tree.json'
 const CAPTURES_DIR_NAME = 'jiminy-captures'
+const EXTRA_CONTEXT_SUFFIX = 'jiminy-extra-context'
 const CAPTURE_FILENAME_PREFIX = 'Jiminy Capture'
 
 module.exports = {
@@ -9,5 +10,6 @@ module.exports = {
   SETTINGS_FILE_NAME,
   CONTEXT_GRAPH_FILE_NAME,
   CAPTURES_DIR_NAME,
+  EXTRA_CONTEXT_SUFFIX,
   CAPTURE_FILENAME_PREFIX
 }

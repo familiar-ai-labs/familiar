@@ -4,7 +4,7 @@ const path = require('node:path')
 const assert = require('node:assert/strict')
 const { test } = require('node:test')
 const { JsonContextGraphStore, syncContextGraph } = require('../context-graph')
-const { CAPTURES_DIR_NAME } = require('../const')
+const { CAPTURES_DIR_NAME, EXTRA_CONTEXT_SUFFIX } = require('../const')
 
 const createTempDir = (prefix) => fs.mkdtempSync(path.join(os.tmpdir(), prefix))
 
@@ -48,6 +48,12 @@ const writeCaptureFolderFixture = (rootPath) => {
   const capturesPath = path.join(rootPath, CAPTURES_DIR_NAME)
   fs.mkdirSync(capturesPath, { recursive: true })
   fs.writeFileSync(path.join(capturesPath, 'capture.md'), 'Captured content', 'utf-8')
+}
+
+const writeExtraContextFolderFixture = (rootPath) => {
+  const extraFolder = path.join(rootPath, `notes-${EXTRA_CONTEXT_SUFFIX}`)
+  fs.mkdirSync(extraFolder, { recursive: true })
+  fs.writeFileSync(path.join(extraFolder, 'analysis.md'), 'Generated analysis', 'utf-8')
 }
 const createStore = () => {
   const settingsDir = createTempDir('jiminy-settings-')
@@ -247,4 +253,30 @@ test('sync ignores the captures folder', async () => {
   const stored = JSON.parse(fs.readFileSync(store.getPath(), 'utf-8'))
   const capturedNode = Object.values(stored.nodes).find((node) => node.relativePath === path.join(CAPTURES_DIR_NAME, 'capture.md'))
   assert.equal(capturedNode, undefined)
+})
+
+test('sync ignores jiminy extra context folders', async () => {
+  const contextRoot = createTempDir('jiminy-context-')
+  writeFixtureFiles(contextRoot)
+  writeExtraContextFolderFixture(contextRoot)
+
+  const store = createStore()
+  const summarizer = {
+    model: 'test-model',
+    summarizeFile: async ({ relativePath }) => `Summary for ${relativePath}`,
+    summarizeFolder: async ({ relativePath }) => `Folder summary for ${relativePath || '.'}`
+  }
+
+  const result = await syncContextGraph({
+    rootPath: contextRoot,
+    store,
+    summarizer
+  })
+
+  assert.equal(result.graph.counts.files, 2)
+  assert.equal(result.graph.counts.folders, 2)
+
+  const stored = JSON.parse(fs.readFileSync(store.getPath(), 'utf-8'))
+  const extraNode = Object.values(stored.nodes).find((node) => node.relativePath === path.join(`notes-${EXTRA_CONTEXT_SUFFIX}`, 'analysis.md'))
+  assert.equal(extraNode, undefined)
 })

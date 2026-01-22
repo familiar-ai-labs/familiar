@@ -2,7 +2,7 @@ const fs = require('node:fs')
 const path = require('node:path')
 const crypto = require('node:crypto')
 const { FileNode, FolderNode, createNodeId, normalizeRelativePath } = require('./nodes')
-const { CAPTURES_DIR_NAME } = require('../const')
+const { CAPTURES_DIR_NAME, EXTRA_CONTEXT_SUFFIX } = require('../const')
 
 const MAX_NODES = 300
 const ALLOWED_EXTENSIONS = new Set(['.md', '.txt'])
@@ -56,6 +56,8 @@ const scanContextFolder = (rootPath, { logger = console, maxNodes = MAX_NODES, e
     }
   }
 
+  const isExtraContextDirName = (name) => name.endsWith(EXTRA_CONTEXT_SUFFIX)
+
   const walk = (currentPath, relativePath, depth) => {
     let realPath
     try {
@@ -107,6 +109,11 @@ const scanContextFolder = (rootPath, { logger = console, maxNodes = MAX_NODES, e
 
       if (isExcluded(normalizedEntryRelative)) {
         logger.log('Skipping excluded path', { path: normalizedEntryRelative })
+        continue
+      }
+
+      if (entry.isDirectory() && isExtraContextDirName(entry.name)) {
+        logger.log('Skipping generated context folder', { path: normalizedEntryRelative })
         continue
       }
 
