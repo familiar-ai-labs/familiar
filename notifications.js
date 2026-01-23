@@ -39,5 +39,6 @@ const showProviderExhaustedNotification = ({ source } = {}) => {
 }
 
 module.exports = {
+    showNotification,
     showProviderExhaustedNotification
 }

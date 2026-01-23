@@ -4,7 +4,8 @@ const path = require('node:path');
 const { buildTrayMenuTemplate } = require('./menu');
 const { registerIpcHandlers } = require('./ipc');
 const { registerCaptureHandlers, startCaptureFlow, closeOverlayWindow } = require('./screenshot/capture');
-const { registerCaptureHotkey, unregisterGlobalHotkeys } = require('./hotkeys');
+const { captureClipboard } = require('./clipboard');
+const { registerCaptureHotkey, registerClipboardHotkey, unregisterGlobalHotkeys } = require('./hotkeys');
 const { registerExtractionHandlers } = require('./extraction');
 const { registerAnalysisHandlers } = require('./analysis');
 const { showWindow } = require('./utils/window');
@@ -111,6 +112,9 @@ function createTray() {
             onCapture: () => {
                 void startCaptureFlow();
             },
+            onClipboard: () => {
+                void captureClipboard();
+            },
             onOpenSettings: showSettingsWindow,
             onAbout: showAboutDialog,
             onRestart: restartApp,
@@ -150,6 +154,15 @@ app.whenReady().then(() => {
         });
         if (!hotkeyResult.ok) {
             console.warn('Capture hotkey inactive', { reason: hotkeyResult.reason, accelerator: hotkeyResult.accelerator });
+        }
+
+        const clipboardHotkeyResult = registerClipboardHotkey({
+            onClipboard: () => {
+                void captureClipboard();
+            },
+        });
+        if (!clipboardHotkeyResult.ok) {
+            console.warn('Clipboard hotkey inactive', { reason: clipboardHotkeyResult.reason, accelerator: clipboardHotkeyResult.accelerator });
         }
     } else if (isE2E) {
         console.log('E2E mode: running on non-macOS platform');

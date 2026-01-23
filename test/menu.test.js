@@ -6,6 +6,7 @@ const { buildTrayMenuTemplate } = require('../menu')
 test('buildTrayMenuTemplate returns the expected items', () => {
   const template = buildTrayMenuTemplate({
     onCapture: () => {},
+    onClipboard: () => {},
     onOpenSettings: () => {},
     onAbout: () => {},
     onRestart: () => {},
@@ -14,8 +15,8 @@ test('buildTrayMenuTemplate returns the expected items', () => {
 
   const labels = template.filter((item) => item.label).map((item) => item.label)
 
-  assert.deepEqual(labels, ['Capture Selection', 'Open Settings', 'About', 'Restart', 'Quit'])
-  assert.equal(template[3].type, 'separator')
+  assert.deepEqual(labels, ['Capture Selection', 'Capture Clipboard', 'Open Settings', 'About', 'Restart', 'Quit'])
+  assert.equal(template[4].type, 'separator')
 })
 
 test('about click does not trigger open settings', () => {
@@ -24,6 +25,7 @@ test('about click does not trigger open settings', () => {
 
   const template = buildTrayMenuTemplate({
     onCapture: () => {},
+    onClipboard: () => {},
     onOpenSettings: () => { openSettingsCalls += 1 },
     onAbout: () => { aboutCalls += 1 },
     onRestart: () => {},
@@ -45,6 +47,7 @@ test('open settings click does not trigger about', () => {
 
   const template = buildTrayMenuTemplate({
     onCapture: () => {},
+    onClipboard: () => {},
     onOpenSettings: () => { openSettingsCalls += 1 },
     onAbout: () => { aboutCalls += 1 },
     onRestart: () => {},
@@ -67,6 +70,7 @@ test('capture click does not trigger about or settings', () => {
 
   const template = buildTrayMenuTemplate({
     onCapture: () => { captureCalls += 1 },
+    onClipboard: () => {},
     onOpenSettings: () => { openSettingsCalls += 1 },
     onAbout: () => { aboutCalls += 1 },
     onRestart: () => {},
@@ -81,4 +85,28 @@ test('capture click does not trigger about or settings', () => {
   assert.equal(captureCalls, 1)
   assert.equal(openSettingsCalls, 0)
   assert.equal(aboutCalls, 0)
+})
+
+test('clipboard click does not trigger capture or settings', () => {
+  let captureCalls = 0
+  let clipboardCalls = 0
+  let openSettingsCalls = 0
+
+  const template = buildTrayMenuTemplate({
+    onCapture: () => { captureCalls += 1 },
+    onClipboard: () => { clipboardCalls += 1 },
+    onOpenSettings: () => { openSettingsCalls += 1 },
+    onAbout: () => {},
+    onRestart: () => {},
+    onQuit: () => {}
+  })
+
+  const clipboardItem = template.find((item) => item.label === 'Capture Clipboard')
+  assert.ok(clipboardItem)
+
+  clipboardItem.click()
+
+  assert.equal(clipboardCalls, 1)
+  assert.equal(captureCalls, 0)
+  assert.equal(openSettingsCalls, 0)
 })

@@ -1,6 +1,7 @@
-function buildTrayMenuTemplate ({ onCapture, onOpenSettings, onAbout, onRestart, onQuit }) {
+function buildTrayMenuTemplate ({ onCapture, onClipboard, onOpenSettings, onAbout, onRestart, onQuit }) {
   return [
     { label: 'Capture Selection', click: onCapture },
+    { label: 'Capture Clipboard', click: onClipboard },
     { label: 'Open Settings', click: onOpenSettings },
     { label: 'About', click: onAbout },
     { type: 'separator' },
