@@ -33,12 +33,12 @@ test('image extraction notifies and skips on exhausted provider', async (t) => {
 
   const indexPath = require.resolve('../extraction/image/index')
   const handlerPath = require.resolve('../extraction/image/handler')
-  const notificationsPath = require.resolve('../notifications')
+  const toastPath = require.resolve('../toast')
 
   const originalIndexModule = require.cache[indexPath]
-  const originalNotificationsModule = require.cache[notificationsPath]
+  const originalToastModule = require.cache[toastPath]
 
-  let notificationCalled = false
+  let toastCalled = false
 
   mockModule(indexPath, {
     DEFAULT_VISION_MODEL: 'gemini-2.0-flash',
@@ -47,10 +47,9 @@ test('image extraction notifies and skips on exhausted provider', async (t) => {
     }
   })
 
-  mockModule(notificationsPath, {
-    showProviderExhaustedNotification: () => {
-      notificationCalled = true
-      return true
+  mockModule(toastPath, {
+    showToast: () => {
+      toastCalled = true
     }
   })
 
@@ -62,7 +61,7 @@ test('image extraction notifies and skips on exhausted provider', async (t) => {
     const result = await handleImageExtractionEvent({ metadata: { path: '/tmp/fake.png' } })
 
     assert.deepEqual(result, { skipped: true, reason: 'provider_exhausted' })
-    assert.equal(notificationCalled, true)
+    assert.equal(toastCalled, true)
   } finally {
     if (originalIndexModule) {
       require.cache[indexPath] = originalIndexModule
@@ -70,10 +69,10 @@ test('image extraction notifies and skips on exhausted provider', async (t) => {
       delete require.cache[indexPath]
     }
 
-    if (originalNotificationsModule) {
-      require.cache[notificationsPath] = originalNotificationsModule
+    if (originalToastModule) {
+      require.cache[toastPath] = originalToastModule
     } else {
-      delete require.cache[notificationsPath]
+      delete require.cache[toastPath]
     }
 
     resetModule(handlerPath)

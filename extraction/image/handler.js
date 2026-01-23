@@ -1,6 +1,6 @@
 const { loadSettings } = require('../../settings')
 const { enqueueAnalysis } = require('../../analysis')
-const { showProviderExhaustedNotification } = require('../../notifications')
+const { showToast } = require('../../toast')
 const { ExhaustedLlmProviderError } = require('../../modelProviders')
 const { runImageExtraction } = require('./index')
 
@@ -44,7 +44,11 @@ const handleImageExtractionEvent = async (event) => {
         imagePath,
         message: error.message
       })
-      showProviderExhaustedNotification({ source: 'image_extraction' })
+      showToast({
+        title: 'LLM provider exhausted',
+        body: 'Your LLM provider is rate limited. Please wait and try again.',
+        type: 'warning'
+      })
       return { skipped: true, reason: 'provider_exhausted' }
     }
 

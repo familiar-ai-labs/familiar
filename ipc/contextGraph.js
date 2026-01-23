@@ -1,7 +1,7 @@
 const { ipcMain } = require('electron');
 const { loadSettings, validateContextFolderPath } = require('../settings');
 const { JsonContextGraphStore, createSummarizer, syncContextGraph } = require('../context-graph');
-const { showProviderExhaustedNotification } = require('../notifications');
+const { showToast } = require('../toast');
 const { ExhaustedLlmProviderError } = require('../modelProviders');
 const { constructContextGraphSkeleton, MAX_NODES } = require('../context-graph/graphSkeleton');
 
@@ -118,7 +118,11 @@ async function handleSync(event) {
     } catch (error) {
         console.error('Context graph sync failed', error);
         if (error instanceof ExhaustedLlmProviderError) {
-            showProviderExhaustedNotification({ source: 'context_graph_sync' });
+            showToast({
+                title: 'LLM provider exhausted',
+                body: 'Your LLM provider is rate limited. Please wait and try again.',
+                type: 'warning'
+            });
             return { ok: false, message: 'LLM provider rate limit exhausted. Please try again later.' };
         }
         return { ok: false, message: error.message || 'Failed to sync context graph.' };

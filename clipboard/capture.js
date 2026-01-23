@@ -2,16 +2,17 @@ const { clipboard } = require('electron')
 const { getClipboardDirectory, saveClipboardToDirectory } = require('./storage')
 const { enqueueAnalysis } = require('../analysis')
 const { loadSettings, validateContextFolderPath } = require('../settings')
-const { showNotification } = require('../notifications')
+const { showToast } = require('../toast')
 
 async function captureClipboard () {
   const text = clipboard.readText()
 
   if (!text || text.trim().length === 0) {
     console.log('Clipboard capture skipped: clipboard is empty')
-    showNotification({
+    showToast({
       title: 'Clipboard Empty',
-      body: 'No text content in clipboard to capture.'
+      body: 'No text content in clipboard to capture.',
+      type: 'warning'
     })
     return { ok: false, reason: 'empty-clipboard' }
   }
@@ -22,9 +23,10 @@ async function captureClipboard () {
 
   if (!validation.ok) {
     console.warn('Clipboard capture failed: context folder not configured', { message: validation.message })
-    showNotification({
+    showToast({
       title: 'Context Folder Required',
-      body: validation.message || 'Set a Context Folder Path in Settings before capturing.'
+      body: validation.message || 'Set a Context Folder Path in Settings before capturing.',
+      type: 'warning'
     })
     return { ok: false, reason: 'no-context-folder', message: validation.message }
   }
@@ -32,9 +34,10 @@ async function captureClipboard () {
   const clipboardDirectory = getClipboardDirectory(validation.path)
   if (!clipboardDirectory) {
     console.error('Clipboard capture failed: clipboard directory could not be resolved')
-    showNotification({
+    showToast({
       title: 'Capture Failed',
-      body: 'Could not determine clipboard directory.'
+      body: 'Could not determine clipboard directory.',
+      type: 'error'
     })
     return { ok: false, reason: 'no-clipboard-directory' }
   }
@@ -47,17 +50,19 @@ async function captureClipboard () {
       console.error('Failed to enqueue clipboard analysis', { error, savedPath })
     })
 
-    showNotification({
+    showToast({
       title: 'Clipboard Captured',
-      body: 'Text content saved and queued for analysis.'
+      body: 'Text content saved and queued for analysis.',
+      type: 'success'
     })
 
     return { ok: true, path: savedPath }
   } catch (error) {
     console.error('Clipboard capture failed', error)
-    showNotification({
+    showToast({
       title: 'Capture Failed',
-      body: 'Failed to save clipboard content. Check write permissions.'
+      body: 'Failed to save clipboard content. Check write permissions.',
+      type: 'error'
     })
     return { ok: false, reason: 'save-failed', error }
   }

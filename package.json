@@ -4,7 +4,10 @@
   "description": "Jiminy menu bar app shell (macOS)",
   "main": "main.js",
   "scripts": {
-    "start": "electron .",
+    "css": "tailwindcss -i ./src/input.css -o ./styles.css --watch",
+    "css:build": "tailwindcss -i ./src/input.css -o ./styles.css --minify",
+    "start": "npm run css:build && electron .",
+    "dev": "tailwindcss -i ./src/input.css -o ./styles.css --watch & electron .",
     "test": "find test -name \"*.test.js\" -not -path \"*/e2e/*\" -not -path \"*/modelProviderTests/*\" -print0 | xargs -0 node --test",
     "test:modelProviderTests": "find test/modelProviderTests -name \"*.test.js\" -print0 | xargs -0 node --test",
     "test:e2e": "playwright test",
@@ -21,7 +24,9 @@
   "author": "Jiminy",
   "license": "CC0-1.0",
   "devDependencies": {
+    "@tailwindcss/cli": "^4.1.18",
     "electron": "^40.0.0",
-    "playwright": "^1.55.0"
+    "playwright": "^1.55.0",
+    "tailwindcss": "^4.1.18"
   }
 }

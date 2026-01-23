@@ -30,15 +30,6 @@ const showNotification = ({ title, body }) => {
     }
 }
 
-const showProviderExhaustedNotification = ({ source } = {}) => {
-    console.warn('LLM provider exhausted', { source })
-    return showNotification({
-        title: 'LLM provider exhausted',
-        body: 'Your LLM provider is rate limited. Please wait and try again.'
-    })
-}
-
 module.exports = {
-    showNotification,
-    showProviderExhaustedNotification
+    showNotification
 }
