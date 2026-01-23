@@ -70,6 +70,8 @@ const createElements = () => ({
   'llm-api-key-save': new TestElement(),
   'llm-api-key-error': new TestElement(),
   'llm-api-key-status': new TestElement(),
+  'llm-provider': new TestElement(),
+  'llm-provider-error': new TestElement(),
   'context-graph-sync': new TestElement(),
   'context-graph-status': new TestElement(),
   'context-graph-progress': new TestElement(),
@@ -84,6 +86,7 @@ test('refreshes context graph status when context path changes', async () => {
   const jiminy = {
     getSettings: async () => ({
       contextFolderPath: '',
+      llmProviderName: 'gemini',
       llmProviderApiKey: '',
       exclusions: []
     }),
@@ -130,6 +133,7 @@ test('prune button clears context graph data', async () => {
   const jiminy = {
     getSettings: async () => ({
       contextFolderPath: '/tmp/context',
+      llmProviderName: 'gemini',
       llmProviderApiKey: '',
       exclusions: []
     }),
@@ -183,6 +187,7 @@ test('prune button reports nothing to prune when graph is missing', async () => 
   const jiminy = {
     getSettings: async () => ({
       contextFolderPath: '/tmp/context',
+      llmProviderName: 'gemini',
       llmProviderApiKey: '',
       exclusions: []
     }),

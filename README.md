@@ -26,7 +26,7 @@ E2E helpers:
 -   `JIMINY_E2E=1` opens the Settings window on launch and bypasses native dialogs.
 -   `JIMINY_E2E_CONTEXT_PATH` supplies the folder picker result.
 -   `JIMINY_SETTINGS_DIR` overrides the settings storage directory.
--   `JIMINY_LLM_MOCK=1` replaces Gemini calls with a mock summarizer.
+-   `JIMINY_LLM_MOCK=1` replaces LLM calls with a mock summarizer/extractor.
 -   `JIMINY_LLM_MOCK_TEXT` sets the mock summary text (default: `gibberish`).
 -   On Linux CI/E2E runs (`JIMINY_E2E=1` or `CI=true`), the app disables GPU and sandbox flags to improve launch reliability.
 
@@ -60,12 +60,12 @@ Environment:
 
 ## Notes
 
--   The app runs from the macOS menu bar with a Settings window that stores the Context Folder Path and LLM API key in `~/.jiminy/settings.json`.
+-   The app runs from the macOS menu bar with a Settings window that stores the Context Folder Path, LLM provider, and API key in `~/.jiminy/settings.json`.
 -   The Settings window includes a Context Graph sync action that writes summaries to `~/.jiminy/context-tree.json` and a prune action that deletes it.
 -   Auto-launch on login is enabled via Electron login item settings.
 -   The tray menu includes a **Capture Selection** overlay (drag to select, release to capture) that saves a PNG to `<contextFolderPath>/jiminy-captures`. It requires macOS Screen Recording permission in **System Settings > Privacy & Security > Screen Recording**.
 -   A global hotkey triggers the same capture flow: `Command+Shift+J` on macOS (Electron accelerator `CommandOrControl+Shift+J`).
--   Captures enqueue a background extraction task (`sourceType: "image"`) which runs the Gemini Vision extractor and writes a Markdown file next to the PNG as `<capture>.png-extraction.md`. Extraction is skipped if no API key is configured and mocking is disabled.
+-   Captures enqueue a background extraction task (`sourceType: "image"`) which runs the selected provider's vision extractor and writes a Markdown file next to the PNG as `<capture>.png-extraction.md`. Extraction is skipped if no API key is configured and mocking is disabled.
 
 ## Context Graph (Current Implementation)
 
@@ -83,11 +83,11 @@ Environment:
 
 ## Context Graph Dev Notes
 
--   **LLM config:** Uses the API key saved in `~/.jiminy/settings.json` under `llm_provider.api_key` (configure it in the Settings window). For tests or local runs, set `JIMINY_LLM_MOCK=1` (optionally `JIMINY_LLM_MOCK_TEXT`) to bypass live calls.
+-   **LLM config:** Uses the provider and API key saved in `~/.jiminy/settings.json` under `llm_provider.provider` and `llm_provider.api_key` (configure both in the Settings window). Supported providers: `gemini`, `openai`, `anthropic`. Sync/extraction/analysis do not run unless a provider is selected. Optional overrides: `llm_provider.text_model` and `llm_provider.vision_model`. For tests or local runs, set `JIMINY_LLM_MOCK=1` (optionally `JIMINY_LLM_MOCK_TEXT`) to bypass live calls.
 -   **IPC surface:** Main process exposes `contextGraph:sync`, `contextGraph:prune`, and streams progress via `contextGraph:progress`. Renderer subscribes through `window.jiminy.onContextGraphProgress`.
 -   **Schema reference:** See `code/desktopapp/context-graph/nodes.js` for node fields and `code/desktopapp/context-graph/sync.js` for the graph root shape.
 -   **Errors vs warnings:** Sync returns `errors` (fatal issues like unreadable files or empty LLM responses) and `warnings` (cycle detections). Renderer shows warnings but allows completion.
--   **Tests:** `code/desktopapp/test/llms.test.js` makes a live Gemini call and will fail without a network connection and a valid `LLM_API_KEY` in the environment.
+-   **Tests:** Unit tests stub `fetch` for LLM requests and do not require network access by default.
 
 ## Example Context Graph
 
@@ -96,7 +96,7 @@ Environment:
   "version": 1,
   "rootPath": "/Users/example/context",
   "generatedAt": "2026-01-19T13:51:11.637Z",
-  "model": "gemini-1.5-flash",
+  "model": "gemini-2.0-flash-lite",
   "rootId": "n_19ec2fb35088",
   "counts": { "files": 1, "folders": 1 },
   "nodes": {
@@ -150,8 +150,9 @@ Environment:
           │                       │                            ▼
           ▼                       ▼                 ┌──────────────────────┐
 ┌──────────────────┐   ┌──────────────────┐        │ PNG saved to           │
-│ Context Folder   │   │ LLM API Key      │        │ <context>/jiminy-      │
-└──────────┬───────┘   └──────────────────┘        │ captures/*.png         │
+│ Context Folder   │   │ LLM Provider +   │        │ <context>/jiminy-      │
+│                  │   │ API Key          │        │ captures/*.png         │
+└──────────┬───────┘   └──────────────────┘        │                        │
            │                                       └──────────┬───────────┘
            │                                                  │
            │                                                  ▼
@@ -170,8 +171,8 @@ Environment:
 └──────────┬───────────┘                                     │
            │                                                  ▼
            ▼                                       ┌──────────────────────┐
-┌──────────────────────┐                          │ Gemini Vision API     │
-│ Gemini Text Summarizer│                          └──────────┬───────────┘
+┌──────────────────────┐                          │ LLM Vision API       │
+│ LLM Text Summarizer  │                          └──────────┬───────────┘
 └──────────┬───────────┘                                     │
            ▼                                                  ▼
 ┌──────────────────────┐                          ┌──────────────────────┐

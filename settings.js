@@ -43,6 +43,9 @@ const saveSettings = (settings, options = {}) => {
   const existing = loadSettings(options)
   const hasContextFolderPath = Object.prototype.hasOwnProperty.call(settings, 'contextFolderPath')
   const hasLlmProviderApiKey = Object.prototype.hasOwnProperty.call(settings, 'llmProviderApiKey')
+  const hasLlmProviderName = Object.prototype.hasOwnProperty.call(settings, 'llmProviderName')
+  const hasLlmProviderTextModel = Object.prototype.hasOwnProperty.call(settings, 'llmProviderTextModel')
+  const hasLlmProviderVisionModel = Object.prototype.hasOwnProperty.call(settings, 'llmProviderVisionModel')
   const hasExclusions = Object.prototype.hasOwnProperty.call(settings, 'exclusions')
   const existingProvider = existing && typeof existing.llm_provider === 'object'
     ? existing.llm_provider
@@ -53,10 +56,23 @@ const saveSettings = (settings, options = {}) => {
 
   fs.mkdirSync(settingsDir, { recursive: true })
   const payload = { contextFolderPath }
-  if (hasLlmProviderApiKey) {
-    payload.llm_provider = {
-      ...existingProvider,
-      api_key: typeof settings.llmProviderApiKey === 'string' ? settings.llmProviderApiKey : ''
+  if (hasLlmProviderApiKey || hasLlmProviderName || hasLlmProviderTextModel || hasLlmProviderVisionModel) {
+    payload.llm_provider = { ...existingProvider }
+    if (hasLlmProviderApiKey) {
+      payload.llm_provider.api_key = typeof settings.llmProviderApiKey === 'string' ? settings.llmProviderApiKey : ''
+    }
+    if (hasLlmProviderName) {
+      payload.llm_provider.provider = typeof settings.llmProviderName === 'string' ? settings.llmProviderName : ''
+    }
+    if (hasLlmProviderTextModel) {
+      payload.llm_provider.text_model = typeof settings.llmProviderTextModel === 'string'
+        ? settings.llmProviderTextModel
+        : ''
+    }
+    if (hasLlmProviderVisionModel) {
+      payload.llm_provider.vision_model = typeof settings.llmProviderVisionModel === 'string'
+        ? settings.llmProviderVisionModel
+        : ''
     }
   } else if (Object.keys(existingProvider).length > 0) {
     payload.llm_provider = { ...existingProvider }

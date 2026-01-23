@@ -38,6 +38,8 @@ test('sync now builds context graph with mocked summaries', async () => {
     await window.waitForLoadState('domcontentloaded')
 
     await window.getByRole('button', { name: 'Choose...' }).click()
+    await window.locator('#llm-provider').selectOption('gemini')
+    await window.locator('#llm-api-key-save').click()
     const countsLocator = window.locator('#context-graph-progress')
     await expect(countsLocator).toHaveText(`Synced nodes 0/${expectedTotalNodes}`)
     await window.locator('#context-folder-save').click()

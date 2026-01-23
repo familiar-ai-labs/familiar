@@ -19,10 +19,16 @@ const makeFakeImageFile = async () => {
 test('image extraction enqueues analysis event with result md path', async () => {
   const previousMock = process.env.JIMINY_LLM_MOCK
   const previousMockText = process.env.JIMINY_LLM_MOCK_TEXT
+  const previousSettingsDir = process.env.JIMINY_SETTINGS_DIR
   process.env.JIMINY_LLM_MOCK = '1'
   process.env.JIMINY_LLM_MOCK_TEXT = 'mock extraction'
 
   const imagePath = await makeFakeImageFile()
+  const settingsDir = await makeTempDir('jiminy-settings-')
+  process.env.JIMINY_SETTINGS_DIR = settingsDir
+  await fs.writeFile(path.join(settingsDir, 'settings.json'), JSON.stringify({
+    llm_provider: { provider: 'gemini', api_key: '' }
+  }, null, 2), 'utf-8')
 
   let capturedEvent = null
   const handlerPromise = new Promise((resolve) => {
@@ -50,6 +56,11 @@ test('image extraction enqueues analysis event with result md path', async () =>
       delete process.env.JIMINY_LLM_MOCK_TEXT
     } else {
       process.env.JIMINY_LLM_MOCK_TEXT = previousMockText
+    }
+    if (typeof previousSettingsDir === 'undefined') {
+      delete process.env.JIMINY_SETTINGS_DIR
+    } else {
+      process.env.JIMINY_SETTINGS_DIR = previousSettingsDir
     }
   }
 })

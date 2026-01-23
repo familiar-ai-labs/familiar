@@ -1,6 +1,6 @@
 const { loadSettings } = require('../settings')
 const { JsonContextGraphStore } = require('../context-graph')
-const { DEFAULT_ANALYSIS_MODEL, runAnalysis } = require('./processor')
+const { runAnalysis } = require('./processor')
 
 const isLlmMockEnabled = () => process.env.JIMINY_LLM_MOCK === '1'
 
@@ -16,7 +16,15 @@ const createAnalysisHandler = ({
   }
 
   const settings = loadSettingsImpl()
+  const provider = settings?.llm_provider?.provider || ''
   const apiKey = settings?.llm_provider?.api_key || ''
+  const model = typeof settings?.llm_provider?.text_model === 'string' && settings.llm_provider.text_model.trim()
+    ? settings.llm_provider.text_model
+    : undefined
+  if (!provider) {
+    console.warn('Skipping analysis due to missing LLM provider', { resultMdPath })
+    return { skipped: true, reason: 'missing_provider' }
+  }
   if (!apiKey && !isLlmMockEnabled()) {
     console.warn('Skipping analysis due to missing LLM API key', { resultMdPath })
     return { skipped: true, reason: 'missing_api_key' }
@@ -31,13 +39,13 @@ const createAnalysisHandler = ({
     return { skipped: true, reason: 'missing_context_folder' }
   }
 
-  const model = settings?.llm_provider?.analysis_model || DEFAULT_ANALYSIS_MODEL
-  console.log('Starting analysis for result markdown', { resultMdPath, model })
+  console.log('Starting analysis for result markdown', { resultMdPath, provider, model })
 
   const result = await runAnalysisImpl({
     resultMdPath,
     contextGraph,
     contextFolderPath,
+    provider,
     apiKey,
     model
   })

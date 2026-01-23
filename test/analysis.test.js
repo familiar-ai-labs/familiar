@@ -69,6 +69,7 @@ test('analysis writes summary alongside relevant node folder', async () => {
     resultMdPath: extractionPath,
     contextGraph: graph,
     contextFolderPath: contextRoot,
+    generator: { model: 'mock', generate: async () => 'mock' },
     summarizeFn: async () => 'Summary of extraction.',
     findRelevantNodeFn: async () => fileNode
   })
@@ -92,6 +93,7 @@ test('analysis writes summary to general analysis folder when no relevant node f
     resultMdPath: extractionPath,
     contextGraph: graph,
     contextFolderPath: contextRoot,
+    generator: { model: 'mock', generate: async () => 'mock' },
     summarizeFn: async () => 'Summary of extraction.',
     findRelevantNodeFn: async () => null
   })

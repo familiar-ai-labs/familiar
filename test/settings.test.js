@@ -22,31 +22,33 @@ test('saveSettings persists contextFolderPath', () => {
   assert.equal(loaded.contextFolderPath, contextDir)
 })
 
-test('saveSettings persists llm_provider api_key and preserves context', () => {
+test('saveSettings persists llm_provider api_key/provider and preserves context', () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-'))
   const settingsDir = path.join(tempRoot, 'settings')
   const contextDir = path.join(tempRoot, 'context')
   fs.mkdirSync(contextDir)
 
   saveSettings({ contextFolderPath: contextDir }, { settingsDir })
-  saveSettings({ llmProviderApiKey: 'test-key' }, { settingsDir })
+  saveSettings({ llmProviderApiKey: 'test-key', llmProviderName: 'gemini' }, { settingsDir })
 
   const loaded = loadSettings({ settingsDir })
   assert.equal(loaded.contextFolderPath, contextDir)
+  assert.equal(loaded.llm_provider?.provider, 'gemini')
   assert.equal(loaded.llm_provider?.api_key, 'test-key')
 })
 
-test('saveSettings preserves llm_provider api_key when updating context path', () => {
+test('saveSettings preserves llm_provider api_key/provider when updating context path', () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-'))
   const settingsDir = path.join(tempRoot, 'settings')
   const contextDir = path.join(tempRoot, 'context')
   fs.mkdirSync(contextDir)
 
-  saveSettings({ llmProviderApiKey: 'keep-me' }, { settingsDir })
+  saveSettings({ llmProviderApiKey: 'keep-me', llmProviderName: 'openai' }, { settingsDir })
   saveSettings({ contextFolderPath: contextDir }, { settingsDir })
 
   const loaded = loadSettings({ settingsDir })
   assert.equal(loaded.contextFolderPath, contextDir)
+  assert.equal(loaded.llm_provider?.provider, 'openai')
   assert.equal(loaded.llm_provider?.api_key, 'keep-me')
 })
 

@@ -53,6 +53,19 @@
         </div>
 
         <div class="field">
+          <label for="llm-provider">LLM Provider</label>
+          <div class="field-row">
+            <select id="llm-provider" class="field-input">
+              <option value="">Select provider...</option>
+              <option value="gemini">Gemini</option>
+              <option value="openai">OpenAI</option>
+              <option value="anthropic">Anthropic</option>
+            </select>
+          </div>
+          <p id="llm-provider-error" class="field-error" role="alert" aria-live="polite"></p>
+        </div>
+
+        <div class="field">
           <label for="llm-api-key">Configure LLM Key</label>
           <div class="field-row">
             <input

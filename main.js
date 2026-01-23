@@ -3,9 +3,9 @@ const { app, BrowserWindow, Menu, Tray, dialog, nativeImage, ipcMain } = require
 const path = require('node:path');
 const { buildTrayMenuTemplate } = require('./menu');
 const { loadSettings, saveSettings, validateContextFolderPath } = require('./settings');
-const { JsonContextGraphStore, createSummarizer, DEFAULT_MODEL, syncContextGraph } = require('./context-graph');
+const { JsonContextGraphStore, createSummarizer, syncContextGraph } = require('./context-graph');
 const { showProviderExhaustedNotification } = require('./notifications');
-const { ExhaustedLlmProviderError } = require('./modelProviders/gemini');
+const { ExhaustedLlmProviderError } = require('./modelProviders');
 const { constructContextGraphSkeleton, MAX_NODES } = require('./context-graph/graphSkeleton');
 const { CAPTURES_DIR_NAME } = require('./const');
 const { registerCaptureHandlers, startCaptureFlow, closeOverlayWindow } = require('./screenshot/capture');
@@ -131,6 +131,7 @@ ipcMain.handle('settings:get', () => {
     try {
         const settings = loadSettings();
         const contextFolderPath = settings.contextFolderPath || '';
+        const llmProviderName = settings?.llm_provider?.provider || '';
         const llmProviderApiKey = settings?.llm_provider?.api_key || '';
         const exclusions = Array.isArray(settings.exclusions) ? settings.exclusions : [];
         let validationMessage = '';
@@ -146,10 +147,16 @@ ipcMain.handle('settings:get', () => {
             }
         }
 
-        return { contextFolderPath, validationMessage, llmProviderApiKey, exclusions };
+        return { contextFolderPath, validationMessage, llmProviderName, llmProviderApiKey, exclusions };
     } catch (error) {
         console.error('Failed to load settings', error);
-        return { contextFolderPath: '', validationMessage: 'Failed to load settings.', llmProviderApiKey: '', exclusions: [] };
+        return {
+            contextFolderPath: '',
+            validationMessage: 'Failed to load settings.',
+            llmProviderName: '',
+            llmProviderApiKey: '',
+            exclusions: []
+        };
     }
 });
 registerCaptureHandlers();
@@ -260,10 +267,11 @@ ipcMain.handle('settings:pickExclusion', async (event, contextFolderPath) => {
 ipcMain.handle('settings:save', (event, payload) => {
     const hasContextFolderPath = Object.prototype.hasOwnProperty.call(payload || {}, 'contextFolderPath');
     const hasLlmProviderApiKey = Object.prototype.hasOwnProperty.call(payload || {}, 'llmProviderApiKey');
+    const hasLlmProviderName = Object.prototype.hasOwnProperty.call(payload || {}, 'llmProviderName');
     const hasExclusions = Object.prototype.hasOwnProperty.call(payload || {}, 'exclusions');
     const settingsPayload = {};
 
-    if (!hasContextFolderPath && !hasLlmProviderApiKey && !hasExclusions) {
+    if (!hasContextFolderPath && !hasLlmProviderApiKey && !hasLlmProviderName && !hasExclusions) {
         return { ok: false, message: 'No settings provided.' };
     }
 
@@ -288,6 +296,12 @@ ipcMain.handle('settings:save', (event, payload) => {
             : '';
     }
 
+    if (hasLlmProviderName) {
+        settingsPayload.llmProviderName = typeof payload.llmProviderName === 'string'
+            ? payload.llmProviderName
+            : '';
+    }
+
     if (hasExclusions) {
         settingsPayload.exclusions = Array.isArray(payload.exclusions) ? payload.exclusions : [];
     }
@@ -305,7 +319,11 @@ ipcMain.handle('settings:save', (event, payload) => {
 ipcMain.handle('contextGraph:sync', async (event) => {
     const settings = loadSettings();
     const contextFolderPath = settings.contextFolderPath || '';
+    const llmProviderName = settings?.llm_provider?.provider || '';
     const llmProviderApiKey = settings?.llm_provider?.api_key || '';
+    const textModel = typeof settings?.llm_provider?.text_model === 'string' && settings.llm_provider.text_model.trim()
+        ? settings.llm_provider.text_model
+        : undefined;
     const exclusions = Array.isArray(settings.exclusions) ? settings.exclusions : [];
     const validation = validateContextFolderPath(contextFolderPath);
 
@@ -315,12 +333,19 @@ ipcMain.handle('contextGraph:sync', async (event) => {
     }
 
     try {
+        if (!llmProviderName) {
+            return { ok: false, message: 'LLM provider is not configured. Set it in Settings.' };
+        }
         if (process.env.JIMINY_LLM_MOCK !== '1' && !llmProviderApiKey) {
             return { ok: false, message: 'LLM API key is not configured. Set it in Settings.' };
         }
 
         const store = new JsonContextGraphStore();
-        const summarizer = createSummarizer({ model: DEFAULT_MODEL, apiKey: llmProviderApiKey });
+        const summarizer = createSummarizer({
+            provider: llmProviderName,
+            apiKey: llmProviderApiKey,
+            textModel
+        });
         const result = await syncContextGraph({
             rootPath: validation.path,
             store,

@@ -4,7 +4,7 @@ const fs = require('node:fs/promises')
 const path = require('node:path')
 const os = require('node:os')
 
-const { ExhaustedLlmProviderError } = require('../modelProviders/gemini')
+const { ExhaustedLlmProviderError } = require('../modelProviders')
 
 const makeTempSettingsDir = async () => fs.mkdtemp(path.join(os.tmpdir(), 'jiminy-settings-'))
 
@@ -25,7 +25,7 @@ test('image extraction notifies and skips on exhausted provider', async (t) => {
   const settingsDir = await makeTempSettingsDir()
   const settingsPath = path.join(settingsDir, 'settings.json')
   await fs.writeFile(settingsPath, JSON.stringify({
-    llm_provider: { api_key: 'test-key' }
+    llm_provider: { provider: 'gemini', api_key: 'test-key' }
   }, null, 2), 'utf-8')
 
   const previousSettingsDir = process.env.JIMINY_SETTINGS_DIR

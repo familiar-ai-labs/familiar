@@ -9,6 +9,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const llmKeySaveButton = document.getElementById('llm-api-key-save')
   const llmKeyError = document.getElementById('llm-api-key-error')
   const llmKeyStatus = document.getElementById('llm-api-key-status')
+  const llmProviderSelect = document.getElementById('llm-provider')
+  const llmProviderError = document.getElementById('llm-provider-error')
   const syncButton = document.getElementById('context-graph-sync')
   const syncStatus = document.getElementById('context-graph-status')
   const syncProgress = document.getElementById('context-graph-progress')
@@ -193,10 +195,14 @@ document.addEventListener('DOMContentLoaded', () => {
       if (llmKeyInput) {
         llmKeyInput.value = result.llmProviderApiKey || ''
       }
+      if (llmProviderSelect) {
+        llmProviderSelect.value = result.llmProviderName || ''
+      }
       currentExclusions = Array.isArray(result.exclusions) ? [...result.exclusions] : []
       renderExclusions()
       setMessage(errorMessage, result.validationMessage || '')
       setMessage(statusMessage, '')
+      setMessage(llmProviderError, '')
       setMessage(llmKeyError, '')
       setMessage(llmKeyStatus, '')
       updateSaveState()
@@ -204,6 +210,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (error) {
       console.error('Failed to load settings', error)
       setMessage(errorMessage, 'Failed to load settings.')
+      setMessage(llmProviderError, 'Failed to load settings.')
       setMessage(llmKeyError, 'Failed to load settings.')
     }
     return null
@@ -211,6 +218,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (!jiminy.pickContextFolder || !jiminy.saveSettings || !jiminy.getSettings) {
     setMessage(errorMessage, 'Settings bridge unavailable. Restart the app.')
+    setMessage(llmProviderError, 'Settings bridge unavailable. Restart the app.')
     setMessage(llmKeyError, 'Settings bridge unavailable. Restart the app.')
     updateSaveState()
     return
@@ -281,15 +289,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (llmKeySaveButton) {
     llmKeySaveButton.addEventListener('click', async () => {
-      if (!llmKeyInput) {
+      if (!llmKeyInput || !llmProviderSelect) {
         return
       }
 
       setMessage(llmKeyStatus, 'Saving...')
       setMessage(llmKeyError, '')
+      setMessage(llmProviderError, '')
+
+      if (!llmProviderSelect.value) {
+        setMessage(llmKeyStatus, '')
+        setMessage(llmProviderError, 'Select an LLM provider.')
+        return
+      }
 
       try {
-        const result = await jiminy.saveSettings({ llmProviderApiKey: llmKeyInput.value })
+        const result = await jiminy.saveSettings({
+          llmProviderName: llmProviderSelect.value,
+          llmProviderApiKey: llmKeyInput.value
+        })
         if (result && result.ok) {
           setMessage(llmKeyStatus, 'Saved.')
         } else {
@@ -301,6 +319,12 @@ document.addEventListener('DOMContentLoaded', () => {
         setMessage(llmKeyStatus, '')
         setMessage(llmKeyError, 'Failed to save LLM key.')
       }
+    })
+  }
+
+  if (llmProviderSelect) {
+    llmProviderSelect.addEventListener('change', () => {
+      setMessage(llmProviderError, '')
     })
   }
 

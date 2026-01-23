@@ -1,14 +1,9 @@
 const { withHttpRetry, HttpRetryableError } = require('../utils/retry')
+const { ExhaustedLlmProviderError } = require('./errors')
 
 const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models'
-
-class ExhaustedLlmProviderError extends Error {
-    constructor(message = 'LLM provider rate limit exhausted.') {
-        super(message)
-        this.name = 'ExhaustedLlmProviderError'
-        this.code = 'exhaustedLlmProvider'
-    }
-}
+const DEFAULT_GEMINI_TEXT_MODEL = 'gemini-2.0-flash-lite'
+const DEFAULT_GEMINI_VISION_MODEL = 'gemini-2.0-flash'
 
 const extractTextFromPayload = (payload) => {
     const candidates = payload?.candidates
@@ -132,8 +127,40 @@ const generateVisionContent = async ({
     return extractTextFromPayload(payload).trim()
 }
 
+const createGeminiProvider = ({
+    apiKey,
+    textModel = DEFAULT_GEMINI_TEXT_MODEL,
+    visionModel = DEFAULT_GEMINI_VISION_MODEL,
+    fetchImpl
+} = {}) => ({
+    name: 'gemini',
+    text: {
+        model: textModel,
+        generate: async (prompt) => generateContent({
+            apiKey,
+            model: textModel,
+            prompt,
+            fetchImpl
+        })
+    },
+    vision: {
+        model: visionModel,
+        extract: async ({ prompt, imageBase64, mimeType }) => generateVisionContent({
+            apiKey,
+            model: visionModel,
+            prompt,
+            imageBase64,
+            mimeType,
+            fetchImpl
+        })
+    }
+})
+
 module.exports = {
+    DEFAULT_GEMINI_TEXT_MODEL,
+    DEFAULT_GEMINI_VISION_MODEL,
     ExhaustedLlmProviderError,
+    createGeminiProvider,
     generateContent,
     generateVisionContent
 }

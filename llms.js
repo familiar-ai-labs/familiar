@@ -1,6 +1,6 @@
-const { generateContent, ExhaustedLlmProviderError } = require('./modelProviders/gemini');
+const { createModelProviderClients, DEFAULT_TEXT_MODELS, ExhaustedLlmProviderError } = require('./modelProviders');
 
-const DEFAULT_MODEL = 'gemini-2.0-flash-lite';
+const DEFAULT_MODEL = DEFAULT_TEXT_MODELS.gemini;
 
 const buildFilePrompt = ({ relativePath, content }) =>
     `Summarize the following file for a context index.\n` +
@@ -16,21 +16,20 @@ const buildFolderPrompt = ({ relativePath, summaries }) =>
     `Avoid repeating every file name.\n\n` +
     `File summaries:\n${summaries}`;
 
-const createGeminiSummarizer = ({ apiKey, model = DEFAULT_MODEL } = {}) => ({
-    model,
-    summarizeFile: async ({ relativePath, content }) =>
-        generateContent({
-            apiKey,
-            model,
-            prompt: buildFilePrompt({ relativePath, content }),
-        }),
-    summarizeFolder: async ({ relativePath, summaries }) =>
-        generateContent({
-            apiKey,
-            model,
-            prompt: buildFolderPrompt({ relativePath, summaries }),
-        }),
-});
+const createProviderSummarizer = ({ provider, apiKey, textModel, fetchImpl } = {}) => {
+    const clients = createModelProviderClients({ provider, apiKey, textModel, fetchImpl });
+    return {
+        provider: clients.name,
+        model: clients.text.model,
+        summarizeFile: async ({ relativePath, content }) =>
+            clients.text.generate(buildFilePrompt({ relativePath, content })),
+        summarizeFolder: async ({ relativePath, summaries }) =>
+            clients.text.generate(buildFolderPrompt({ relativePath, summaries })),
+    };
+};
+
+const createGeminiSummarizer = ({ apiKey, model = DEFAULT_MODEL, fetchImpl } = {}) =>
+    createProviderSummarizer({ provider: 'gemini', apiKey, textModel: model, fetchImpl });
 
 const createMockSummarizer = ({ text = 'gibberish', model = 'mock' } = {}) => ({
     model,
@@ -43,13 +42,14 @@ const createSummarizer = (options = {}) => {
         return createMockSummarizer({ text: process.env.JIMINY_LLM_MOCK_TEXT || 'gibberish' });
     }
 
-    return createGeminiSummarizer(options);
+    return createProviderSummarizer(options);
 };
 
 module.exports = {
     DEFAULT_MODEL,
     ExhaustedLlmProviderError,
     createGeminiSummarizer,
+    createProviderSummarizer,
     createMockSummarizer,
     createSummarizer,
 };
