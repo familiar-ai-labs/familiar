@@ -1,3 +1,5 @@
+const { generateContent, ExhaustedLlmProviderError } = require('./modelProviders/gemini');
+
 const DEFAULT_MODEL = 'gemini-2.0-flash-lite';
 
 const buildFilePrompt = ({ relativePath, content }) =>
@@ -13,43 +15,6 @@ const buildFolderPrompt = ({ relativePath, summaries }) =>
     `Instructions: Provide a concise overview of the folder's themes, key artifacts, and how the files relate. ` +
     `Avoid repeating every file name.\n\n` +
     `File summaries:\n${summaries}`;
-
-const extractText = (payload) => {
-    const candidates = payload?.candidates;
-    if (!Array.isArray(candidates) || candidates.length === 0) {
-        return '';
-    }
-
-    const parts = candidates[0]?.content?.parts;
-    if (!Array.isArray(parts) || parts.length === 0) {
-        return '';
-    }
-
-    return parts.map((part) => part?.text || '').join('');
-};
-
-const generateContent = async ({ apiKey, model, prompt }) => {
-    if (!apiKey) {
-        throw new Error('LLM API key is required for Gemini summaries.');
-    }
-
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-    const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-        }),
-    });
-
-    if (!response.ok) {
-        const message = await response.text();
-        throw new Error(`Gemini request failed: ${response.status} ${message}`);
-    }
-
-    const payload = await response.json();
-    return extractText(payload).trim();
-};
 
 const createGeminiSummarizer = ({ apiKey, model = DEFAULT_MODEL } = {}) => ({
     model,
@@ -83,6 +48,7 @@ const createSummarizer = (options = {}) => {
 
 module.exports = {
     DEFAULT_MODEL,
+    ExhaustedLlmProviderError,
     createGeminiSummarizer,
     createMockSummarizer,
     createSummarizer,

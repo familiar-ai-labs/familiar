@@ -1,5 +1,7 @@
 const { loadSettings } = require('../../settings')
 const { enqueueAnalysis } = require('../../analysis')
+const { showProviderExhaustedNotification } = require('../../notifications')
+const { ExhaustedLlmProviderError } = require('../../modelProviders/gemini')
 const { DEFAULT_VISION_MODEL, runImageExtraction } = require('./index')
 
 const isLlmMockEnabled = () => process.env.JIMINY_LLM_MOCK === '1'
@@ -20,11 +22,27 @@ const handleImageExtractionEvent = async (event) => {
 
   console.log('Starting image extraction', { imagePath, model: DEFAULT_VISION_MODEL })
 
-  const { outputPath, markdown } = await runImageExtraction({
-    apiKey,
-    model: DEFAULT_VISION_MODEL,
-    imagePath
-  })
+  let extractionResult
+  try {
+    extractionResult = await runImageExtraction({
+      apiKey,
+      model: DEFAULT_VISION_MODEL,
+      imagePath
+    })
+  } catch (error) {
+    if (error instanceof ExhaustedLlmProviderError) {
+      console.warn('LLM provider exhausted during image extraction', {
+        imagePath,
+        message: error.message
+      })
+      showProviderExhaustedNotification({ source: 'image_extraction' })
+      return { skipped: true, reason: 'provider_exhausted' }
+    }
+
+    throw error
+  }
+
+  const { outputPath, markdown } = extractionResult
 
   console.log('Image extraction saved', {
     imagePath,

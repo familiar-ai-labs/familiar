@@ -20,6 +20,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const addExclusionBtn = document.getElementById('add-exclusion')
 
   let currentExclusions = []
+  let isSyncing = false
+  let isMaxNodesExceeded = false
 
   const setMessage = (element, message) => {
     if (!element) {
@@ -37,9 +39,75 @@ document.addEventListener('DOMContentLoaded', () => {
     saveButton.disabled = !contextFolderInput.value
   }
 
-  const setSyncState = (isSyncing) => {
+  const updateSyncButtonState = () => {
+    if (!syncButton) {
+      return
+    }
+
+    syncButton.disabled = isSyncing || isMaxNodesExceeded
+  }
+
+  const setSyncState = (nextIsSyncing) => {
+    isSyncing = Boolean(nextIsSyncing)
+    updateSyncButtonState()
+  }
+
+  const showContextGraphLoading = () => {
     if (syncButton) {
-      syncButton.disabled = isSyncing
+      syncButton.hidden = true
+    }
+    setMessage(syncProgress, 'Loading...')
+  }
+
+  const showContextGraphCounts = (syncedNodes, totalNodes) => {
+    if (syncButton) {
+      syncButton.hidden = false
+    }
+    setMessage(syncProgress, `Synced nodes ${syncedNodes}/${totalNodes}`)
+  }
+
+  const refreshContextGraphStatus = async (options = {}) => {
+    if (!jiminy.getContextGraphStatus) {
+      setMessage(syncError, 'Context graph status bridge unavailable. Restart the app.')
+      if (syncButton) {
+        syncButton.hidden = false
+      }
+      setMessage(syncProgress, 'Synced nodes 0/0')
+      return
+    }
+
+    if (isSyncing) {
+      return
+    }
+
+    showContextGraphLoading()
+    isMaxNodesExceeded = false
+    updateSyncButtonState()
+
+    try {
+      const contextFolderPath = typeof options.contextFolderPath === 'string'
+        ? options.contextFolderPath
+        : contextFolderInput?.value || ''
+      const exclusions = Array.isArray(options.exclusions) ? options.exclusions : currentExclusions
+      const result = await jiminy.getContextGraphStatus({ contextFolderPath, exclusions })
+      const syncedNodes = Number(result?.syncedNodes ?? 0)
+      const totalNodes = Number(result?.totalNodes ?? 0)
+      isMaxNodesExceeded = Boolean(result?.maxNodesExceeded)
+
+      if (isMaxNodesExceeded) {
+        setMessage(syncError, result?.message || 'Context graph exceeds MAX_NODES.')
+      } else {
+        setMessage(syncError, '')
+      }
+
+      showContextGraphCounts(syncedNodes, totalNodes)
+    } catch (error) {
+      console.error('Failed to load context graph status', error)
+      isMaxNodesExceeded = false
+      setMessage(syncError, 'Failed to load context graph status.')
+      showContextGraphCounts(0, 0)
+    } finally {
+      updateSyncButtonState()
     }
   }
 
@@ -74,6 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       await jiminy.saveSettings({ exclusions: currentExclusions })
       console.log('Exclusions saved', currentExclusions)
+      await refreshContextGraphStatus()
     } catch (error) {
       console.error('Failed to save exclusions', error)
     }
@@ -111,11 +180,13 @@ document.addEventListener('DOMContentLoaded', () => {
       setMessage(llmKeyError, '')
       setMessage(llmKeyStatus, '')
       updateSaveState()
+      return result
     } catch (error) {
       console.error('Failed to load settings', error)
       setMessage(errorMessage, 'Failed to load settings.')
       setMessage(llmKeyError, 'Failed to load settings.')
     }
+    return null
   }
 
   if (!jiminy.pickContextFolder || !jiminy.saveSettings || !jiminy.getSettings) {
@@ -147,6 +218,7 @@ document.addEventListener('DOMContentLoaded', () => {
           setMessage(errorMessage, '')
           setMessage(statusMessage, '')
           updateSaveState()
+          await refreshContextGraphStatus({ contextFolderPath: result.path, exclusions: currentExclusions })
         } else if (result && result.error) {
           setMessage(statusMessage, '')
           setMessage(errorMessage, result.error)
@@ -174,6 +246,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const result = await jiminy.saveSettings({ contextFolderPath: contextFolderInput.value })
         if (result && result.ok) {
           setMessage(statusMessage, 'Saved.')
+          await refreshContextGraphStatus()
         } else {
           setMessage(statusMessage, '')
           setMessage(errorMessage, result?.message || 'Failed to save settings.')
@@ -218,6 +291,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return
       }
 
+      let shouldRefreshStatus = false
       setMessage(syncError, '')
       setMessage(syncStatus, 'Syncing...')
       setMessage(syncWarning, '')
@@ -241,6 +315,7 @@ document.addEventListener('DOMContentLoaded', () => {
               : 'Warning: cycle detected in context folder.'
             setMessage(syncWarning, warningText)
           }
+          shouldRefreshStatus = true
         } else {
           setMessage(syncStatus, '')
           setMessage(syncWarning, '')
@@ -253,6 +328,9 @@ document.addEventListener('DOMContentLoaded', () => {
         setMessage(syncError, 'Failed to sync context graph.')
       } finally {
         setSyncState(false)
+        if (shouldRefreshStatus) {
+          await refreshContextGraphStatus()
+        }
       }
     })
   }
@@ -294,5 +372,11 @@ document.addEventListener('DOMContentLoaded', () => {
     })
   }
 
-  void loadSettings()
+  const initialize = async () => {
+    showContextGraphLoading()
+    await loadSettings()
+    await refreshContextGraphStatus()
+  }
+
+  void initialize()
 })

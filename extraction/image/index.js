@@ -1,5 +1,6 @@
 const fs = require('node:fs/promises')
 const path = require('node:path')
+const { generateVisionContent } = require('../../modelProviders/gemini')
 
 const DEFAULT_VISION_MODEL = 'gemini-2.0-flash'
 const DEFAULT_VISION_MIME = 'image/png'
@@ -27,20 +28,6 @@ const buildImageExtractionPrompt = () => (
   'If text is present, put it in a fenced code block.\n'
 )
 
-const extractTextFromPayload = (payload) => {
-  const candidates = payload?.candidates
-  if (!Array.isArray(candidates) || candidates.length === 0) {
-    return ''
-  }
-
-  const parts = candidates[0]?.content?.parts
-  if (!Array.isArray(parts) || parts.length === 0) {
-    return ''
-  }
-
-  return parts.map((part) => part?.text || '').join('')
-}
-
 const inferMimeType = (imagePath, fallback = DEFAULT_VISION_MIME) => {
   if (!imagePath) {
     return fallback
@@ -57,53 +44,6 @@ const readImageAsBase64 = async (imagePath) => {
 
   const buffer = await fs.readFile(imagePath)
   return buffer.toString('base64')
-}
-
-const generateVisionContent = async ({
-  apiKey,
-  model,
-  prompt,
-  imageBase64,
-  mimeType = DEFAULT_VISION_MIME,
-  fetchImpl = fetch
-} = {}) => {
-  if (!apiKey) {
-    throw new Error('LLM API key is required for Gemini vision extraction.')
-  }
-
-  if (!imageBase64) {
-    throw new Error('Image data is required for Gemini vision extraction.')
-  }
-
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
-  const response = await fetchImpl(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            { text: prompt },
-            {
-              inline_data: {
-                mime_type: mimeType,
-                data: imageBase64
-              }
-            }
-          ]
-        }
-      ]
-    })
-  })
-
-  if (!response.ok) {
-    const message = await response.text()
-    throw new Error(`Gemini vision request failed: ${response.status} ${message}`)
-  }
-
-  const payload = await response.json()
-  return extractTextFromPayload(payload).trim()
 }
 
 const createGeminiVisionExtractor = ({ apiKey, model = DEFAULT_VISION_MODEL, fetchImpl } = {}) => ({

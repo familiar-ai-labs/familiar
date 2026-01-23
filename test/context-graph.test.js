@@ -4,6 +4,7 @@ const path = require('node:path')
 const assert = require('node:assert/strict')
 const { test } = require('node:test')
 const { JsonContextGraphStore, syncContextGraph } = require('../context-graph')
+const { constructContextGraphSkeleton } = require('../context-graph/graphSkeleton')
 const { CAPTURES_DIR_NAME, EXTRA_CONTEXT_SUFFIX } = require('../const')
 
 const createTempDir = (prefix) => fs.mkdtempSync(path.join(os.tmpdir(), prefix))
@@ -102,6 +103,38 @@ const createStore = () => {
   const settingsDir = createTempDir('jiminy-settings-')
   return new JsonContextGraphStore({ settingsDir })
 }
+
+test('context graph totals match sync counts', async () => {
+  const contextRoot = createTempDir('jiminy-context-')
+  writeFixtureFiles(contextRoot)
+  writeCaptureFolderFixture(contextRoot)
+
+  const ignoredPath = path.join(contextRoot, 'ignored')
+  fs.mkdirSync(ignoredPath, { recursive: true })
+  fs.writeFileSync(path.join(ignoredPath, 'skip.md'), 'Skip me', 'utf-8')
+
+  const exclusions = ['ignored']
+  const effectiveExclusions = [CAPTURES_DIR_NAME, ...exclusions]
+
+  const skeleton = constructContextGraphSkeleton(contextRoot, { exclusions: effectiveExclusions })
+
+  const store = createStore()
+  const summarizer = {
+    model: 'test-model',
+    summarizeFile: async ({ relativePath }) => `Summary for ${relativePath}`,
+    summarizeFolder: async ({ relativePath }) => `Folder summary for ${relativePath || '.'}`
+  }
+
+  const result = await syncContextGraph({
+    rootPath: contextRoot,
+    store,
+    summarizer,
+    exclusions
+  })
+
+  assert.equal(result.graph.counts.files, skeleton.counts.files)
+  assert.equal(result.graph.counts.folders, skeleton.counts.folders)
+})
 
 test('sync builds a context graph and persists json', async () => {
   const contextRoot = createTempDir('jiminy-context-')

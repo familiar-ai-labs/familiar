@@ -4,6 +4,10 @@ const path = require('node:path');
 const { buildTrayMenuTemplate } = require('./menu');
 const { loadSettings, saveSettings, validateContextFolderPath } = require('./settings');
 const { JsonContextGraphStore, createSummarizer, DEFAULT_MODEL, syncContextGraph } = require('./context-graph');
+const { showProviderExhaustedNotification } = require('./notifications');
+const { ExhaustedLlmProviderError } = require('./modelProviders/gemini');
+const { constructContextGraphSkeleton, MAX_NODES } = require('./context-graph/graphSkeleton');
+const { CAPTURES_DIR_NAME } = require('./const');
 const { registerCaptureHandlers, startCaptureFlow, closeOverlayWindow } = require('./screenshot/capture');
 const { registerCaptureHotkey, unregisterGlobalHotkeys } = require('./hotkeys');
 const { registerExtractionHandlers } = require('./extraction');
@@ -335,7 +339,98 @@ ipcMain.handle('contextGraph:sync', async (event) => {
         };
     } catch (error) {
         console.error('Context graph sync failed', error);
+        if (error instanceof ExhaustedLlmProviderError) {
+            showProviderExhaustedNotification({ source: 'context_graph_sync' });
+            return { ok: false, message: 'LLM provider rate limit exhausted. Please try again later.' };
+        }
         return { ok: false, message: error.message || 'Failed to sync context graph.' };
+    }
+});
+
+const getSyncedNodeCount = (graph) => {
+    if (!graph) {
+        return 0;
+    }
+
+    if (graph.counts) {
+        const files = Number(graph.counts.files || 0);
+        const folders = Number(graph.counts.folders || 0);
+        return files + folders;
+    }
+
+    if (graph.nodes && typeof graph.nodes === 'object') {
+        return Object.keys(graph.nodes).length;
+    }
+
+    return 0;
+};
+
+const parseMaxNodesError = (error) => {
+    const message = error?.message || '';
+    const match = /Context graph has (\d+) nodes, exceeding MAX_NODES/.exec(message);
+    if (!match) {
+        return { maxNodesExceeded: false, totalNodes: 0 };
+    }
+
+    return {
+        maxNodesExceeded: true,
+        totalNodes: Number(match[1])
+    };
+};
+
+ipcMain.handle('contextGraph:status', async (_event, payload = {}) => {
+    const settings = loadSettings();
+    const contextFolderPath = typeof payload?.contextFolderPath === 'string'
+        ? payload.contextFolderPath
+        : settings.contextFolderPath || '';
+    const exclusions = Array.isArray(payload?.exclusions)
+        ? payload.exclusions
+        : Array.isArray(settings.exclusions)
+            ? settings.exclusions
+            : [];
+
+    if (!contextFolderPath) {
+        return { ok: true, syncedNodes: 0, totalNodes: 0, maxNodesExceeded: false };
+    }
+
+    const validation = validateContextFolderPath(contextFolderPath);
+    if (!validation.ok) {
+        return { ok: true, syncedNodes: 0, totalNodes: 0, maxNodesExceeded: false };
+    }
+
+    const store = new JsonContextGraphStore();
+    const syncedNodes = getSyncedNodeCount(store.load());
+    const effectiveExclusions = Array.from(new Set([CAPTURES_DIR_NAME, ...exclusions].filter(Boolean)));
+
+    try {
+        const scanResult = constructContextGraphSkeleton(validation.path, {
+            maxNodes: MAX_NODES,
+            exclusions: effectiveExclusions,
+            logger: console,
+        });
+
+        const totalNodes = scanResult.counts.files + scanResult.counts.folders;
+        return { ok: true, syncedNodes, totalNodes, maxNodesExceeded: false };
+    } catch (error) {
+        const maxNodes = parseMaxNodesError(error);
+        if (maxNodes.maxNodesExceeded) {
+            return {
+                ok: false,
+                syncedNodes,
+                totalNodes: maxNodes.totalNodes,
+                maxNodesExceeded: true,
+                message: error.message || `Context graph exceeds MAX_NODES (${MAX_NODES}).`,
+            };
+        }
+
+        console.error('Failed to compute context graph status', error);
+        return {
+            ok: false,
+            syncedNodes,
+            totalNodes: 0,
+            maxNodesExceeded: false,
+            message: error.message || 'Failed to check context graph status.',
+        };
     }
 });
 

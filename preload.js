@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('jiminy', {
     const data = typeof payload === 'string' ? { contextFolderPath: payload } : payload
     return ipcRenderer.invoke('settings:save', data)
   },
+  getContextGraphStatus: (payload) => ipcRenderer.invoke('contextGraph:status', payload),
   syncContextGraph: () => ipcRenderer.invoke('contextGraph:sync'),
   onContextGraphProgress: (handler) => {
     const listener = (_event, payload) => handler(payload)

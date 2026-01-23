@@ -3,6 +3,8 @@ const os = require('node:os')
 const path = require('node:path')
 const { test, expect } = require('playwright/test')
 const { _electron: electron } = require('playwright')
+const { constructContextGraphSkeleton } = require('../../context-graph/graphSkeleton')
+const { CAPTURES_DIR_NAME } = require('../../const')
 
 test('sync now builds context graph with mocked summaries', async () => {
   const appRoot = path.join(__dirname, '../..')
@@ -26,15 +28,25 @@ test('sync now builds context graph with mocked summaries', async () => {
     }
   })
 
+  const scanResult = constructContextGraphSkeleton(contextPath, {
+    exclusions: [CAPTURES_DIR_NAME]
+  })
+  const expectedTotalNodes = scanResult.counts.files + scanResult.counts.folders
+
   try {
     const window = await electronApp.firstWindow()
     await window.waitForLoadState('domcontentloaded')
 
     await window.getByRole('button', { name: 'Choose...' }).click()
+    const countsLocator = window.locator('#context-graph-progress')
+    await expect(countsLocator).toHaveText(`Synced nodes 0/${expectedTotalNodes}`)
     await window.locator('#context-folder-save').click()
+
+    await expect(countsLocator).toHaveText(`Synced nodes 0/${expectedTotalNodes}`)
 
     await window.getByRole('button', { name: 'Sync now' }).click()
     await expect(window.locator('#context-graph-status')).toHaveText(/Sync complete/)
+    await expect(countsLocator).toHaveText(`Synced nodes ${expectedTotalNodes}/${expectedTotalNodes}`)
 
     const graphPath = path.join(settingsDir, 'context-tree.json')
     await expect.poll(() => fs.existsSync(graphPath)).toBe(true)
