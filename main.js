@@ -405,22 +405,42 @@ ipcMain.handle('contextGraph:prune', () => {
     }
 });
 
-const getSyncedNodeCount = (graph) => {
-    if (!graph) {
-        return 0;
+/**
+ * Computes sync stats by comparing stored graph nodes to current scan nodes.
+ * @param {Object|null} storedGraph - The previously saved graph
+ * @param {Object} scanResult - The result from constructContextGraphSkeleton
+ * @returns {{ synced: number, outOfSync: number, new: number, total: number }}
+ */
+const computeSyncStats = (storedGraph, scanResult) => {
+    const storedNodes = storedGraph?.nodes || {};
+    const currentNodes = scanResult.nodes || {};
+    const total = scanResult.counts.files + scanResult.counts.folders;
+
+    let synced = 0;
+    let outOfSync = 0;
+    let newNodes = 0;
+
+    for (const nodeId of Object.keys(currentNodes)) {
+        const currentNode = currentNodes[nodeId];
+        const storedNode = storedNodes[nodeId];
+
+        if (!storedNode) {
+            // Node doesn't exist in stored graph - it's new
+            newNodes += 1;
+        } else if (
+            currentNode.contentHash &&
+            storedNode.contentHash &&
+            currentNode.contentHash === storedNode.contentHash
+        ) {
+            // Hash matches - synced
+            synced += 1;
+        } else {
+            // Hash differs or missing - out of sync
+            outOfSync += 1;
+        }
     }
 
-    if (graph.counts) {
-        const files = Number(graph.counts.files || 0);
-        const folders = Number(graph.counts.folders || 0);
-        return files + folders;
-    }
-
-    if (graph.nodes && typeof graph.nodes === 'object') {
-        return Object.keys(graph.nodes).length;
-    }
-
-    return 0;
+    return { synced, outOfSync, new: newNodes, total };
 };
 
 const parseMaxNodesError = (error) => {
@@ -448,16 +468,30 @@ ipcMain.handle('contextGraph:status', async (_event, payload = {}) => {
             : [];
 
     if (!contextFolderPath) {
-        return { ok: true, syncedNodes: 0, totalNodes: 0, maxNodesExceeded: false };
+        return {
+            ok: true,
+            syncedNodes: 0,
+            outOfSyncNodes: 0,
+            newNodes: 0,
+            totalNodes: 0,
+            maxNodesExceeded: false
+        };
     }
 
     const validation = validateContextFolderPath(contextFolderPath);
     if (!validation.ok) {
-        return { ok: true, syncedNodes: 0, totalNodes: 0, maxNodesExceeded: false };
+        return {
+            ok: true,
+            syncedNodes: 0,
+            outOfSyncNodes: 0,
+            newNodes: 0,
+            totalNodes: 0,
+            maxNodesExceeded: false
+        };
     }
 
     const store = new JsonContextGraphStore({ contextFolderPath: validation.path });
-    const syncedNodes = getSyncedNodeCount(store.load());
+    const storedGraph = store.load();
     const effectiveExclusions = Array.from(new Set(exclusions.filter(Boolean)));
 
     try {
@@ -467,14 +501,23 @@ ipcMain.handle('contextGraph:status', async (_event, payload = {}) => {
             logger: console,
         });
 
-        const totalNodes = scanResult.counts.files + scanResult.counts.folders;
-        return { ok: true, syncedNodes, totalNodes, maxNodesExceeded: false };
+        const stats = computeSyncStats(storedGraph, scanResult);
+        return {
+            ok: true,
+            syncedNodes: stats.synced,
+            outOfSyncNodes: stats.outOfSync,
+            newNodes: stats.new,
+            totalNodes: stats.total,
+            maxNodesExceeded: false
+        };
     } catch (error) {
         const maxNodes = parseMaxNodesError(error);
         if (maxNodes.maxNodesExceeded) {
             return {
                 ok: false,
-                syncedNodes,
+                syncedNodes: 0,
+                outOfSyncNodes: 0,
+                newNodes: 0,
                 totalNodes: maxNodes.totalNodes,
                 maxNodesExceeded: true,
                 message: error.message || `Context graph exceeds MAX_NODES (${MAX_NODES}).`,
@@ -484,7 +527,9 @@ ipcMain.handle('contextGraph:status', async (_event, payload = {}) => {
         console.error('Failed to compute context graph status', error);
         return {
             ok: false,
-            syncedNodes,
+            syncedNodes: 0,
+            outOfSyncNodes: 0,
+            newNodes: 0,
             totalNodes: 0,
             maxNodesExceeded: false,
             message: error.message || 'Failed to check context graph status.',

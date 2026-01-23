@@ -72,12 +72,20 @@ const syncContextGraph = async ({
     })
   }
 
+  // Track sync stats: synced (hash match), outOfSync (hash differs), new (not in previous)
+  const syncStats = {
+    synced: 0,
+    outOfSync: 0,
+    new: 0
+  }
+
   const now = new Date().toISOString()
 
   for (const fileId of fileIds) {
     const node = nodes[fileId]
     const previous = previousNodes[fileId]
     const content = fileContents.get(fileId)
+    const isNew = !previous
 
     if (
       previous &&
@@ -89,8 +97,16 @@ const syncContextGraph = async ({
     ) {
       node.summary = previous.summary
       node.summaryUpdatedAt = previous.summaryUpdatedAt || null
+      syncStats.synced += 1
       markProgress(node, 'file:cached')
       continue
+    }
+
+    // Track as new or out-of-sync
+    if (isNew) {
+      syncStats.new += 1
+    } else {
+      syncStats.outOfSync += 1
     }
 
     if (!content) {
@@ -123,13 +139,46 @@ const syncContextGraph = async ({
 
   for (const folderId of folderOrder) {
     const node = nodes[folderId]
+    const previous = previousNodes[folderId]
+    const isNew = !previous
     const summaries = collectFileSummaries(nodes, folderId, folderSummaryCache)
 
     if (summaries.length === 0) {
       node.summary = ''
       node.summaryUpdatedAt = null
+      // Empty folder: track as synced if hash matches, otherwise new/outOfSync
+      if (previous && previous.contentHash === node.contentHash) {
+        syncStats.synced += 1
+      } else if (isNew) {
+        syncStats.new += 1
+      } else {
+        syncStats.outOfSync += 1
+      }
       markProgress(node, 'folder:empty')
       continue
+    }
+
+    // Check if folder contentHash matches and previous summary exists (folder caching)
+    if (
+      previous &&
+      previous.contentHash &&
+      node.contentHash &&
+      previous.contentHash === node.contentHash &&
+      typeof previous.summary === 'string' &&
+      previous.summary.trim().length > 0
+    ) {
+      node.summary = previous.summary
+      node.summaryUpdatedAt = previous.summaryUpdatedAt || null
+      syncStats.synced += 1
+      markProgress(node, 'folder:cached')
+      continue
+    }
+
+    // Track as new or out-of-sync before attempting summarization
+    if (isNew) {
+      syncStats.new += 1
+    } else {
+      syncStats.outOfSync += 1
     }
 
     try {
@@ -171,10 +220,11 @@ const syncContextGraph = async ({
     files: counts.files,
     folders: counts.folders,
     errors: errors.length,
+    syncStats,
     durationMs
   })
 
-  return { graph, errors, warnings, durationMs }
+  return { graph, errors, warnings, durationMs, syncStats }
 }
 
 module.exports = {

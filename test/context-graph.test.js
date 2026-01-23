@@ -575,3 +575,277 @@ test('sync respects scoped .gitignore patterns', async () => {
     assert.equal(paths.has(pathValue), false, `Expected ${pathValue} to be excluded`)
   }
 })
+
+// ============================================================================
+// JIM-31: Incremental sync and contentHash tests
+// ============================================================================
+
+test('every node has non-empty contentHash after sync', async () => {
+  const contextRoot = createTempDir('jiminy-context-')
+  writeFixtureFiles(contextRoot)
+
+  const store = createStore(contextRoot)
+  const summarizer = {
+    model: 'test-model',
+    summarizeFile: async ({ relativePath }) => `Summary for ${relativePath}`,
+    summarizeFolder: async ({ relativePath }) => `Folder summary for ${relativePath || '.'}`
+  }
+
+  const result = await syncContextGraph({
+    rootPath: contextRoot,
+    store,
+    summarizer
+  })
+
+  const stored = JSON.parse(fs.readFileSync(store.getPath(), 'utf-8'))
+
+  // Check all nodes have contentHash
+  for (const [nodeId, node] of Object.entries(stored.nodes)) {
+    assert.ok(node.contentHash, `Node ${nodeId} (${node.relativePath}) should have contentHash`)
+    assert.equal(typeof node.contentHash, 'string', `contentHash should be a string`)
+    assert.ok(node.contentHash.length > 0, `contentHash should not be empty`)
+  }
+})
+
+test('folder nodes have contentHash computed from children', async () => {
+  const contextRoot = createTempDir('jiminy-context-')
+  writeFixtureFiles(contextRoot)
+
+  const store = createStore(contextRoot)
+  const summarizer = {
+    model: 'test-model',
+    summarizeFile: async ({ relativePath }) => `Summary for ${relativePath}`,
+    summarizeFolder: async ({ relativePath }) => `Folder summary for ${relativePath || '.'}`
+  }
+
+  await syncContextGraph({
+    rootPath: contextRoot,
+    store,
+    summarizer
+  })
+
+  const stored = JSON.parse(fs.readFileSync(store.getPath(), 'utf-8'))
+  const folderNodes = Object.values(stored.nodes).filter((node) => node.type === 'folder')
+
+  assert.ok(folderNodes.length > 0, 'Should have folder nodes')
+  for (const folder of folderNodes) {
+    assert.ok(folder.contentHash, `Folder ${folder.relativePath} should have contentHash`)
+  }
+})
+
+test('two syncs with no changes results in all synced and no LLM calls', async () => {
+  const contextRoot = createTempDir('jiminy-context-')
+  writeFixtureFiles(contextRoot)
+
+  const store = createStore(contextRoot)
+  const firstCalls = { files: 0, folders: 0 }
+  const firstSummarizer = {
+    model: 'test-model',
+    summarizeFile: async ({ relativePath }) => {
+      firstCalls.files += 1
+      return `Summary for ${relativePath}`
+    },
+    summarizeFolder: async ({ relativePath }) => {
+      firstCalls.folders += 1
+      return `Folder summary for ${relativePath || '.'}`
+    }
+  }
+
+  // First sync
+  const firstResult = await syncContextGraph({
+    rootPath: contextRoot,
+    store,
+    summarizer: firstSummarizer
+  })
+
+  assert.ok(firstCalls.files > 0, 'First sync should call summarizeFile')
+  assert.ok(firstCalls.folders > 0, 'First sync should call summarizeFolder')
+
+  // Second sync - should reuse cached summaries (no LLM calls)
+  const secondCalls = { files: 0, folders: 0 }
+  const secondSummarizer = {
+    model: 'test-model',
+    summarizeFile: async () => {
+      secondCalls.files += 1
+      throw new Error('summarizeFile should not be called for unchanged files')
+    },
+    summarizeFolder: async () => {
+      secondCalls.folders += 1
+      throw new Error('summarizeFolder should not be called for unchanged folders')
+    }
+  }
+
+  const secondResult = await syncContextGraph({
+    rootPath: contextRoot,
+    store,
+    summarizer: secondSummarizer
+  })
+
+  // Verify no LLM calls on second sync
+  assert.equal(secondCalls.files, 0, 'Second sync should not call summarizeFile')
+  assert.equal(secondCalls.folders, 0, 'Second sync should not call summarizeFolder')
+
+  // Verify syncStats: all should be synced, none out-of-sync or new
+  const totalNodes = secondResult.graph.counts.files + secondResult.graph.counts.folders
+  assert.equal(secondResult.syncStats.synced, totalNodes, 'All nodes should be synced')
+  assert.equal(secondResult.syncStats.outOfSync, 0, 'No nodes should be out-of-sync')
+  assert.equal(secondResult.syncStats.new, 0, 'No nodes should be new')
+})
+
+test('editing a file makes it out-of-sync while siblings remain synced', async () => {
+  const contextRoot = createTempDir('jiminy-context-')
+  writeFixtureFiles(contextRoot) // Creates alpha.md and sub/beta.txt
+
+  const store = createStore(contextRoot)
+  const summarizer = {
+    model: 'test-model',
+    summarizeFile: async ({ relativePath }) => `Summary for ${relativePath}`,
+    summarizeFolder: async ({ relativePath }) => `Folder summary for ${relativePath || '.'}`
+  }
+
+  // First sync
+  await syncContextGraph({
+    rootPath: contextRoot,
+    store,
+    summarizer
+  })
+
+  // Modify one file
+  fs.writeFileSync(path.join(contextRoot, 'alpha.md'), 'Modified alpha content', 'utf-8')
+
+  // Second sync - track which files get summarized
+  const summarizedPaths = []
+  const trackingSummarizer = {
+    model: 'test-model',
+    summarizeFile: async ({ relativePath }) => {
+      summarizedPaths.push(relativePath)
+      return `New summary for ${relativePath}`
+    },
+    summarizeFolder: async ({ relativePath }) => {
+      summarizedPaths.push(relativePath || '(root)')
+      return `New folder summary for ${relativePath || '.'}`
+    }
+  }
+
+  const result = await syncContextGraph({
+    rootPath: contextRoot,
+    store,
+    summarizer: trackingSummarizer
+  })
+
+  // The modified file should be out-of-sync and re-summarized
+  assert.ok(summarizedPaths.includes('alpha.md'), 'Modified file should be re-summarized')
+
+  // The unchanged sibling file should NOT be re-summarized
+  assert.equal(
+    summarizedPaths.includes('sub/beta.txt'),
+    false,
+    'Unchanged sibling file should NOT be re-summarized'
+  )
+
+  // syncStats should reflect: 1 out-of-sync file, unchanged file synced
+  assert.ok(result.syncStats.outOfSync > 0, 'Should have out-of-sync nodes')
+  assert.ok(result.syncStats.synced > 0, 'Should have synced nodes (unchanged sibling)')
+})
+
+test('editing a file makes ancestor folders out-of-sync', async () => {
+  const contextRoot = createTempDir('jiminy-context-')
+  writeFixtureFiles(contextRoot) // Creates alpha.md and sub/beta.txt
+
+  const store = createStore(contextRoot)
+  const summarizer = {
+    model: 'test-model',
+    summarizeFile: async ({ relativePath }) => `Summary for ${relativePath}`,
+    summarizeFolder: async ({ relativePath }) => `Folder summary for ${relativePath || '.'}`
+  }
+
+  // First sync
+  await syncContextGraph({
+    rootPath: contextRoot,
+    store,
+    summarizer
+  })
+
+  // Modify the file in the subfolder
+  fs.writeFileSync(path.join(contextRoot, 'sub', 'beta.txt'), 'Modified beta content', 'utf-8')
+
+  // Second sync - track which folders get summarized
+  const summarizedFolders = []
+  const trackingSummarizer = {
+    model: 'test-model',
+    summarizeFile: async ({ relativePath }) => `New summary for ${relativePath}`,
+    summarizeFolder: async ({ relativePath }) => {
+      summarizedFolders.push(relativePath || '(root)')
+      return `New folder summary for ${relativePath || '.'}`
+    }
+  }
+
+  await syncContextGraph({
+    rootPath: contextRoot,
+    store,
+    summarizer: trackingSummarizer
+  })
+
+  // The 'sub' folder should be out-of-sync (child changed)
+  assert.ok(summarizedFolders.includes('sub'), 'Child folder should be re-summarized')
+
+  // The root folder should also be out-of-sync (descendant changed)
+  assert.ok(summarizedFolders.includes('(root)'), 'Root folder should be re-summarized')
+})
+
+test('syncStats correctly tracks new nodes on first sync', async () => {
+  const contextRoot = createTempDir('jiminy-context-')
+  writeFixtureFiles(contextRoot)
+
+  const store = createStore(contextRoot)
+  const summarizer = {
+    model: 'test-model',
+    summarizeFile: async ({ relativePath }) => `Summary for ${relativePath}`,
+    summarizeFolder: async ({ relativePath }) => `Folder summary for ${relativePath || '.'}`
+  }
+
+  // First sync - no previous graph exists, all nodes are new
+  const result = await syncContextGraph({
+    rootPath: contextRoot,
+    store,
+    summarizer
+  })
+
+  const totalNodes = result.graph.counts.files + result.graph.counts.folders
+  assert.equal(result.syncStats.new, totalNodes, 'All nodes should be new on first sync')
+  assert.equal(result.syncStats.synced, 0, 'No nodes should be synced on first sync')
+  assert.equal(result.syncStats.outOfSync, 0, 'No nodes should be out-of-sync on first sync')
+})
+
+test('adding a new file creates a new node in syncStats', async () => {
+  const contextRoot = createTempDir('jiminy-context-')
+  writeFixtureFiles(contextRoot)
+
+  const store = createStore(contextRoot)
+  const summarizer = {
+    model: 'test-model',
+    summarizeFile: async ({ relativePath }) => `Summary for ${relativePath}`,
+    summarizeFolder: async ({ relativePath }) => `Folder summary for ${relativePath || '.'}`
+  }
+
+  // First sync
+  const firstResult = await syncContextGraph({
+    rootPath: contextRoot,
+    store,
+    summarizer
+  })
+
+  // Add a new file
+  fs.writeFileSync(path.join(contextRoot, 'gamma.md'), 'Gamma content', 'utf-8')
+
+  // Second sync
+  const secondResult = await syncContextGraph({
+    rootPath: contextRoot,
+    store,
+    summarizer
+  })
+
+  // Should have 1 new node (the new file)
+  // Plus folders might be out-of-sync due to the new child
+  assert.ok(secondResult.syncStats.new >= 1, 'Should have at least 1 new node')
+})

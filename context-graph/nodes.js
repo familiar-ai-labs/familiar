@@ -52,15 +52,17 @@ class FileNode extends Node {
 }
 
 class FolderNode extends Node {
-  constructor ({ id, name, relativePath, children = [], summary = '', summaryUpdatedAt = null }) {
+  constructor ({ id, name, relativePath, children = [], contentHash = null, summary = '', summaryUpdatedAt = null }) {
     super({ id, type: 'folder', name, relativePath, summary, summaryUpdatedAt })
     this.children = children
+    this.contentHash = contentHash
   }
 
   toJSON () {
     return {
       ...super.toJSON(),
-      children: this.children
+      children: this.children,
+      contentHash: this.contentHash
     }
   }
 }

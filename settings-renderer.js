@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const llmProviderError = document.getElementById('llm-provider-error')
   const syncButton = document.getElementById('context-graph-sync')
   const syncStatus = document.getElementById('context-graph-status')
+  const syncStats = document.getElementById('context-graph-stats')
   const syncProgress = document.getElementById('context-graph-progress')
   const syncWarning = document.getElementById('context-graph-warning')
   const syncError = document.getElementById('context-graph-error')
@@ -69,14 +70,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if (syncButton) {
       syncButton.hidden = true
     }
+    setMessage(syncStats, '')
     setMessage(syncProgress, 'Loading...')
   }
 
-  const showContextGraphCounts = (syncedNodes, totalNodes) => {
+  const showContextGraphCounts = ({ syncedNodes, outOfSyncNodes, newNodes, totalNodes }) => {
     if (syncButton) {
       syncButton.hidden = false
     }
-    setMessage(syncProgress, `Synced nodes ${syncedNodes}/${totalNodes}`)
+    const statsText = `Synced: ${syncedNodes}/${totalNodes} | Out of sync: ${outOfSyncNodes}/${totalNodes} | New: ${newNodes}`
+    setMessage(syncStats, statsText)
+    setMessage(syncProgress, '')
   }
 
   const refreshContextGraphStatus = async (options = {}) => {
@@ -85,7 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (syncButton) {
         syncButton.hidden = false
       }
-      setMessage(syncProgress, 'Synced nodes 0/0')
+      showContextGraphCounts({ syncedNodes: 0, outOfSyncNodes: 0, newNodes: 0, totalNodes: 0 })
       return
     }
 
@@ -104,6 +108,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const exclusions = Array.isArray(options.exclusions) ? options.exclusions : currentExclusions
       const result = await jiminy.getContextGraphStatus({ contextFolderPath, exclusions })
       const syncedNodes = Number(result?.syncedNodes ?? 0)
+      const outOfSyncNodes = Number(result?.outOfSyncNodes ?? 0)
+      const newNodes = Number(result?.newNodes ?? 0)
       const totalNodes = Number(result?.totalNodes ?? 0)
       isMaxNodesExceeded = Boolean(result?.maxNodesExceeded)
 
@@ -113,12 +119,12 @@ document.addEventListener('DOMContentLoaded', () => {
         setMessage(syncError, '')
       }
 
-      showContextGraphCounts(syncedNodes, totalNodes)
+      showContextGraphCounts({ syncedNodes, outOfSyncNodes, newNodes, totalNodes })
     } catch (error) {
       console.error('Failed to load context graph status', error)
       isMaxNodesExceeded = false
       setMessage(syncError, 'Failed to load context graph status.')
-      showContextGraphCounts(0, 0)
+      showContextGraphCounts({ syncedNodes: 0, outOfSyncNodes: 0, newNodes: 0, totalNodes: 0 })
     } finally {
       updateSyncButtonState()
     }

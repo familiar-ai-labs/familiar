@@ -387,6 +387,27 @@ const constructContextGraphSkeleton = (rootPath, { logger = console, maxNodes = 
     throw new Error(`Context graph has ${totalNodes} nodes, exceeding MAX_NODES (${maxNodes}).`)
   }
 
+  // Compute folder contentHash bottom-up (deepest folders first)
+  const folderOrder = [...folderIds].sort((a, b) => (folderDepths.get(b) || 0) - (folderDepths.get(a) || 0))
+  for (const folderId of folderOrder) {
+    const folderNode = nodes[folderId]
+    if (!folderNode || !folderNode.children || folderNode.children.length === 0) {
+      // Empty folder gets hash of empty string
+      folderNode.contentHash = crypto.createHash('sha256').update('').digest('hex')
+      continue
+    }
+
+    // Sort children by relativePath and concatenate their contentHash values
+    const childHashes = folderNode.children
+      .map((childId) => nodes[childId])
+      .filter((child) => child && child.contentHash)
+      .sort((a, b) => a.relativePath.localeCompare(b.relativePath))
+      .map((child) => child.contentHash)
+      .join('')
+
+    folderNode.contentHash = crypto.createHash('sha256').update(childHashes).digest('hex')
+  }
+
   return {
     nodes,
     rootId,

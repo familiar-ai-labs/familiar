@@ -44,14 +44,15 @@ test('sync now builds context graph with mocked summaries', async () => {
     await window.getByRole('button', { name: 'Choose...' }).click()
     await window.locator('#llm-provider').selectOption('gemini')
     await window.locator('#llm-api-key-save').click()
-    const countsLocator = window.locator('#context-graph-progress')
-    await expect(countsLocator).toHaveText(`Synced nodes 0/${expectedTotalNodes}`)
+    const statsLocator = window.locator('#context-graph-stats')
+    // Before sync: no stored graph, so all nodes are "new"
+    await expect(statsLocator).toHaveText(`Synced: 0/${expectedTotalNodes} | Out of sync: 0/${expectedTotalNodes} | New: ${expectedTotalNodes}`)
     await expect(window.locator('#context-folder-status')).toHaveText('Saved.')
-    await expect(countsLocator).toHaveText(`Synced nodes 0/${expectedTotalNodes}`)
 
     await window.getByRole('button', { name: 'Sync now' }).click()
     await expect(window.locator('#context-graph-status')).toHaveText(/Sync complete/)
-    await expect(countsLocator).toHaveText(`Synced nodes ${expectedTotalNodes}/${expectedTotalNodes}`)
+    // After sync: all nodes are now synced
+    await expect(statsLocator).toHaveText(`Synced: ${expectedTotalNodes}/${expectedTotalNodes} | Out of sync: 0/${expectedTotalNodes} | New: 0`)
 
     const graphPath = path.join(contextPath, JIMINY_BEHIND_THE_SCENES_DIR_NAME, 'context-tree.json')
     await expect.poll(() => fs.existsSync(graphPath)).toBe(true)
