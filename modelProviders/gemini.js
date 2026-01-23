@@ -1,3 +1,5 @@
+const { withHttpRetry, HttpRetryableError } = require('../utils/retry')
+
 const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models'
 
 class ExhaustedLlmProviderError extends Error {
@@ -28,31 +30,60 @@ const logGeminiFailure = ({ context, status, message }) => {
     console.warn(`Gemini ${context} request failed`, { status, message })
 }
 
-const generateContent = async ({ apiKey, model, prompt, fetchImpl = fetch } = {}) => {
+const requestGemini = async ({
+    apiKey,
+    model,
+    payload,
+    context,
+    fetchImpl = fetch
+} = {}) => {
     if (!apiKey) {
-        throw new Error('LLM API key is required for Gemini summaries.')
+        throw new Error('LLM API key is required for Gemini requests.')
     }
 
     const url = buildGeminiUrl({ model, apiKey })
-    const response = await fetchImpl(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }]
+    const retryingFetch = withHttpRetry(fetchImpl)
+
+    try {
+        const response = await retryingFetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
         })
+
+        if (!response.ok) {
+            const message = await response.text()
+            logGeminiFailure({ context, status: response.status, message })
+            if (response.status === 429) {
+                throw new ExhaustedLlmProviderError()
+            }
+            throw new Error(`Gemini ${context} request failed: ${response.status} ${message}`)
+        }
+
+        return response
+    } catch (error) {
+        if (error instanceof HttpRetryableError) {
+            logGeminiFailure({ context, status: error.status, message: error.message })
+            if (error.status === 429) {
+                throw new ExhaustedLlmProviderError()
+            }
+            throw new Error(`Gemini ${context} request failed: ${error.status} ${error.message}`)
+        }
+
+        throw error
+    }
+}
+
+const generateContent = async ({ apiKey, model, prompt, fetchImpl = fetch } = {}) => {
+    const response = await requestGemini({
+        apiKey,
+        model,
+        context: 'text',
+        fetchImpl,
+        payload: {
+            contents: [{ parts: [{ text: prompt }] }]
+        }
     })
-
-    if (response.status === 429) {
-        const message = await response.text()
-        logGeminiFailure({ context: 'text', status: response.status, message })
-        throw new ExhaustedLlmProviderError()
-    }
-
-    if (!response.ok) {
-        const message = await response.text()
-        logGeminiFailure({ context: 'text', status: response.status, message })
-        throw new Error(`Gemini request failed: ${response.status} ${message}`)
-    }
 
     const payload = await response.json()
     return extractTextFromPayload(payload).trim()
@@ -74,11 +105,12 @@ const generateVisionContent = async ({
         throw new Error('Image data is required for Gemini vision extraction.')
     }
 
-    const url = buildGeminiUrl({ model, apiKey })
-    const response = await fetchImpl(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+    const response = await requestGemini({
+        apiKey,
+        model,
+        context: 'vision',
+        fetchImpl,
+        payload: {
             contents: [
                 {
                     role: 'user',
@@ -93,20 +125,8 @@ const generateVisionContent = async ({
                     ]
                 }
             ]
-        })
+        }
     })
-
-    if (response.status === 429) {
-        const message = await response.text()
-        logGeminiFailure({ context: 'vision', status: response.status, message })
-        throw new ExhaustedLlmProviderError()
-    }
-
-    if (!response.ok) {
-        const message = await response.text()
-        logGeminiFailure({ context: 'vision', status: response.status, message })
-        throw new Error(`Gemini vision request failed: ${response.status} ${message}`)
-    }
 
     const payload = await response.json()
     return extractTextFromPayload(payload).trim()

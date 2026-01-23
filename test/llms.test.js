@@ -32,12 +32,16 @@ test('gemini summarizer throws exhausted error on 429', async (t) => {
         global.fetch = originalFetch;
     });
 
-    global.fetch = async () => ({
-        ok: false,
-        status: 429,
-        json: async () => ({}),
-        text: async () => 'rate limited',
-    });
+    let fetchCalls = 0;
+    global.fetch = async () => {
+        fetchCalls += 1;
+        return {
+            ok: false,
+            status: 429,
+            json: async () => ({}),
+            text: async () => 'rate limited',
+        };
+    };
 
     const summarizer = createGeminiSummarizer({ apiKey: 'test-key', model: DEFAULT_MODEL });
 
@@ -53,4 +57,45 @@ test('gemini summarizer throws exhausted error on 429', async (t) => {
             return true;
         }
     );
+
+    assert.ok(fetchCalls > 1);
+});
+
+test('gemini summarizer retries on transient errors', async (t) => {
+    const originalFetch = global.fetch;
+    t.after(() => {
+        global.fetch = originalFetch;
+    });
+
+    let fetchCalls = 0;
+    global.fetch = async () => {
+        fetchCalls += 1;
+        if (fetchCalls < 2) {
+            return {
+                ok: false,
+                status: 500,
+                json: async () => ({}),
+                text: async () => 'server error',
+            };
+        }
+
+        return {
+            ok: true,
+            status: 200,
+            json: async () => ({
+                candidates: [{ content: { parts: [{ text: 'summary after retry' }] } }],
+            }),
+            text: async () => '',
+        };
+    };
+
+    const summarizer = createGeminiSummarizer({ apiKey: 'test-key', model: DEFAULT_MODEL });
+
+    const summary = await summarizer.summarizeFile({
+        relativePath: 'smoke.md',
+        content: 'This is a short test file used to verify Gemini summaries.',
+    });
+
+    assert.equal(summary, 'summary after retry');
+    assert.equal(fetchCalls, 2);
 });

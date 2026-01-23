@@ -12,6 +12,7 @@ const { registerCaptureHandlers, startCaptureFlow, closeOverlayWindow } = requir
 const { registerCaptureHotkey, unregisterGlobalHotkeys } = require('./hotkeys');
 const { registerExtractionHandlers } = require('./extraction');
 const { registerAnalysisHandlers } = require('./analysis');
+const { showWindow } = require('./utils/window');
 const trayIconPath = path.join(__dirname, 'icon.png');
 
 let tray = null;
@@ -63,18 +64,18 @@ function createSettingsWindow() {
     return window;
 }
 
-function showSettingsWindow() {
+function showSettingsWindow(options = {}) {
     if (!settingsWindow) {
         settingsWindow = createSettingsWindow();
     }
 
-    if (settingsWindow.isMinimized()) {
-        settingsWindow.restore();
+    const result = showWindow(settingsWindow, options);
+    const reason = options.reason || result.reason;
+    if (result.shown) {
+        console.log('Settings window shown', { focus: result.focused, reason });
+    } else {
+        console.log('Settings window display skipped', { reason });
     }
-
-    settingsWindow.show();
-    settingsWindow.focus();
-    console.log('Settings window shown');
 }
 
 function showAboutDialog() {
@@ -465,7 +466,7 @@ app.whenReady().then(() => {
 
     if (isE2E) {
         console.log('E2E mode: opening settings window');
-        showSettingsWindow();
+        showSettingsWindow({ focus: false, reason: 'e2e' });
     }
 
     app.on('activate', () => {

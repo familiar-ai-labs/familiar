@@ -3,7 +3,6 @@ const path = require('node:path')
 const { normalizeRect, clampRectToBounds } = require('./capture-utils')
 const { getCaptureDirectory, savePngToDirectory } = require('./capture-storage')
 const { extractionQueue } = require('../extraction')
-const { ensureScreenRecordingPermission } = require('./permissions')
 const { loadSettings, validateContextFolderPath } = require('../settings')
 
 let overlayWindow = null
@@ -102,8 +101,6 @@ async function startCaptureFlow () {
     })
     return { ok: false, message: validation.message || 'Context folder path is not configured.' }
   }
-
-  await ensureScreenRecordingPermission()
 
   const display = getCaptureDisplay()
   const captureDirectory = getCaptureDirectory(validation.path)
