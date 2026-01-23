@@ -64,6 +64,7 @@ const syncContextGraph = async ({
     .map(([id, node]) => ({
       id,
       relativePath: node?.relativePath || null,
+      path: node?.relativePath || null,
       type: node?.type || null
     }))
 

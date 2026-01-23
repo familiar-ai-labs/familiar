@@ -610,6 +610,7 @@ test('sync logs and removes deleted nodes from the stored graph', async () => {
   })
 
   assert.ok(logs.some((entry) => entry.message === 'Removed deleted context node'))
+  assert.ok(logs.some((entry) => entry.message === 'Removed deleted context node' && entry.meta?.path === 'alpha.md'))
 
   const stored = JSON.parse(fs.readFileSync(store.getPath(), 'utf-8'))
   const removedNode = Object.values(stored.nodes).find((node) => node.relativePath === 'alpha.md')
