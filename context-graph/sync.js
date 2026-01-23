@@ -1,4 +1,3 @@
-const { CAPTURES_DIR_NAME } = require('../const')
 const { constructContextGraphSkeleton, MAX_NODES } = require('./graphSkeleton')
 
 const collectFileSummaries = (nodes, folderId, cache) => {
@@ -44,12 +43,10 @@ const syncContextGraph = async ({
   const start = Date.now()
   logger.log('Context graph sync started', { rootPath })
 
-  const effectiveExclusions = Array.from(new Set([CAPTURES_DIR_NAME, ...exclusions].filter(Boolean)))
-
   const previousGraph = store.load()
   const previousNodes = previousGraph?.nodes || {}
 
-  const scanResult = constructContextGraphSkeleton(rootPath, { logger, maxNodes, exclusions: effectiveExclusions })
+  const scanResult = constructContextGraphSkeleton(rootPath, { logger, maxNodes, exclusions })
   const {
     nodes,
     rootId,

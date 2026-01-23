@@ -2,7 +2,7 @@ const fs = require('node:fs')
 const path = require('node:path')
 const { resolveSettingsDir } = require('../settings')
 
-const { CONTEXT_GRAPH_FILE_NAME } = require('../const')
+const { CONTEXT_GRAPH_FILE_NAME, JIMINY_BEHIND_THE_SCENES_DIR_NAME } = require('../const')
 
 class ContextGraphStore {
   load () {
@@ -25,8 +25,11 @@ class ContextGraphStore {
 class JsonContextGraphStore extends ContextGraphStore {
   constructor (options = {}) {
     super()
+    this.contextFolderPath = typeof options.contextFolderPath === 'string' ? options.contextFolderPath : ''
     this.settingsDir = resolveSettingsDir(options.settingsDir)
-    this.graphPath = path.join(this.settingsDir, CONTEXT_GRAPH_FILE_NAME)
+    this.graphPath = this.contextFolderPath
+      ? path.join(this.contextFolderPath, JIMINY_BEHIND_THE_SCENES_DIR_NAME, CONTEXT_GRAPH_FILE_NAME)
+      : null
   }
 
   getPath () {
@@ -34,7 +37,7 @@ class JsonContextGraphStore extends ContextGraphStore {
   }
 
   load () {
-    if (!fs.existsSync(this.graphPath)) {
+    if (!this.graphPath || !fs.existsSync(this.graphPath)) {
       return null
     }
 
@@ -52,13 +55,16 @@ class JsonContextGraphStore extends ContextGraphStore {
   }
 
   save (graph) {
-    fs.mkdirSync(this.settingsDir, { recursive: true })
+    if (!this.graphPath) {
+      throw new Error('Context folder path is required to save context graph.')
+    }
+    fs.mkdirSync(path.dirname(this.graphPath), { recursive: true })
     fs.writeFileSync(this.graphPath, JSON.stringify(graph, null, 2), 'utf-8')
     return this.graphPath
   }
 
   delete () {
-    if (!fs.existsSync(this.graphPath)) {
+    if (!this.graphPath || !fs.existsSync(this.graphPath)) {
       return { deleted: false }
     }
 

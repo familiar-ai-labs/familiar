@@ -7,7 +7,6 @@ const { JsonContextGraphStore, createSummarizer, syncContextGraph } = require('.
 const { showProviderExhaustedNotification } = require('./notifications');
 const { ExhaustedLlmProviderError } = require('./modelProviders');
 const { constructContextGraphSkeleton, MAX_NODES } = require('./context-graph/graphSkeleton');
-const { CAPTURES_DIR_NAME } = require('./const');
 const { registerCaptureHandlers, startCaptureFlow, closeOverlayWindow } = require('./screenshot/capture');
 const { registerCaptureHotkey, unregisterGlobalHotkeys } = require('./hotkeys');
 const { registerExtractionHandlers } = require('./extraction');
@@ -340,7 +339,7 @@ ipcMain.handle('contextGraph:sync', async (event) => {
             return { ok: false, message: 'LLM API key is not configured. Set it in Settings.' };
         }
 
-        const store = new JsonContextGraphStore();
+        const store = new JsonContextGraphStore({ contextFolderPath: validation.path });
         const summarizer = createSummarizer({
             provider: llmProviderName,
             apiKey: llmProviderApiKey,
@@ -374,7 +373,20 @@ ipcMain.handle('contextGraph:sync', async (event) => {
 });
 
 ipcMain.handle('contextGraph:prune', () => {
-    const store = new JsonContextGraphStore();
+    const settings = loadSettings();
+    const contextFolderPath = settings.contextFolderPath || '';
+    if (!contextFolderPath) {
+        console.warn('Context graph prune skipped: missing context folder path');
+        return { ok: true, deleted: false, graphPath: null };
+    }
+
+    const validation = validateContextFolderPath(contextFolderPath);
+    if (!validation.ok) {
+        console.warn('Context graph prune skipped: invalid context folder path', { message: validation.message });
+        return { ok: true, deleted: false, graphPath: null };
+    }
+
+    const store = new JsonContextGraphStore({ contextFolderPath: validation.path });
     const graphPath = store.getPath();
 
     console.log('Pruning context graph', { path: graphPath });
@@ -444,9 +456,9 @@ ipcMain.handle('contextGraph:status', async (_event, payload = {}) => {
         return { ok: true, syncedNodes: 0, totalNodes: 0, maxNodesExceeded: false };
     }
 
-    const store = new JsonContextGraphStore();
+    const store = new JsonContextGraphStore({ contextFolderPath: validation.path });
     const syncedNodes = getSyncedNodeCount(store.load());
-    const effectiveExclusions = Array.from(new Set([CAPTURES_DIR_NAME, ...exclusions].filter(Boolean)));
+    const effectiveExclusions = Array.from(new Set(exclusions.filter(Boolean)));
 
     try {
         const scanResult = constructContextGraphSkeleton(validation.path, {

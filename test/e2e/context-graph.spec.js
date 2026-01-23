@@ -4,11 +4,17 @@ const path = require('node:path')
 const { test, expect } = require('playwright/test')
 const { _electron: electron } = require('playwright')
 const { constructContextGraphSkeleton } = require('../../context-graph/graphSkeleton')
-const { CAPTURES_DIR_NAME } = require('../../const')
+const { JIMINY_BEHIND_THE_SCENES_DIR_NAME } = require('../../const')
 
 test('sync now builds context graph with mocked summaries', async () => {
   const appRoot = path.join(__dirname, '../..')
-  const contextPath = path.join(appRoot, 'test', 'fixtures', 'context-graph')
+  const fixturePath = path.join(appRoot, 'test', 'fixtures', 'context-graph')
+  const contextPath = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-context-e2e-'))
+  fs.cpSync(fixturePath, contextPath, { recursive: true })
+  const existingGraphPath = path.join(contextPath, JIMINY_BEHIND_THE_SCENES_DIR_NAME, 'context-tree.json')
+  if (fs.existsSync(existingGraphPath)) {
+    fs.unlinkSync(existingGraphPath)
+  }
   const settingsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-e2e-'))
   const launchArgs = ['.']
   if (process.platform === 'linux' || process.env.CI) {
@@ -28,9 +34,7 @@ test('sync now builds context graph with mocked summaries', async () => {
     }
   })
 
-  const scanResult = constructContextGraphSkeleton(contextPath, {
-    exclusions: [CAPTURES_DIR_NAME]
-  })
+  const scanResult = constructContextGraphSkeleton(contextPath, { exclusions: [] })
   const expectedTotalNodes = scanResult.counts.files + scanResult.counts.folders
 
   try {
@@ -42,15 +46,14 @@ test('sync now builds context graph with mocked summaries', async () => {
     await window.locator('#llm-api-key-save').click()
     const countsLocator = window.locator('#context-graph-progress')
     await expect(countsLocator).toHaveText(`Synced nodes 0/${expectedTotalNodes}`)
-    await window.locator('#context-folder-save').click()
-
+    await expect(window.locator('#context-folder-status')).toHaveText('Saved.')
     await expect(countsLocator).toHaveText(`Synced nodes 0/${expectedTotalNodes}`)
 
     await window.getByRole('button', { name: 'Sync now' }).click()
     await expect(window.locator('#context-graph-status')).toHaveText(/Sync complete/)
     await expect(countsLocator).toHaveText(`Synced nodes ${expectedTotalNodes}/${expectedTotalNodes}`)
 
-    const graphPath = path.join(settingsDir, 'context-tree.json')
+    const graphPath = path.join(contextPath, JIMINY_BEHIND_THE_SCENES_DIR_NAME, 'context-tree.json')
     await expect.poll(() => fs.existsSync(graphPath)).toBe(true)
 
     const graph = JSON.parse(fs.readFileSync(graphPath, 'utf-8'))

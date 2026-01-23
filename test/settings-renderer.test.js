@@ -63,7 +63,6 @@ const flushPromises = () => new Promise((resolve) => setImmediate(resolve))
 const createElements = () => ({
   'context-folder-path': new TestElement(),
   'context-folder-choose': new TestElement(),
-  'context-folder-save': new TestElement(),
   'context-folder-error': new TestElement(),
   'context-folder-status': new TestElement(),
   'llm-api-key': new TestElement(),
@@ -83,6 +82,7 @@ const createElements = () => ({
 
 test('refreshes context graph status when context path changes', async () => {
   const statusCalls = []
+  const saveCalls = []
   const jiminy = {
     getSettings: async () => ({
       contextFolderPath: '',
@@ -91,7 +91,10 @@ test('refreshes context graph status when context path changes', async () => {
       exclusions: []
     }),
     pickContextFolder: async () => ({ canceled: false, path: '/tmp/new-context' }),
-    saveSettings: async () => ({ ok: true }),
+    saveSettings: async (payload) => {
+      saveCalls.push(payload)
+      return { ok: true }
+    },
     getContextGraphStatus: async (payload) => {
       statusCalls.push(payload)
       return { syncedNodes: 0, totalNodes: 2, maxNodesExceeded: false }
@@ -119,6 +122,9 @@ test('refreshes context graph status when context path changes', async () => {
 
     await elements['context-folder-choose'].click()
     await flushPromises()
+    assert.equal(saveCalls.length, 1)
+    assert.equal(saveCalls[0].contextFolderPath, '/tmp/new-context')
+    assert.equal(elements['context-folder-status'].textContent, 'Saved.')
     assert.equal(statusCalls.length, 2)
     assert.equal(statusCalls[1].contextFolderPath, '/tmp/new-context')
   } finally {

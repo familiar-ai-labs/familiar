@@ -6,7 +6,7 @@ const isLlmMockEnabled = () => process.env.JIMINY_LLM_MOCK === '1'
 
 const createAnalysisHandler = ({
   loadSettingsImpl = loadSettings,
-  createStore = () => new JsonContextGraphStore(),
+  createStore = ({ contextFolderPath } = {}) => new JsonContextGraphStore({ contextFolderPath }),
   runAnalysisImpl = runAnalysis
 } = {}) => async (event) => {
   const resultMdPath = event?.result_md_path
@@ -31,7 +31,7 @@ const createAnalysisHandler = ({
   }
 
   const contextFolderPath = settings?.contextFolderPath || ''
-  const store = createStore()
+  const store = createStore({ contextFolderPath })
   const contextGraph = store.load()
 
   if (!contextFolderPath && !contextGraph?.rootPath) {

@@ -3,7 +3,11 @@ const os = require('node:os')
 const path = require('node:path')
 const { test, expect } = require('playwright/test')
 const { _electron: electron } = require('playwright')
-const { CAPTURES_DIR_NAME, CAPTURE_FILENAME_PREFIX } = require('../../const')
+const {
+  CAPTURES_DIR_NAME,
+  CAPTURE_FILENAME_PREFIX,
+  JIMINY_BEHIND_THE_SCENES_DIR_NAME
+} = require('../../const')
 
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
@@ -54,7 +58,6 @@ test('capture flow saves a screenshot under the context folder', async () => {
     await window.waitForLoadState('domcontentloaded')
 
     await window.getByRole('button', { name: 'Choose...' }).click()
-    await window.locator('#context-folder-save').click()
     await expect(window.locator('#context-folder-status')).toHaveText('Saved.')
 
     const overlayPromise = electronApp.waitForEvent('window')
@@ -84,7 +87,7 @@ test('capture flow saves a screenshot under the context folder', async () => {
 
     await overlay.waitForEvent('close')
 
-    const capturesDir = path.join(contextPath, CAPTURES_DIR_NAME)
+    const capturesDir = path.join(contextPath, JIMINY_BEHIND_THE_SCENES_DIR_NAME, CAPTURES_DIR_NAME)
     await expect.poll(() => {
       if (!fs.existsSync(capturesDir)) {
         return 0
@@ -97,9 +100,10 @@ test('capture flow saves a screenshot under the context folder', async () => {
       .filter((filename) => filename.endsWith('.png'))
     expect(captureFiles.length).toBe(1)
 
-    const prefix = escapeRegExp(CAPTURE_FILENAME_PREFIX)
+    const expectedPrefix = CAPTURE_FILENAME_PREFIX ? `${CAPTURE_FILENAME_PREFIX} ` : ''
+    const prefix = escapeRegExp(expectedPrefix)
     const pattern = new RegExp(
-      `^${prefix} \\d{4}-\\d{2}-\\d{2}_\\d{2}-\\d{2}-\\d{2}-\\d{3}\\.png$`
+      `^${prefix}\\d{4}-\\d{2}-\\d{2}_\\d{2}-\\d{2}-\\d{2}-\\d{3}\\.png$`
     )
     expect(captureFiles[0]).toMatch(pattern)
   } finally {

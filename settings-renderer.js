@@ -2,7 +2,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const jiminy = window.jiminy || {}
   const contextFolderInput = document.getElementById('context-folder-path')
   const chooseButton = document.getElementById('context-folder-choose')
-  const saveButton = document.getElementById('context-folder-save')
   const errorMessage = document.getElementById('context-folder-error')
   const statusMessage = document.getElementById('context-folder-status')
   const llmKeyInput = document.getElementById('llm-api-key')
@@ -35,14 +34,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     element.textContent = message || ''
     element.style.display = message ? 'block' : 'none'
-  }
-
-  const updateSaveState = () => {
-    if (!saveButton || !contextFolderInput) {
-      return
-    }
-    saveButton.disabled = !contextFolderInput.value
-    updatePruneButtonState()
   }
 
   const updateSyncButtonState = () => {
@@ -184,6 +175,32 @@ document.addEventListener('DOMContentLoaded', () => {
     saveExclusions()
   }
 
+  const saveContextFolderPath = async (contextFolderPath) => {
+    if (!jiminy.saveSettings) {
+      return false
+    }
+
+    setMessage(statusMessage, 'Saving...')
+    setMessage(errorMessage, '')
+
+    try {
+      const result = await jiminy.saveSettings({ contextFolderPath })
+      if (result && result.ok) {
+        setMessage(statusMessage, 'Saved.')
+        console.log('Context folder saved', contextFolderPath)
+        return true
+      }
+      setMessage(statusMessage, '')
+      setMessage(errorMessage, result?.message || 'Failed to save settings.')
+    } catch (error) {
+      console.error('Failed to save settings', error)
+      setMessage(statusMessage, '')
+      setMessage(errorMessage, 'Failed to save settings.')
+    }
+
+    return false
+  }
+
   const loadSettings = async () => {
     if (!jiminy.getSettings || !contextFolderInput) {
       return
@@ -205,7 +222,7 @@ document.addEventListener('DOMContentLoaded', () => {
       setMessage(llmProviderError, '')
       setMessage(llmKeyError, '')
       setMessage(llmKeyStatus, '')
-      updateSaveState()
+      updatePruneButtonState()
       return result
     } catch (error) {
       console.error('Failed to load settings', error)
@@ -220,7 +237,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setMessage(errorMessage, 'Settings bridge unavailable. Restart the app.')
     setMessage(llmProviderError, 'Settings bridge unavailable. Restart the app.')
     setMessage(llmKeyError, 'Settings bridge unavailable. Restart the app.')
-    updateSaveState()
+    updatePruneButtonState()
     return
   }
 
@@ -245,8 +262,11 @@ document.addEventListener('DOMContentLoaded', () => {
           contextFolderInput.value = result.path
           setMessage(errorMessage, '')
           setMessage(statusMessage, '')
-          updateSaveState()
-          await refreshContextGraphStatus({ contextFolderPath: result.path, exclusions: currentExclusions })
+          updatePruneButtonState()
+          const saved = await saveContextFolderPath(result.path)
+          if (saved) {
+            await refreshContextGraphStatus({ contextFolderPath: result.path, exclusions: currentExclusions })
+          }
         } else if (result && result.error) {
           setMessage(statusMessage, '')
           setMessage(errorMessage, result.error)
@@ -257,32 +277,6 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error('Failed to pick context folder', error)
         setMessage(statusMessage, '')
         setMessage(errorMessage, 'Failed to open folder picker.')
-      }
-    })
-  }
-
-  if (saveButton) {
-    saveButton.addEventListener('click', async () => {
-      if (!contextFolderInput) {
-        return
-      }
-
-      setMessage(statusMessage, 'Saving...')
-      setMessage(errorMessage, '')
-
-      try {
-        const result = await jiminy.saveSettings({ contextFolderPath: contextFolderInput.value })
-        if (result && result.ok) {
-          setMessage(statusMessage, 'Saved.')
-          await refreshContextGraphStatus()
-        } else {
-          setMessage(statusMessage, '')
-          setMessage(errorMessage, result?.message || 'Failed to save settings.')
-        }
-      } catch (error) {
-        console.error('Failed to save settings', error)
-        setMessage(statusMessage, '')
-        setMessage(errorMessage, 'Failed to save settings.')
       }
     })
   }

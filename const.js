@@ -1,15 +1,17 @@
 const SETTINGS_DIR_NAME = '.jiminy'
 const SETTINGS_FILE_NAME = 'settings.json'
+const JIMINY_BEHIND_THE_SCENES_DIR_NAME = 'jiminy-behind-the-scenes'
 const CONTEXT_GRAPH_FILE_NAME = 'context-tree.json'
 const CAPTURES_DIR_NAME = 'jiminy-captures'
 const EXTRA_CONTEXT_SUFFIX = 'jiminy-extra-context'
 const GENERAL_ANALYSIS_DIR_NAME = 'jiminy-general-analysis'
-const CAPTURE_FILENAME_PREFIX = 'Jiminy Capture'
+const CAPTURE_FILENAME_PREFIX = ''
 const MAX_CONTEXT_FILE_SIZE_BYTES = 100 * 1024
 
 module.exports = {
   SETTINGS_DIR_NAME,
   SETTINGS_FILE_NAME,
+  JIMINY_BEHIND_THE_SCENES_DIR_NAME,
   CONTEXT_GRAPH_FILE_NAME,
   CAPTURES_DIR_NAME,
   EXTRA_CONTEXT_SUFFIX,

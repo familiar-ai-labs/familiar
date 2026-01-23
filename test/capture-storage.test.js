@@ -5,13 +5,18 @@ const path = require('node:path')
 const fs = require('node:fs/promises')
 
 const { buildCaptureFilename, getCaptureDirectory, savePngToDirectory } = require('../screenshot/capture-storage')
-const { CAPTURE_FILENAME_PREFIX, CAPTURES_DIR_NAME } = require('../const')
+const {
+  CAPTURE_FILENAME_PREFIX,
+  CAPTURES_DIR_NAME,
+  JIMINY_BEHIND_THE_SCENES_DIR_NAME
+} = require('../const')
 
 test('buildCaptureFilename uses a stable timestamp format', () => {
   const date = new Date(2026, 0, 2, 3, 4, 5, 6)
   const filename = buildCaptureFilename(date)
 
-  assert.equal(filename, `${CAPTURE_FILENAME_PREFIX} 2026-01-02_03-04-05-006.png`)
+  const expectedPrefix = CAPTURE_FILENAME_PREFIX ? `${CAPTURE_FILENAME_PREFIX} ` : ''
+  assert.equal(filename, `${expectedPrefix}2026-01-02_03-04-05-006.png`)
 })
 
 test('savePngToDirectory writes to the target directory', async () => {
@@ -40,7 +45,7 @@ test('savePngToDirectory stores captures under the context captures folder', asy
 
 test('getCaptureDirectory returns a path under the context folder', () => {
   const dir = getCaptureDirectory('/tmp/context')
-  assert.equal(dir, path.join('/tmp/context', CAPTURES_DIR_NAME))
+  assert.equal(dir, path.join('/tmp/context', JIMINY_BEHIND_THE_SCENES_DIR_NAME, CAPTURES_DIR_NAME))
 })
 
 test('getCaptureDirectory returns null without a context folder', () => {

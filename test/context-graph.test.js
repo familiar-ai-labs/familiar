@@ -5,7 +5,13 @@ const assert = require('node:assert/strict')
 const { test } = require('node:test')
 const { JsonContextGraphStore, syncContextGraph } = require('../context-graph')
 const { constructContextGraphSkeleton } = require('../context-graph/graphSkeleton')
-const { CAPTURES_DIR_NAME, EXTRA_CONTEXT_SUFFIX, GENERAL_ANALYSIS_DIR_NAME, MAX_CONTEXT_FILE_SIZE_BYTES } = require('../const')
+const {
+  CAPTURES_DIR_NAME,
+  EXTRA_CONTEXT_SUFFIX,
+  GENERAL_ANALYSIS_DIR_NAME,
+  JIMINY_BEHIND_THE_SCENES_DIR_NAME,
+  MAX_CONTEXT_FILE_SIZE_BYTES
+} = require('../const')
 
 const createTempDir = (prefix) => fs.mkdtempSync(path.join(os.tmpdir(), prefix))
 const toPosix = (value) => value.split(path.sep).join('/')
@@ -56,6 +62,12 @@ const writeCaptureFolderFixture = (rootPath) => {
   const capturesPath = path.join(rootPath, CAPTURES_DIR_NAME)
   fs.mkdirSync(capturesPath, { recursive: true })
   fs.writeFileSync(path.join(capturesPath, 'capture.md'), 'Captured content', 'utf-8')
+}
+
+const writeBehindTheScenesFixture = (rootPath) => {
+  const behindPath = path.join(rootPath, JIMINY_BEHIND_THE_SCENES_DIR_NAME)
+  fs.mkdirSync(behindPath, { recursive: true })
+  fs.writeFileSync(path.join(behindPath, 'note.md'), 'Should be ignored', 'utf-8')
 }
 
 const writeExtraContextFolderFixture = (rootPath) => {
@@ -111,16 +123,14 @@ const writeScopedGitignoreFixture = (rootPath) => {
   fs.writeFileSync(path.join(folderB, 'abc', 'keep.md'), 'Should be kept', 'utf-8')
   fs.writeFileSync(path.join(folderB, 'ignore.md'), 'Should be kept', 'utf-8')
 }
-const createStore = () => {
-  const settingsDir = createTempDir('jiminy-settings-')
-  return new JsonContextGraphStore({ settingsDir })
-}
+const createStore = (contextFolderPath) => new JsonContextGraphStore({ contextFolderPath })
 
 test('context graph store delete removes the persisted file', () => {
-  const store = createStore()
+  const contextRoot = createTempDir('jiminy-context-')
+  const store = createStore(contextRoot)
   const graph = {
     version: 1,
-    rootPath: '/tmp/context',
+    rootPath: contextRoot,
     generatedAt: new Date().toISOString(),
     model: 'test',
     rootId: 'root',
@@ -139,6 +149,27 @@ test('context graph store delete removes the persisted file', () => {
   assert.equal(second.deleted, false)
 })
 
+test('context graph store writes under jiminy-behind-the-scenes', () => {
+  const contextRoot = createTempDir('jiminy-context-')
+  const store = createStore(contextRoot)
+  const expectedPath = path.join(contextRoot, JIMINY_BEHIND_THE_SCENES_DIR_NAME, 'context-tree.json')
+
+  const graph = {
+    version: 1,
+    rootPath: contextRoot,
+    generatedAt: new Date().toISOString(),
+    model: 'test',
+    rootId: 'root',
+    counts: { files: 0, folders: 0 },
+    nodes: {}
+  }
+
+  store.save(graph)
+
+  assert.equal(store.getPath(), expectedPath)
+  assert.equal(fs.existsSync(expectedPath), true)
+})
+
 test('context graph totals match sync counts', async () => {
   const contextRoot = createTempDir('jiminy-context-')
   writeFixtureFiles(contextRoot)
@@ -149,11 +180,9 @@ test('context graph totals match sync counts', async () => {
   fs.writeFileSync(path.join(ignoredPath, 'skip.md'), 'Skip me', 'utf-8')
 
   const exclusions = ['ignored']
-  const effectiveExclusions = [CAPTURES_DIR_NAME, ...exclusions]
+  const skeleton = constructContextGraphSkeleton(contextRoot, { exclusions })
 
-  const skeleton = constructContextGraphSkeleton(contextRoot, { exclusions: effectiveExclusions })
-
-  const store = createStore()
+  const store = createStore(contextRoot)
   const summarizer = {
     model: 'test-model',
     summarizeFile: async ({ relativePath }) => `Summary for ${relativePath}`,
@@ -175,7 +204,7 @@ test('sync builds a context graph and persists json', async () => {
   const contextRoot = createTempDir('jiminy-context-')
   writeFixtureFiles(contextRoot)
 
-  const store = createStore()
+  const store = createStore(contextRoot)
   const calls = { files: 0, folders: 0 }
   const summarizer = {
     model: 'test-model',
@@ -212,7 +241,7 @@ test('sync reuses file summaries when content hash is unchanged', async () => {
   const contextRoot = createTempDir('jiminy-context-')
   writeFixtureFiles(contextRoot)
 
-  const store = createStore()
+  const store = createStore(contextRoot)
   const summarizer = {
     model: 'test-model',
     summarizeFile: async ({ relativePath }) => `Initial summary for ${relativePath}`,
@@ -247,7 +276,7 @@ test('sync warns on directory cycles and avoids recursion', async () => {
   const contextRoot = createTempDir('jiminy-context-')
   writeCycleFixture(contextRoot)
 
-  const store = createStore()
+  const store = createStore(contextRoot)
   const summarizer = {
     model: 'test-model',
     summarizeFile: async ({ relativePath }) => `Summary for ${relativePath}`,
@@ -269,7 +298,7 @@ test('sync fails when MAX_NODES is exceeded', async () => {
   const contextRoot = createTempDir('jiminy-context-')
   writeManyFilesFixture(contextRoot, 10)
 
-  const store = createStore()
+  const store = createStore(contextRoot)
   const summarizer = {
     model: 'test-model',
     summarizeFile: async ({ relativePath }) => `Summary for ${relativePath}`,
@@ -291,7 +320,7 @@ test('sync ignores unsupported files when MAX_NODES is low', async () => {
   const contextRoot = createTempDir('jiminy-context-')
   writeJsMdFixture(contextRoot)
 
-  const store = createStore()
+  const store = createStore(contextRoot)
   const summarizer = {
     model: 'test-model',
     summarizeFile: async ({ relativePath }) => `Summary for ${relativePath}`,
@@ -313,7 +342,7 @@ test('sync skips non-md/txt files and logs a warning', async () => {
   const contextRoot = createTempDir('jiminy-context-')
   writeSkipFixture(contextRoot)
 
-  const store = createStore()
+  const store = createStore(contextRoot)
   const summarizer = {
     model: 'test-model',
     summarizeFile: async ({ relativePath }) => `Summary for ${relativePath}`,
@@ -346,7 +375,7 @@ test('sync skips files larger than MAX_CONTEXT_FILE_SIZE_BYTES', async () => {
   const contextRoot = createTempDir('jiminy-context-')
   writeLargeFileFixture(contextRoot)
 
-  const store = createStore()
+  const store = createStore(contextRoot)
   const summarizer = {
     model: 'test-model',
     summarizeFile: async ({ relativePath }) => `Summary for ${relativePath}`,
@@ -380,7 +409,7 @@ test('sync ignores the captures folder', async () => {
   writeFixtureFiles(contextRoot)
   writeCaptureFolderFixture(contextRoot)
 
-  const store = createStore()
+  const store = createStore(contextRoot)
   const summarizer = {
     model: 'test-model',
     summarizeFile: async ({ relativePath }) => `Summary for ${relativePath}`,
@@ -399,12 +428,38 @@ test('sync ignores the captures folder', async () => {
   assert.equal(capturedNode, undefined)
 })
 
+test('sync ignores jiminy behind-the-scenes folder', async () => {
+  const contextRoot = createTempDir('jiminy-context-')
+  writeFixtureFiles(contextRoot)
+  writeBehindTheScenesFixture(contextRoot)
+
+  const store = createStore(contextRoot)
+  const summarizer = {
+    model: 'test-model',
+    summarizeFile: async ({ relativePath }) => `Summary for ${relativePath}`,
+    summarizeFolder: async ({ relativePath }) => `Folder summary for ${relativePath || '.'}`
+  }
+
+  const result = await syncContextGraph({
+    rootPath: contextRoot,
+    store,
+    summarizer
+  })
+
+  assert.equal(result.graph.counts.files, 2)
+  const stored = JSON.parse(fs.readFileSync(store.getPath(), 'utf-8'))
+  const behindNode = Object.values(stored.nodes).find((node) =>
+    node.relativePath === path.join(JIMINY_BEHIND_THE_SCENES_DIR_NAME, 'note.md')
+  )
+  assert.equal(behindNode, undefined)
+})
+
 test('sync ignores jiminy extra context folders', async () => {
   const contextRoot = createTempDir('jiminy-context-')
   writeFixtureFiles(contextRoot)
   writeExtraContextFolderFixture(contextRoot)
 
-  const store = createStore()
+  const store = createStore(contextRoot)
   const summarizer = {
     model: 'test-model',
     summarizeFile: async ({ relativePath }) => `Summary for ${relativePath}`,
@@ -430,7 +485,7 @@ test('sync ignores jiminy general analysis folders', async () => {
   writeFixtureFiles(contextRoot)
   writeGeneralAnalysisFolderFixture(contextRoot)
 
-  const store = createStore()
+  const store = createStore(contextRoot)
   const summarizer = {
     model: 'test-model',
     summarizeFile: async ({ relativePath }) => `Summary for ${relativePath}`,
@@ -456,7 +511,7 @@ test('sync ignores hidden folders like .git', async () => {
   writeFixtureFiles(contextRoot)
   writeHiddenFolderFixture(contextRoot)
 
-  const store = createStore()
+  const store = createStore(contextRoot)
   const summarizer = {
     model: 'test-model',
     summarizeFile: async ({ relativePath }) => `Summary for ${relativePath}`,
@@ -480,7 +535,7 @@ test('sync respects scoped .gitignore patterns', async () => {
   const contextRoot = createTempDir('jiminy-context-')
   writeScopedGitignoreFixture(contextRoot)
 
-  const store = createStore()
+  const store = createStore(contextRoot)
   const summarizer = {
     model: 'test-model',
     summarizeFile: async ({ relativePath }) => `Summary for ${relativePath}`,

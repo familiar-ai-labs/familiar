@@ -1,6 +1,6 @@
 const path = require('node:path')
 const fs = require('node:fs/promises')
-const { CAPTURE_FILENAME_PREFIX, CAPTURES_DIR_NAME } = require('../const')
+const { CAPTURE_FILENAME_PREFIX, CAPTURES_DIR_NAME, JIMINY_BEHIND_THE_SCENES_DIR_NAME } = require('../const')
 
 function buildCaptureFilename (date = new Date()) {
   const pad = (value, size = 2) => String(value).padStart(size, '0')
@@ -12,7 +12,8 @@ function buildCaptureFilename (date = new Date()) {
   const second = pad(date.getSeconds())
   const ms = pad(date.getMilliseconds(), 3)
 
-  return `${CAPTURE_FILENAME_PREFIX} ${year}-${month}-${day}_${hour}-${minute}-${second}-${ms}.png`
+  const prefix = CAPTURE_FILENAME_PREFIX ? `${CAPTURE_FILENAME_PREFIX} ` : ''
+  return `${prefix}${year}-${month}-${day}_${hour}-${minute}-${second}-${ms}.png`
 }
 
 function getCaptureDirectory (contextFolderPath) {
@@ -20,7 +21,7 @@ function getCaptureDirectory (contextFolderPath) {
     return null
   }
 
-  return path.join(contextFolderPath, CAPTURES_DIR_NAME)
+  return path.join(contextFolderPath, JIMINY_BEHIND_THE_SCENES_DIR_NAME, CAPTURES_DIR_NAME)
 }
 
 async function savePngToDirectory (buffer, directory, date = new Date()) {

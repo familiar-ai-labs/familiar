@@ -2,7 +2,13 @@ const fs = require('node:fs')
 const path = require('node:path')
 const crypto = require('node:crypto')
 const { FileNode, FolderNode, createNodeId, normalizeRelativePath } = require('./nodes')
-const { EXTRA_CONTEXT_SUFFIX, GENERAL_ANALYSIS_DIR_NAME, MAX_CONTEXT_FILE_SIZE_BYTES } = require('../const')
+const {
+  CAPTURES_DIR_NAME,
+  EXTRA_CONTEXT_SUFFIX,
+  GENERAL_ANALYSIS_DIR_NAME,
+  JIMINY_BEHIND_THE_SCENES_DIR_NAME,
+  MAX_CONTEXT_FILE_SIZE_BYTES
+} = require('../const')
 
 const MAX_NODES = 300
 const ALLOWED_EXTENSIONS = new Set(['.md', '.txt'])
@@ -166,8 +172,11 @@ const constructContextGraphSkeleton = (rootPath, { logger = console, maxNodes = 
   let totalNodes = 0
   let exceededLimit = false
 
+  const defaultExclusions = [CAPTURES_DIR_NAME, JIMINY_BEHIND_THE_SCENES_DIR_NAME].filter(Boolean)
   const exclusionSet = new Set(
-    exclusions.map((p) => p.replace(/\\/g, '/').replace(/^\/+|\/+$/g, ''))
+    [...defaultExclusions, ...exclusions]
+      .filter(Boolean)
+      .map((p) => p.replace(/\\/g, '/').replace(/^\/+|\/+$/g, ''))
   )
 
   const isExcluded = (relativePath) => {
@@ -190,6 +199,8 @@ const constructContextGraphSkeleton = (rootPath, { logger = console, maxNodes = 
 
   const isExtraContextDirName = (name) => name.endsWith(EXTRA_CONTEXT_SUFFIX)
   const isGeneralAnalysisDirName = (name) => name === GENERAL_ANALYSIS_DIR_NAME
+  const isBehindTheScenesDirName = (name) => name === JIMINY_BEHIND_THE_SCENES_DIR_NAME
+  const isCapturesDirName = (name) => name === CAPTURES_DIR_NAME
 
   const walk = (currentPath, relativePath, depth, gitignoreMatchers) => {
     let realPath
@@ -273,6 +284,16 @@ const constructContextGraphSkeleton = (rootPath, { logger = console, maxNodes = 
 
       if (isDirectory && isExtraContextDirName(entry.name)) {
         logger.log('Skipping generated context folder', { path: normalizedEntryRelative })
+        continue
+      }
+
+      if (isDirectory && isCapturesDirName(entry.name)) {
+        logger.log('Skipping captures folder', { path: normalizedEntryRelative })
+        continue
+      }
+
+      if (isDirectory && isBehindTheScenesDirName(entry.name)) {
+        logger.log('Skipping jiminy behind-the-scenes folder', { path: normalizedEntryRelative })
         continue
       }
 
