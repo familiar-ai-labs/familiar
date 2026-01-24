@@ -3,14 +3,22 @@
   <head>
     <meta charset="UTF-8">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'">
-    <link href="./overlay.css" rel="stylesheet">
+    <link href="../styles.css" rel="stylesheet">
     <title>Capture</title>
+    <style>
+      body {
+        cursor: crosshair;
+      }
+      .selection {
+        box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.35);
+      }
+    </style>
   </head>
-  <body>
-    <div id="overlay" class="overlay" role="application" aria-label="Screen capture overlay">
-      <div id="selection" class="selection hidden"></div>
-      <div id="hint" class="hint">Drag to select - Release to capture - Esc to cancel</div>
-      <div id="message" class="message hidden" role="alert" aria-live="polite"></div>
+  <body class="m-0 overflow-hidden select-none font-sans text-zinc-100">
+    <div id="overlay" class="fixed inset-0 w-screen h-screen" role="application" aria-label="Screen capture overlay">
+      <div id="selection" class="absolute border-2 border-white rounded-md bg-transparent hidden"></div>
+      <div id="hint" class="fixed left-5 bottom-5 px-3 py-2 rounded-full bg-black/45 text-xs tracking-wide">Drag to select - Release to capture - Esc to cancel</div>
+      <div id="message" class="fixed left-5 top-5 px-3 py-2 rounded-lg bg-zinc-900/80 text-xs max-w-xs hidden" role="alert" aria-live="polite"></div>
     </div>
     <script src="./overlay-renderer.js"></script>
   </body>

@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     element.textContent = message || ''
-    element.style.display = message ? 'block' : 'none'
+    element.classList.toggle('hidden', !message)
   }
 
   const updateSyncButtonState = () => {
@@ -136,15 +136,15 @@ document.addEventListener('DOMContentLoaded', () => {
     exclusionsList.innerHTML = ''
     for (const exclusion of currentExclusions) {
       const li = document.createElement('li')
-      li.className = 'exclusion-item'
+      li.className = 'flex items-center justify-between px-2 py-1.5 rounded-md bg-zinc-100 dark:bg-zinc-700/50 text-xs text-zinc-700 dark:text-zinc-300 group'
 
       const pathSpan = document.createElement('span')
-      pathSpan.className = 'exclusion-path'
+      pathSpan.className = 'truncate'
       pathSpan.textContent = exclusion
       pathSpan.title = exclusion
 
       const removeBtn = document.createElement('button')
-      removeBtn.className = 'exclusion-remove'
+      removeBtn.className = 'ml-2 px-1.5 py-0.5 rounded text-sm text-zinc-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-zinc-200 dark:hover:bg-zinc-600 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer'
       removeBtn.textContent = '×'
       removeBtn.title = 'Remove exclusion'
       removeBtn.addEventListener('click', () => removeExclusion(exclusion))
@@ -412,11 +412,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (advancedToggleBtn && advancedOptions) {
     advancedToggleBtn.addEventListener('click', () => {
-      const isHidden = advancedOptions.hidden
-      advancedOptions.hidden = !isHidden
-      const arrow = advancedToggleBtn.querySelector('.toggle-arrow')
+      const isHidden = advancedOptions.classList.contains('hidden')
+      advancedOptions.classList.toggle('hidden', !isHidden)
+      const arrow = document.getElementById('toggle-arrow')
       if (arrow) {
-        arrow.classList.toggle('open', isHidden)
+        arrow.classList.toggle('rotate-90', isHidden)
       }
     })
   }
