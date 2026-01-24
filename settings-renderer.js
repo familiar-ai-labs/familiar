@@ -22,8 +22,199 @@ document.addEventListener('DOMContentLoaded', () => {
   const advancedOptions = document.getElementById('advanced-options')
   const exclusionsList = document.getElementById('exclusions-list')
   const addExclusionBtn = document.getElementById('add-exclusion')
+  const captureHotkeyBtn = document.getElementById('capture-hotkey')
+  const clipboardHotkeyBtn = document.getElementById('clipboard-hotkey')
+  const hotkeysSaveButton = document.getElementById('hotkeys-save')
+  const hotkeysResetButton = document.getElementById('hotkeys-reset')
+  const hotkeysStatus = document.getElementById('hotkeys-status')
+  const hotkeysError = document.getElementById('hotkeys-error')
+
+  const DEFAULT_CAPTURE_HOTKEY = 'CommandOrControl+Shift+J'
+  const DEFAULT_CLIPBOARD_HOTKEY = 'CommandOrControl+J'
 
   let currentExclusions = []
+  let recordingElement = null
+
+  /**
+   * Convert a KeyboardEvent to an Electron accelerator string
+   */
+  const keyEventToAccelerator = (event) => {
+    const parts = []
+
+    // Modifiers - use CommandOrControl for cross-platform compatibility
+    if (event.metaKey || event.ctrlKey) {
+      parts.push('CommandOrControl')
+    }
+    if (event.altKey) {
+      parts.push('Alt')
+    }
+    if (event.shiftKey) {
+      parts.push('Shift')
+    }
+
+    // Get the actual key
+    let key = event.key
+
+    // Skip if only modifier keys are pressed
+    if (['Meta', 'Control', 'Alt', 'Shift'].includes(key)) {
+      return null
+    }
+
+    // Map special keys to Electron accelerator names
+    const keyMap = {
+      ' ': 'Space',
+      'ArrowUp': 'Up',
+      'ArrowDown': 'Down',
+      'ArrowLeft': 'Left',
+      'ArrowRight': 'Right',
+      'Escape': 'Escape',
+      'Enter': 'Return',
+      'Backspace': 'Backspace',
+      'Delete': 'Delete',
+      'Tab': 'Tab',
+      'Home': 'Home',
+      'End': 'End',
+      'PageUp': 'PageUp',
+      'PageDown': 'PageDown',
+      'Insert': 'Insert'
+    }
+
+    if (keyMap[key]) {
+      key = keyMap[key]
+    } else if (key.length === 1) {
+      // Single character - uppercase it
+      key = key.toUpperCase()
+    } else if (key.startsWith('F') && /^F\d+$/.test(key)) {
+      // Function keys (F1-F12) - keep as is
+    } else {
+      // Unknown key
+      return null
+    }
+
+    // Must have at least one modifier for a global hotkey
+    if (parts.length === 0) {
+      return null
+    }
+
+    parts.push(key)
+    return parts.join('+')
+  }
+
+  /**
+   * Format an accelerator string for display
+   */
+  const formatAcceleratorForDisplay = (accelerator) => {
+    if (!accelerator) return 'Click to set...'
+
+    // Replace CommandOrControl with platform-specific symbol
+    const isMac = jiminy.platform === 'darwin'
+    return accelerator
+      .replace(/CommandOrControl/g, isMac ? '⌘' : 'Ctrl')
+      .replace(/Command/g, '⌘')
+      .replace(/Control/g, 'Ctrl')
+      .replace(/Alt/g, isMac ? '⌥' : 'Alt')
+      .replace(/Shift/g, isMac ? '⇧' : 'Shift')
+      .replace(/\+/g, ' + ')
+  }
+
+  /**
+   * Update a hotkey button's display
+   */
+  const updateHotkeyDisplay = (button, accelerator) => {
+    if (!button) return
+    button.dataset.hotkey = accelerator || ''
+    button.textContent = formatAcceleratorForDisplay(accelerator)
+  }
+
+  /**
+   * Start recording mode for a hotkey button
+   */
+  const startRecording = async (button) => {
+    if (recordingElement) {
+      await stopRecording(recordingElement)
+    }
+
+    // Suspend global hotkeys so they don't trigger during recording
+    if (jiminy.suspendHotkeys) {
+      try {
+        await jiminy.suspendHotkeys()
+        console.log('Global hotkeys suspended for recording')
+      } catch (error) {
+        console.error('Failed to suspend hotkeys', error)
+      }
+    }
+
+    recordingElement = button
+    button.textContent = 'Press keys...'
+    button.classList.add('ring-2', 'ring-blue-500', 'bg-blue-50', 'dark:bg-blue-900/30')
+  }
+
+  /**
+   * Stop recording mode for a hotkey button
+   */
+  const stopRecording = async (button) => {
+    if (!button) return
+    button.classList.remove('ring-2', 'ring-blue-500', 'bg-blue-50', 'dark:bg-blue-900/30')
+    updateHotkeyDisplay(button, button.dataset.hotkey)
+
+    const wasRecording = recordingElement === button
+    if (wasRecording) {
+      recordingElement = null
+    }
+
+    // Resume global hotkeys after recording ends
+    if (wasRecording && jiminy.resumeHotkeys) {
+      try {
+        await jiminy.resumeHotkeys()
+        console.log('Global hotkeys resumed after recording')
+      } catch (error) {
+        console.error('Failed to resume hotkeys', error)
+      }
+    }
+  }
+
+  /**
+   * Handle keydown during recording
+   */
+  const handleHotkeyKeydown = async (event) => {
+    if (!recordingElement) return
+
+    event.preventDefault()
+    event.stopPropagation()
+
+    const accelerator = keyEventToAccelerator(event)
+    if (accelerator) {
+      const button = recordingElement
+      button.dataset.hotkey = accelerator
+      await stopRecording(button)
+      setMessage(hotkeysError, '')
+    }
+  }
+
+  // Set up hotkey recording
+  const setupHotkeyRecorder = (button) => {
+    if (!button) return
+
+    button.addEventListener('click', () => {
+      void startRecording(button)
+    })
+
+    button.addEventListener('blur', () => {
+      // Small delay to allow keydown to process first
+      setTimeout(() => {
+        if (recordingElement === button) {
+          void stopRecording(button)
+        }
+      }, 100)
+    })
+
+    button.addEventListener('keydown', (event) => {
+      void handleHotkeyKeydown(event)
+    })
+  }
+
+  setupHotkeyRecorder(captureHotkeyBtn)
+  setupHotkeyRecorder(clipboardHotkeyBtn)
   let isSyncing = false
   let isMaxNodesExceeded = false
   let isPruning = false
@@ -221,6 +412,12 @@ document.addEventListener('DOMContentLoaded', () => {
       if (llmProviderSelect) {
         llmProviderSelect.value = result.llmProviderName || ''
       }
+      if (captureHotkeyBtn) {
+        updateHotkeyDisplay(captureHotkeyBtn, result.captureHotkey || DEFAULT_CAPTURE_HOTKEY)
+      }
+      if (clipboardHotkeyBtn) {
+        updateHotkeyDisplay(clipboardHotkeyBtn, result.clipboardHotkey || DEFAULT_CLIPBOARD_HOTKEY)
+      }
       currentExclusions = Array.isArray(result.exclusions) ? [...result.exclusions] : []
       renderExclusions()
       setMessage(errorMessage, result.validationMessage || '')
@@ -228,6 +425,8 @@ document.addEventListener('DOMContentLoaded', () => {
       setMessage(llmProviderError, '')
       setMessage(llmKeyError, '')
       setMessage(llmKeyStatus, '')
+      setMessage(hotkeysError, '')
+      setMessage(hotkeysStatus, '')
       updatePruneButtonState()
       return result
     } catch (error) {
@@ -235,6 +434,7 @@ document.addEventListener('DOMContentLoaded', () => {
       setMessage(errorMessage, 'Failed to load settings.')
       setMessage(llmProviderError, 'Failed to load settings.')
       setMessage(llmKeyError, 'Failed to load settings.')
+      setMessage(hotkeysError, 'Failed to load settings.')
     }
     return null
   }
@@ -243,6 +443,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setMessage(errorMessage, 'Settings bridge unavailable. Restart the app.')
     setMessage(llmProviderError, 'Settings bridge unavailable. Restart the app.')
     setMessage(llmKeyError, 'Settings bridge unavailable. Restart the app.')
+    setMessage(hotkeysError, 'Settings bridge unavailable. Restart the app.')
     updatePruneButtonState()
     return
   }
@@ -444,6 +645,73 @@ document.addEventListener('DOMContentLoaded', () => {
       } catch (error) {
         console.error('Failed to pick exclusion', error)
       }
+    })
+  }
+
+  if (hotkeysSaveButton) {
+    hotkeysSaveButton.addEventListener('click', async () => {
+      if (!captureHotkeyBtn || !clipboardHotkeyBtn) {
+        return
+      }
+
+      setMessage(hotkeysStatus, 'Saving...')
+      setMessage(hotkeysError, '')
+
+      const captureHotkey = captureHotkeyBtn.dataset.hotkey || ''
+      const clipboardHotkey = clipboardHotkeyBtn.dataset.hotkey || ''
+
+      if (!captureHotkey && !clipboardHotkey) {
+        setMessage(hotkeysStatus, '')
+        setMessage(hotkeysError, 'At least one hotkey is required.')
+        return
+      }
+
+      try {
+        const result = await jiminy.saveSettings({ captureHotkey, clipboardHotkey })
+        if (result && result.ok) {
+          // Re-register hotkeys with the new values
+          if (jiminy.reregisterHotkeys) {
+            const reregisterResult = await jiminy.reregisterHotkeys()
+            if (reregisterResult && reregisterResult.ok) {
+              setMessage(hotkeysStatus, 'Saved and applied.')
+            } else {
+              const captureError = reregisterResult?.captureHotkey?.ok === false
+              const clipboardError = reregisterResult?.clipboardHotkey?.ok === false
+              if (captureError || clipboardError) {
+                const errorParts = []
+                if (captureError) errorParts.push('capture')
+                if (clipboardError) errorParts.push('clipboard')
+                setMessage(hotkeysStatus, 'Saved.')
+                setMessage(hotkeysError, `Failed to register ${errorParts.join(' and ')} hotkey. The shortcut may be in use by another app.`)
+              } else {
+                setMessage(hotkeysStatus, 'Saved.')
+              }
+            }
+          } else {
+            setMessage(hotkeysStatus, 'Saved. Restart to apply.')
+          }
+        } else {
+          setMessage(hotkeysStatus, '')
+          setMessage(hotkeysError, result?.message || 'Failed to save hotkeys.')
+        }
+      } catch (error) {
+        console.error('Failed to save hotkeys', error)
+        setMessage(hotkeysStatus, '')
+        setMessage(hotkeysError, 'Failed to save hotkeys.')
+      }
+    })
+  }
+
+  if (hotkeysResetButton) {
+    hotkeysResetButton.addEventListener('click', () => {
+      if (captureHotkeyBtn) {
+        updateHotkeyDisplay(captureHotkeyBtn, DEFAULT_CAPTURE_HOTKEY)
+      }
+      if (clipboardHotkeyBtn) {
+        updateHotkeyDisplay(clipboardHotkeyBtn, DEFAULT_CLIPBOARD_HOTKEY)
+      }
+      setMessage(hotkeysStatus, '')
+      setMessage(hotkeysError, '')
     })
   }
 

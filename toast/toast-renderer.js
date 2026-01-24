@@ -20,3 +20,7 @@ ipcRenderer.on('toast-data', (_event, { title, body, type = 'info' }) => {
   document.getElementById('body').textContent = body || ''
   document.getElementById('icon').innerHTML = icons[type] || icons.info
 })
+
+document.getElementById('close-btn').addEventListener('click', () => {
+  ipcRenderer.send('toast-close')
+})

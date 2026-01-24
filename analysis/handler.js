@@ -1,6 +1,16 @@
+const path = require('path')
 const { loadSettings } = require('../settings')
 const { JsonContextGraphStore } = require('../context-graph')
 const { runAnalysis } = require('./processor')
+const { showToast } = require('../toast')
+
+const shortenPath = (fullPath, maxComponents = 2) => {
+  const parts = fullPath.split(path.sep).filter(Boolean)
+  if (parts.length <= maxComponents) {
+    return fullPath
+  }
+  return '.../' + parts.slice(-maxComponents).join('/')
+}
 
 const isLlmMockEnabled = () => process.env.JIMINY_LLM_MOCK === '1'
 
@@ -54,6 +64,15 @@ const createAnalysisHandler = ({
     resultMdPath,
     outputPath: result.outputPath,
     relevantNodeId: result.relevantNodeId
+  })
+
+  const nodeName = result.relevantNodeName || 'General'
+  const shortPath = shortenPath(result.outputPath)
+  showToast({
+    title: 'Analysis Complete',
+    body: `Context: ${nodeName}\nSaved: ${shortPath}`,
+    type: 'success',
+    duration: 15000
   })
 
   return result

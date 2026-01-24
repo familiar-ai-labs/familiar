@@ -78,6 +78,7 @@ test('analysis writes summary alongside relevant node folder', async () => {
   const expectedFile = path.join(expectedDir, 'capture-analysis.md')
 
   assert.equal(result.outputPath, expectedFile)
+  assert.equal(result.relevantNodeName, fileNode.name)
   assert.ok(await fs.stat(result.outputPath))
 })
 
@@ -105,5 +106,6 @@ test('analysis writes summary to general analysis folder when no relevant node f
   )
 
   assert.equal(result.outputPath, expectedFile)
+  assert.equal(result.relevantNodeName, null)
   assert.ok(await fs.stat(result.outputPath))
 })

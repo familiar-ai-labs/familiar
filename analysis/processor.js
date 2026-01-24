@@ -205,6 +205,7 @@ const runAnalysis = async ({
         outputPath,
         summary,
         relevantNodeId: relevantNode?.id || null,
+        relevantNodeName: relevantNode?.name || null,
         outputDir,
     };
 };

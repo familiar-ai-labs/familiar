@@ -1,6 +1,7 @@
 const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const path = require('node:path');
 const { loadSettings, saveSettings, validateContextFolderPath } = require('../settings');
+const { DEFAULT_CAPTURE_HOTKEY, DEFAULT_CLIPBOARD_HOTKEY } = require('../hotkeys');
 
 /**
  * Registers IPC handlers for settings operations.
@@ -20,6 +21,8 @@ function handleGetSettings() {
         const llmProviderName = settings?.llm_provider?.provider || '';
         const llmProviderApiKey = settings?.llm_provider?.api_key || '';
         const exclusions = Array.isArray(settings.exclusions) ? settings.exclusions : [];
+        const captureHotkey = typeof settings.captureHotkey === 'string' ? settings.captureHotkey : DEFAULT_CAPTURE_HOTKEY;
+        const clipboardHotkey = typeof settings.clipboardHotkey === 'string' ? settings.clipboardHotkey : DEFAULT_CLIPBOARD_HOTKEY;
         let validationMessage = '';
 
         if (contextFolderPath) {
@@ -33,7 +36,7 @@ function handleGetSettings() {
             }
         }
 
-        return { contextFolderPath, validationMessage, llmProviderName, llmProviderApiKey, exclusions };
+        return { contextFolderPath, validationMessage, llmProviderName, llmProviderApiKey, exclusions, captureHotkey, clipboardHotkey };
     } catch (error) {
         console.error('Failed to load settings', error);
         return {
@@ -41,7 +44,9 @@ function handleGetSettings() {
             validationMessage: 'Failed to load settings.',
             llmProviderName: '',
             llmProviderApiKey: '',
-            exclusions: []
+            exclusions: [],
+            captureHotkey: DEFAULT_CAPTURE_HOTKEY,
+            clipboardHotkey: DEFAULT_CLIPBOARD_HOTKEY
         };
     }
 }
@@ -51,9 +56,11 @@ function handleSaveSettings(_event, payload) {
     const hasLlmProviderApiKey = Object.prototype.hasOwnProperty.call(payload || {}, 'llmProviderApiKey');
     const hasLlmProviderName = Object.prototype.hasOwnProperty.call(payload || {}, 'llmProviderName');
     const hasExclusions = Object.prototype.hasOwnProperty.call(payload || {}, 'exclusions');
+    const hasCaptureHotkey = Object.prototype.hasOwnProperty.call(payload || {}, 'captureHotkey');
+    const hasClipboardHotkey = Object.prototype.hasOwnProperty.call(payload || {}, 'clipboardHotkey');
     const settingsPayload = {};
 
-    if (!hasContextFolderPath && !hasLlmProviderApiKey && !hasLlmProviderName && !hasExclusions) {
+    if (!hasContextFolderPath && !hasLlmProviderApiKey && !hasLlmProviderName && !hasExclusions && !hasCaptureHotkey && !hasClipboardHotkey) {
         return { ok: false, message: 'No settings provided.' };
     }
 
@@ -88,10 +95,22 @@ function handleSaveSettings(_event, payload) {
         settingsPayload.exclusions = Array.isArray(payload.exclusions) ? payload.exclusions : [];
     }
 
+    if (hasCaptureHotkey) {
+        settingsPayload.captureHotkey = typeof payload.captureHotkey === 'string'
+            ? payload.captureHotkey
+            : DEFAULT_CAPTURE_HOTKEY;
+    }
+
+    if (hasClipboardHotkey) {
+        settingsPayload.clipboardHotkey = typeof payload.clipboardHotkey === 'string'
+            ? payload.clipboardHotkey
+            : DEFAULT_CLIPBOARD_HOTKEY;
+    }
+
     try {
         saveSettings(settingsPayload);
         console.log('Settings saved');
-        return { ok: true };
+        return { ok: true, hotkeysChanged: hasCaptureHotkey || hasClipboardHotkey };
     } catch (error) {
         console.error('Failed to save settings', error);
         return { ok: false, message: 'Failed to save settings.' };

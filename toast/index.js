@@ -1,11 +1,11 @@
-const { BrowserWindow, screen } = require('electron')
+const { BrowserWindow, screen, ipcMain } = require('electron')
 const path = require('path')
 
 let toastWindow = null
 let hideTimeout = null
 
-const TOAST_WIDTH = 320
-const TOAST_HEIGHT = 70
+const TOAST_WIDTH = 420
+const TOAST_HEIGHT = 110
 const TOAST_MARGIN = 16
 const TOAST_DURATION_MS = 3000
 
@@ -95,6 +95,12 @@ function destroyToast () {
     toastWindow.destroy()
     toastWindow = null
   }
+}
+
+if (ipcMain && typeof ipcMain.on === 'function') {
+  ipcMain.on('toast-close', () => {
+    hideToast()
+  })
 }
 
 module.exports = {

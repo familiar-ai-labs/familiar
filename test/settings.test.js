@@ -70,3 +70,45 @@ test('validateContextFolderPath rejects file path', () => {
   assert.equal(result.ok, false)
   assert.equal(result.message, 'Selected path is not a directory.')
 })
+
+test('saveSettings persists captureHotkey and clipboardHotkey', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-'))
+  const settingsDir = path.join(tempRoot, 'settings')
+
+  saveSettings({ captureHotkey: 'Alt+S', clipboardHotkey: 'Alt+C' }, { settingsDir })
+
+  const loaded = loadSettings({ settingsDir })
+  assert.equal(loaded.captureHotkey, 'Alt+S')
+  assert.equal(loaded.clipboardHotkey, 'Alt+C')
+})
+
+test('saveSettings preserves hotkeys when updating other settings', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-'))
+  const settingsDir = path.join(tempRoot, 'settings')
+  const contextDir = path.join(tempRoot, 'context')
+  fs.mkdirSync(contextDir)
+
+  saveSettings({ captureHotkey: 'Alt+S', clipboardHotkey: 'Alt+C' }, { settingsDir })
+  saveSettings({ contextFolderPath: contextDir }, { settingsDir })
+
+  const loaded = loadSettings({ settingsDir })
+  assert.equal(loaded.captureHotkey, 'Alt+S')
+  assert.equal(loaded.clipboardHotkey, 'Alt+C')
+  assert.equal(loaded.contextFolderPath, contextDir)
+})
+
+test('saveSettings preserves other settings when updating hotkeys', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-'))
+  const settingsDir = path.join(tempRoot, 'settings')
+  const contextDir = path.join(tempRoot, 'context')
+  fs.mkdirSync(contextDir)
+
+  saveSettings({ contextFolderPath: contextDir, llmProviderApiKey: 'key123', llmProviderName: 'openai' }, { settingsDir })
+  saveSettings({ captureHotkey: 'CommandOrControl+Alt+X' }, { settingsDir })
+
+  const loaded = loadSettings({ settingsDir })
+  assert.equal(loaded.captureHotkey, 'CommandOrControl+Alt+X')
+  assert.equal(loaded.contextFolderPath, contextDir)
+  assert.equal(loaded.llm_provider?.api_key, 'key123')
+  assert.equal(loaded.llm_provider?.provider, 'openai')
+})

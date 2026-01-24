@@ -3,6 +3,7 @@ const path = require('node:path')
 const os = require('node:os')
 
 const { SETTINGS_DIR_NAME, SETTINGS_FILE_NAME } = require('./const')
+const { DEFAULT_CAPTURE_HOTKEY, DEFAULT_CLIPBOARD_HOTKEY } = require('./hotkeys')
 
 const resolveSettingsDir = (settingsDir) => (
   settingsDir || process.env.JIMINY_SETTINGS_DIR || path.join(os.homedir(), SETTINGS_DIR_NAME)
@@ -47,6 +48,8 @@ const saveSettings = (settings, options = {}) => {
   const hasLlmProviderTextModel = Object.prototype.hasOwnProperty.call(settings, 'llmProviderTextModel')
   const hasLlmProviderVisionModel = Object.prototype.hasOwnProperty.call(settings, 'llmProviderVisionModel')
   const hasExclusions = Object.prototype.hasOwnProperty.call(settings, 'exclusions')
+  const hasCaptureHotkey = Object.prototype.hasOwnProperty.call(settings, 'captureHotkey')
+  const hasClipboardHotkey = Object.prototype.hasOwnProperty.call(settings, 'clipboardHotkey')
   const existingProvider = existing && typeof existing.llm_provider === 'object'
     ? existing.llm_provider
     : {}
@@ -82,6 +85,18 @@ const saveSettings = (settings, options = {}) => {
     payload.exclusions = Array.isArray(settings.exclusions) ? settings.exclusions : []
   } else if (Array.isArray(existing.exclusions)) {
     payload.exclusions = existing.exclusions
+  }
+
+  if (hasCaptureHotkey) {
+    payload.captureHotkey = typeof settings.captureHotkey === 'string' ? settings.captureHotkey : DEFAULT_CAPTURE_HOTKEY
+  } else if (typeof existing.captureHotkey === 'string') {
+    payload.captureHotkey = existing.captureHotkey
+  }
+
+  if (hasClipboardHotkey) {
+    payload.clipboardHotkey = typeof settings.clipboardHotkey === 'string' ? settings.clipboardHotkey : DEFAULT_CLIPBOARD_HOTKEY
+  } else if (typeof existing.clipboardHotkey === 'string') {
+    payload.clipboardHotkey = existing.clipboardHotkey
   }
 
   fs.writeFileSync(settingsPath, JSON.stringify(payload, null, 2), 'utf-8')

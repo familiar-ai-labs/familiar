@@ -1,14 +1,15 @@
-const { app, BrowserWindow, Menu, Tray, dialog, nativeImage } = require('electron');
+const { app, BrowserWindow, Menu, Tray, dialog, nativeImage, ipcMain } = require('electron');
 const path = require('node:path');
 
 const { buildTrayMenuTemplate } = require('./menu');
 const { registerIpcHandlers } = require('./ipc');
 const { registerCaptureHandlers, startCaptureFlow, closeOverlayWindow } = require('./screenshot/capture');
 const { captureClipboard } = require('./clipboard');
-const { registerCaptureHotkey, registerClipboardHotkey, unregisterGlobalHotkeys } = require('./hotkeys');
+const { registerCaptureHotkey, registerClipboardHotkey, unregisterGlobalHotkeys, DEFAULT_CAPTURE_HOTKEY, DEFAULT_CLIPBOARD_HOTKEY } = require('./hotkeys');
 const { registerExtractionHandlers } = require('./extraction');
 const { registerAnalysisHandlers } = require('./analysis');
 const { showWindow } = require('./utils/window');
+const { loadSettings } = require('./settings');
 
 const trayIconPath = path.join(__dirname, 'icon.png');
 
@@ -96,6 +97,40 @@ function quitApp() {
     app.quit();
 }
 
+function registerHotkeysFromSettings() {
+    const settings = loadSettings();
+    const captureAccelerator = typeof settings.captureHotkey === 'string' && settings.captureHotkey
+        ? settings.captureHotkey
+        : DEFAULT_CAPTURE_HOTKEY;
+    const clipboardAccelerator = typeof settings.clipboardHotkey === 'string' && settings.clipboardHotkey
+        ? settings.clipboardHotkey
+        : DEFAULT_CLIPBOARD_HOTKEY;
+
+    unregisterGlobalHotkeys();
+
+    const captureResult = registerCaptureHotkey({
+        onCapture: () => {
+            void startCaptureFlow();
+        },
+        accelerator: captureAccelerator
+    });
+    if (!captureResult.ok) {
+        console.warn('Capture hotkey inactive', { reason: captureResult.reason, accelerator: captureResult.accelerator });
+    }
+
+    const clipboardResult = registerClipboardHotkey({
+        onClipboard: () => {
+            void captureClipboard();
+        },
+        accelerator: clipboardAccelerator
+    });
+    if (!clipboardResult.ok) {
+        console.warn('Clipboard hotkey inactive', { reason: clipboardResult.reason, accelerator: clipboardResult.accelerator });
+    }
+
+    return { captureResult, clipboardResult };
+}
+
 function createTray() {
     const trayIconBase = nativeImage.createFromPath(trayIconPath);
     if (trayIconBase.isEmpty()) {
@@ -133,6 +168,35 @@ registerCaptureHandlers();
 registerExtractionHandlers();
 registerAnalysisHandlers();
 
+// IPC handler for hotkey re-registration
+ipcMain.handle('hotkeys:reregister', () => {
+    console.log('Re-registering hotkeys from settings');
+    const result = registerHotkeysFromSettings();
+    return {
+        ok: result.captureResult.ok && result.clipboardResult.ok,
+        captureHotkey: result.captureResult,
+        clipboardHotkey: result.clipboardResult
+    };
+});
+
+// IPC handler to temporarily suspend hotkeys (for recording new ones)
+ipcMain.handle('hotkeys:suspend', () => {
+    console.log('Suspending global hotkeys for recording');
+    unregisterGlobalHotkeys();
+    return { ok: true };
+});
+
+// IPC handler to resume hotkeys after recording
+ipcMain.handle('hotkeys:resume', () => {
+    console.log('Resuming global hotkeys after recording');
+    const result = registerHotkeysFromSettings();
+    return {
+        ok: result.captureResult.ok && result.clipboardResult.ok,
+        captureHotkey: result.captureResult,
+        clipboardHotkey: result.clipboardResult
+    };
+});
+
 app.whenReady().then(() => {
     if (process.platform !== 'darwin' && !isE2E) {
         console.error('Jiminy desktop app is macOS-only right now.');
@@ -147,23 +211,7 @@ app.whenReady().then(() => {
         app.setLoginItemSettings({ openAtLogin: true, openAsHidden: true });
 
         createTray();
-        const hotkeyResult = registerCaptureHotkey({
-            onCapture: () => {
-                void startCaptureFlow();
-            },
-        });
-        if (!hotkeyResult.ok) {
-            console.warn('Capture hotkey inactive', { reason: hotkeyResult.reason, accelerator: hotkeyResult.accelerator });
-        }
-
-        const clipboardHotkeyResult = registerClipboardHotkey({
-            onClipboard: () => {
-                void captureClipboard();
-            },
-        });
-        if (!clipboardHotkeyResult.ok) {
-            console.warn('Clipboard hotkey inactive', { reason: clipboardHotkeyResult.reason, accelerator: clipboardHotkeyResult.accelerator });
-        }
+        registerHotkeysFromSettings();
     } else if (isE2E) {
         console.log('E2E mode: running on non-macOS platform');
     }

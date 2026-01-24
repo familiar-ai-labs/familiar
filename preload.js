@@ -11,6 +11,9 @@ contextBridge.exposeInMainWorld('jiminy', {
     const data = typeof payload === 'string' ? { contextFolderPath: payload } : payload
     return ipcRenderer.invoke('settings:save', data)
   },
+  reregisterHotkeys: () => ipcRenderer.invoke('hotkeys:reregister'),
+  suspendHotkeys: () => ipcRenderer.invoke('hotkeys:suspend'),
+  resumeHotkeys: () => ipcRenderer.invoke('hotkeys:resume'),
   getContextGraphStatus: (payload) => ipcRenderer.invoke('contextGraph:status', payload),
   syncContextGraph: () => ipcRenderer.invoke('contextGraph:sync'),
   pruneContextGraph: () => ipcRenderer.invoke('contextGraph:prune'),
