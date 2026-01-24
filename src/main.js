@@ -5,7 +5,13 @@ const { buildTrayMenuTemplate } = require('./menu');
 const { registerIpcHandlers } = require('./ipc');
 const { registerCaptureHandlers, startCaptureFlow, closeOverlayWindow } = require('./screenshot/capture');
 const { captureClipboard } = require('./clipboard');
-const { registerCaptureHotkey, registerClipboardHotkey, unregisterGlobalHotkeys, DEFAULT_CAPTURE_HOTKEY, DEFAULT_CLIPBOARD_HOTKEY } = require('./hotkeys');
+const {
+    registerCaptureHotkey,
+    registerClipboardHotkey,
+    unregisterGlobalHotkeys,
+    DEFAULT_CAPTURE_HOTKEY,
+    DEFAULT_CLIPBOARD_HOTKEY,
+} = require('./hotkeys');
 const { registerExtractionHandlers } = require('./extraction');
 const { registerAnalysisHandlers } = require('./analysis');
 const { showWindow } = require('./utils/window');
@@ -44,7 +50,7 @@ function createSettingsWindow() {
         },
     });
 
-    window.loadFile('index.html');
+    window.loadFile('src/index.html');
 
     window.on('close', (event) => {
         if (!isQuitting) {
@@ -99,12 +105,14 @@ function quitApp() {
 
 function registerHotkeysFromSettings() {
     const settings = loadSettings();
-    const captureAccelerator = typeof settings.captureHotkey === 'string' && settings.captureHotkey
-        ? settings.captureHotkey
-        : DEFAULT_CAPTURE_HOTKEY;
-    const clipboardAccelerator = typeof settings.clipboardHotkey === 'string' && settings.clipboardHotkey
-        ? settings.clipboardHotkey
-        : DEFAULT_CLIPBOARD_HOTKEY;
+    const captureAccelerator =
+        typeof settings.captureHotkey === 'string' && settings.captureHotkey
+            ? settings.captureHotkey
+            : DEFAULT_CAPTURE_HOTKEY;
+    const clipboardAccelerator =
+        typeof settings.clipboardHotkey === 'string' && settings.clipboardHotkey
+            ? settings.clipboardHotkey
+            : DEFAULT_CLIPBOARD_HOTKEY;
 
     unregisterGlobalHotkeys();
 
@@ -112,20 +120,26 @@ function registerHotkeysFromSettings() {
         onCapture: () => {
             void startCaptureFlow();
         },
-        accelerator: captureAccelerator
+        accelerator: captureAccelerator,
     });
     if (!captureResult.ok) {
-        console.warn('Capture hotkey inactive', { reason: captureResult.reason, accelerator: captureResult.accelerator });
+        console.warn('Capture hotkey inactive', {
+            reason: captureResult.reason,
+            accelerator: captureResult.accelerator,
+        });
     }
 
     const clipboardResult = registerClipboardHotkey({
         onClipboard: () => {
             void captureClipboard();
         },
-        accelerator: clipboardAccelerator
+        accelerator: clipboardAccelerator,
     });
     if (!clipboardResult.ok) {
-        console.warn('Clipboard hotkey inactive', { reason: clipboardResult.reason, accelerator: clipboardResult.accelerator });
+        console.warn('Clipboard hotkey inactive', {
+            reason: clipboardResult.reason,
+            accelerator: clipboardResult.accelerator,
+        });
     }
 
     return { captureResult, clipboardResult };
@@ -175,7 +189,7 @@ ipcMain.handle('hotkeys:reregister', () => {
     return {
         ok: result.captureResult.ok && result.clipboardResult.ok,
         captureHotkey: result.captureResult,
-        clipboardHotkey: result.clipboardResult
+        clipboardHotkey: result.clipboardResult,
     };
 });
 
@@ -193,7 +207,7 @@ ipcMain.handle('hotkeys:resume', () => {
     return {
         ok: result.captureResult.ok && result.clipboardResult.ok,
         captureHotkey: result.captureResult,
-        clipboardHotkey: result.clipboardResult
+        clipboardHotkey: result.clipboardResult,
     };
 });
 
@@ -247,7 +261,7 @@ app.on('render-process-gone', (_event, details) => {
 app.on('window-all-closed', (event) => {
     if (process.platform === 'darwin') {
         event.preventDefault();
-        console.log("preventing app from exiting when all windows are closed");
+        console.log('preventing app from exiting when all windows are closed');
         return;
     }
 

@@ -8,7 +8,7 @@ const {
   loadSettings,
   saveSettings,
   validateContextFolderPath
-} = require('../settings')
+} = require('../src/settings')
 
 test('saveSettings persists contextFolderPath', () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-'))

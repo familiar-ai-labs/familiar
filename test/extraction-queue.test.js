@@ -1,27 +1,23 @@
-const assert = require('node:assert/strict')
-const { test } = require('node:test')
+const assert = require('node:assert/strict');
+const { test } = require('node:test');
 
-const {
-  extractionQueue,
-  registerExtractionHandler,
-  clearExtractionHandlers
-} = require('../extraction')
+const { extractionQueue, registerExtractionHandler, clearExtractionHandlers } = require('../src/extraction');
 
 test('extraction queue dispatches events to registered handlers', async () => {
-  clearExtractionHandlers()
+    clearExtractionHandlers();
 
-  let handledEvent = null
-  registerExtractionHandler('image', async (event) => {
-    handledEvent = event
-    return { ok: true }
-  })
+    let handledEvent = null;
+    registerExtractionHandler('image', async (event) => {
+        handledEvent = event;
+        return { ok: true };
+    });
 
-  const event = {
-    sourceType: 'image',
-    metadata: { path: '/tmp/example.png' }
-  }
+    const event = {
+        sourceType: 'image',
+        metadata: { path: '/tmp/example.png' },
+    };
 
-  const result = await extractionQueue.enqueue(event)
-  assert.deepEqual(result, { ok: true })
-  assert.deepEqual(handledEvent, event)
-})
+    const result = await extractionQueue.enqueue(event);
+    assert.deepEqual(result, { ok: true });
+    assert.deepEqual(handledEvent, event);
+});

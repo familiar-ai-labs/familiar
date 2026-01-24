@@ -3,8 +3,8 @@ const os = require('node:os')
 const path = require('node:path')
 const { test, expect } = require('playwright/test')
 const { _electron: electron } = require('playwright')
-const { constructContextGraphSkeleton } = require('../../context-graph/graphSkeleton')
-const { JIMINY_BEHIND_THE_SCENES_DIR_NAME } = require('../../const')
+const { constructContextGraphSkeleton } = require('../../src/context-graph/graphSkeleton')
+const { JIMINY_BEHIND_THE_SCENES_DIR_NAME } = require('../../src/const')
 
 test('sync now builds context graph with mocked summaries', async () => {
   const appRoot = path.join(__dirname, '../..')

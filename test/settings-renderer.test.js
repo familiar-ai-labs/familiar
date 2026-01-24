@@ -110,7 +110,7 @@ test('refreshes context graph status when context path changes', async () => {
   global.window = { jiminy }
 
   try {
-    const rendererPath = path.join(__dirname, '..', 'settings-renderer.js')
+    const rendererPath = path.join(__dirname, '..', 'src', 'settings-renderer.js')
     const resolvedRendererPath = require.resolve(rendererPath)
     delete require.cache[resolvedRendererPath]
     require(resolvedRendererPath)
@@ -164,7 +164,7 @@ test('prune button clears context graph data', async () => {
   global.window = { jiminy }
 
   try {
-    const rendererPath = path.join(__dirname, '..', 'settings-renderer.js')
+    const rendererPath = path.join(__dirname, '..', 'src', 'settings-renderer.js')
     const resolvedRendererPath = require.resolve(rendererPath)
     delete require.cache[resolvedRendererPath]
     require(resolvedRendererPath)
@@ -218,7 +218,7 @@ test('prune button reports nothing to prune when graph is missing', async () => 
   global.window = { jiminy }
 
   try {
-    const rendererPath = path.join(__dirname, '..', 'settings-renderer.js')
+    const rendererPath = path.join(__dirname, '..', 'src', 'settings-renderer.js')
     const resolvedRendererPath = require.resolve(rendererPath)
     delete require.cache[resolvedRendererPath]
     require(resolvedRendererPath)

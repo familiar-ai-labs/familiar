@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
 
-const { createModelProviderClients } = require('../modelProviders');
+const { createModelProviderClients } = require('../src/modelProviders');
 
 const createOkResponse = (payload) => ({
     ok: true,

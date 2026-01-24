@@ -4,11 +4,11 @@ const os = require('node:os')
 const path = require('node:path')
 const fs = require('node:fs/promises')
 
-const { buildClipboardFilename, getClipboardDirectory, saveClipboardToDirectory } = require('../clipboard/storage')
+const { buildClipboardFilename, getClipboardDirectory, saveClipboardToDirectory } = require('../src/clipboard/storage')
 const {
   CAPTURES_DIR_NAME,
   JIMINY_BEHIND_THE_SCENES_DIR_NAME
-} = require('../const')
+} = require('../src/const')
 
 test('buildClipboardFilename uses a stable timestamp format with clipboard prefix', () => {
   const date = new Date(2026, 0, 2, 3, 4, 5, 6)

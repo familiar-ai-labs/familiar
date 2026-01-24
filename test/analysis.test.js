@@ -4,9 +4,9 @@ const fs = require('node:fs/promises')
 const path = require('node:path')
 const os = require('node:os')
 
-const { createNodeId } = require('../context-graph')
-const { GENERAL_ANALYSIS_DIR_NAME } = require('../const')
-const { runAnalysis } = require('../analysis')
+const { createNodeId } = require('../src/context-graph')
+const { GENERAL_ANALYSIS_DIR_NAME } = require('../src/const')
+const { runAnalysis } = require('../src/analysis')
 
 const makeTempDir = async (prefix) => fs.mkdtemp(path.join(os.tmpdir(), prefix))
 

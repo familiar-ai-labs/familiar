@@ -1,7 +1,7 @@
 const { test } = require('node:test')
 const assert = require('node:assert/strict')
 
-const { retry, withRetry, computeBackoffDelay, withHttpRetry } = require('../utils/retry')
+const { retry, withRetry, computeBackoffDelay, withHttpRetry } = require('../src/utils/retry')
 
 test('retry resolves after transient failures', async () => {
   let attempts = 0

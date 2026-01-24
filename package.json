@@ -2,12 +2,14 @@
   "name": "jiminy-desktopapp",
   "version": "1.0.0",
   "description": "Jiminy menu bar app shell (macOS)",
-  "main": "main.js",
+  "main": "src/main.js",
   "scripts": {
-    "css": "tailwindcss -i ./src/input.css -o ./styles.css --watch",
-    "css:build": "tailwindcss -i ./src/input.css -o ./styles.css --minify",
+    "clean": "rimraf dist",
+    "dist:mac": "npm run clean && electron-builder --mac --arm64",
+    "css": "tailwindcss -i ./src/input.css -o ./src/styles.css --watch",
+    "css:build": "tailwindcss -i ./src/input.css -o ./src/styles.css --minify",
     "start": "npm run css:build && electron .",
-    "dev": "tailwindcss -i ./src/input.css -o ./styles.css --watch & electron .",
+    "dev": "tailwindcss -i ./src/input.css -o ./src/styles.css --watch & electron .",
     "test": "find test -name \"*.test.js\" -not -path \"*/e2e/*\" -not -path \"*/modelProviderTests/*\" -print0 | xargs -0 node --test",
     "test:modelProviderTests": "find test/modelProviderTests -name \"*.test.js\" -print0 | xargs -0 node --test",
     "test:e2e": "playwright test",
@@ -21,12 +23,56 @@
     "macOS",
     "Jiminy"
   ],
+  "build": {
+    "appId": "com.jiminy.jiminy",
+    "productName": "Jiminy",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "build/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "icon": "build/icon.icns"
+    },
+    "dmg": {
+      "background": "build/background-jiminy-to-applications.png",
+      "window": {
+        "width": 450,
+        "height": 250
+      },
+      "contents": [
+        {
+          "x": 180,
+          "y": 170,
+          "type": "file"
+        },
+        {
+          "x": 380,
+          "y": 170,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    }
+  },
   "author": "Jiminy",
   "license": "CC0-1.0",
   "devDependencies": {
     "@tailwindcss/cli": "^4.1.18",
     "electron": "^40.0.0",
+    "electron-builder": "^26.4.0",
     "playwright": "^1.55.0",
+    "rimraf": "^6.1.2",
     "tailwindcss": "^4.1.18"
   }
 }

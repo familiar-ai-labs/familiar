@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
-const { createGeminiSummarizer, DEFAULT_MODEL, ExhaustedLlmProviderError } = require('../../llms');
-const { createModelProviderClients } = require('../../modelProviders');
+const { createGeminiSummarizer, DEFAULT_MODEL, ExhaustedLlmProviderError } = require('../../src/llms');
+const { createModelProviderClients } = require('../../src/modelProviders');
 
 const liveApiKey = process.env.LLM_API_KEY;
 
