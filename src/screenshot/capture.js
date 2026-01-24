@@ -1,4 +1,4 @@
-const { app, BrowserWindow, desktopCapturer, ipcMain, screen, dialog, Notification } = require('electron')
+const { app, BrowserWindow, desktopCapturer, ipcMain, screen } = require('electron')
 const path = require('node:path')
 const { normalizeRect, clampRectToBounds } = require('./capture-utils')
 const { getCaptureDirectory, savePngToDirectory } = require('./capture-storage')
@@ -9,67 +9,14 @@ const { showToast } = require('../toast')
 let overlayWindow = null
 let overlaySession = null
 
-const getFocusedVisibleWindow = () => {
-  if (!BrowserWindow || typeof BrowserWindow.getFocusedWindow !== 'function') {
-    return null
-  }
-
-  const focused = BrowserWindow.getFocusedWindow()
-  if (!focused) {
-    return null
-  }
-
-  if (typeof focused.isDestroyed === 'function' && focused.isDestroyed()) {
-    return null
-  }
-
-  if (typeof focused.isVisible === 'function' && !focused.isVisible()) {
-    return null
-  }
-
-  if (typeof focused.isMinimized === 'function' && focused.isMinimized()) {
-    return null
-  }
-
-  return focused
-}
-
-const showCaptureWarningNotification = ({ title, body }) => {
-  try {
-    if (!Notification || typeof Notification.isSupported !== 'function' || !Notification.isSupported()) {
-      console.warn('Notifications not supported for capture warning', { title })
-      return false
-    }
-
-    const notification = new Notification({ title, body })
-    notification.show()
-    console.log('Capture warning notification shown', { title })
-    return true
-  } catch (error) {
-    console.warn('Failed to show capture warning notification', { error, title })
-    return false
-  }
-}
-
 const showContextFolderWarning = async ({ message, detail }) => {
-  const parentWindow = getFocusedVisibleWindow()
-  if (parentWindow) {
-    await dialog.showMessageBox(parentWindow, {
-      type: 'warning',
-      title: 'Context Folder Required',
-      message,
-      detail,
-      buttons: ['OK']
-    })
-    console.log('Context folder warning shown', { via: 'dialog' })
-    return
-  }
-
   const body = detail ? `${message} ${detail}` : message
-  const notified = showCaptureWarningNotification({ title: 'Context Folder Required', body })
-  if (!notified) {
-    console.warn('Context folder warning suppressed', { reason: 'no_window_no_notification' })
-  }
+  showToast({
+    title: 'Context Folder Required',
+    body,
+    type: 'warning',
+    size: 'large'
+  })
 }
 
 function getCaptureDisplay () {

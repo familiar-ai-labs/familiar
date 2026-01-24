@@ -10,31 +10,7 @@ const resetRequireCache = () => {
     delete require.cache[capturePath];
 };
 
-const makeVisibleWindow = (visible = true) => ({
-    isDestroyed: () => false,
-    isVisible: () => visible,
-});
-
-const stubElectron = ({ focusedWindow, windows, notificationSupported = true } = {}) => {
-    const messageBoxCalls = [];
-    const notificationCalls = [];
-
-    class FakeNotification {
-        constructor(payload) {
-            notificationCalls.push(payload);
-        }
-
-        show() {}
-
-        static isSupported() {
-            return notificationSupported;
-        }
-    }
-
-    const BrowserWindow = function () {};
-    BrowserWindow.getFocusedWindow = () => focusedWindow || null;
-    BrowserWindow.getAllWindows = () => (Array.isArray(windows) ? windows : []);
-
+const stubElectron = ({ toastCalls }) => {
     const stub = {
         app: {
             getAppPath: () => '/tmp',
@@ -43,7 +19,7 @@ const stubElectron = ({ focusedWindow, windows, notificationSupported = true } =
             isReady: () => true,
             once: () => {},
         },
-        BrowserWindow,
+        BrowserWindow: function () {},
         desktopCapturer: {
             getSources: async () => [],
         },
@@ -58,13 +34,6 @@ const stubElectron = ({ focusedWindow, windows, notificationSupported = true } =
                 scaleFactor: 1,
             }),
         },
-        dialog: {
-            showMessageBox: async (...args) => {
-                messageBoxCalls.push(args);
-                return {};
-            },
-        },
-        Notification: FakeNotification,
     };
 
     const originalLoad = Module._load;
@@ -72,27 +41,31 @@ const stubElectron = ({ focusedWindow, windows, notificationSupported = true } =
         if (request === 'electron') {
             return stub;
         }
+        if (request === '../toast') {
+            return {
+                showToast: (payload) => {
+                    toastCalls.push(payload);
+                },
+            };
+        }
 
         return originalLoad.call(this, request, parent, isMain);
     };
 
     return {
-        messageBoxCalls,
-        notificationCalls,
         restore: () => {
             Module._load = originalLoad;
         },
     };
 };
 
-test('startCaptureFlow uses notification when no focused visible window exists', async () => {
+test('startCaptureFlow triggers toast when context folder is missing', async () => {
     const tempSettingsDir = await fs.mkdtemp(path.join(os.tmpdir(), 'jiminy-settings-'));
     const previousSettingsDir = process.env.JIMINY_SETTINGS_DIR;
     process.env.JIMINY_SETTINGS_DIR = tempSettingsDir;
 
-    const { messageBoxCalls, notificationCalls, restore } = stubElectron({
-        focusedWindow: null,
-    });
+    const toastCalls = [];
+    const { restore } = stubElectron({ toastCalls });
     resetRequireCache();
 
     try {
@@ -100,40 +73,9 @@ test('startCaptureFlow uses notification when no focused visible window exists',
         const result = await capture.startCaptureFlow();
 
         assert.equal(result.ok, false);
-        assert.equal(messageBoxCalls.length, 0);
-        assert.equal(notificationCalls.length, 1);
-        assert.equal(notificationCalls[0].title, 'Context Folder Required');
-    } finally {
-        restore();
-        resetRequireCache();
-        if (typeof previousSettingsDir === 'undefined') {
-            delete process.env.JIMINY_SETTINGS_DIR;
-        } else {
-            process.env.JIMINY_SETTINGS_DIR = previousSettingsDir;
-        }
-    }
-});
-
-test('startCaptureFlow uses dialog when a visible window exists', async () => {
-    const tempSettingsDir = await fs.mkdtemp(path.join(os.tmpdir(), 'jiminy-settings-'));
-    const previousSettingsDir = process.env.JIMINY_SETTINGS_DIR;
-    process.env.JIMINY_SETTINGS_DIR = tempSettingsDir;
-
-    const focusedWindow = makeVisibleWindow(true);
-    const { messageBoxCalls, notificationCalls, restore } = stubElectron({
-        focusedWindow,
-        windows: [],
-    });
-    resetRequireCache();
-
-    try {
-        const capture = require('../src/screenshot/capture');
-        const result = await capture.startCaptureFlow();
-
-        assert.equal(result.ok, false);
-        assert.equal(messageBoxCalls.length, 1);
-        assert.equal(messageBoxCalls[0][0], focusedWindow);
-        assert.equal(notificationCalls.length, 0);
+        assert.equal(toastCalls.length, 1);
+        assert.equal(toastCalls[0].title, 'Context Folder Required');
+        assert.equal(toastCalls[0].type, 'warning');
     } finally {
         restore();
         resetRequireCache();

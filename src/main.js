@@ -16,6 +16,8 @@ const { registerExtractionHandlers } = require('./extraction');
 const { registerAnalysisHandlers } = require('./analysis');
 const { showWindow } = require('./utils/window');
 const { loadSettings } = require('./settings');
+const { initLogging } = require('./logger');
+const { showToast } = require('./toast');
 
 const trayIconPath = path.join(__dirname, 'icon.png');
 
@@ -25,6 +27,8 @@ let isQuitting = false;
 
 const isE2E = process.env.JIMINY_E2E === '1';
 const isCI = process.env.CI === 'true' || process.env.CI === '1';
+
+initLogging();
 
 if (process.platform === 'linux' && (isE2E || isCI)) {
     console.log('Applying Linux CI/E2E Electron flags');
@@ -127,6 +131,12 @@ function registerHotkeysFromSettings() {
             reason: captureResult.reason,
             accelerator: captureResult.accelerator,
         });
+        showToast({
+            title: 'Capture hotkey inactive',
+            body: 'The capture shortcut could not be registered. Open Settings to update it.',
+            type: 'warning',
+            size: 'large'
+        });
     }
 
     const clipboardResult = registerClipboardHotkey({
@@ -139,6 +149,12 @@ function registerHotkeysFromSettings() {
         console.warn('Clipboard hotkey inactive', {
             reason: clipboardResult.reason,
             accelerator: clipboardResult.accelerator,
+        });
+        showToast({
+            title: 'Clipboard hotkey inactive',
+            body: 'The clipboard shortcut could not be registered. Open Settings to update it.',
+            type: 'warning',
+            size: 'large'
         });
     }
 
