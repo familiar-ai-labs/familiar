@@ -58,7 +58,7 @@ test('capture flow saves a screenshot under the context folder', async () => {
 
         const overlayPromise = electronApp.waitForEvent('window');
         const captureResult = await electronApp.evaluate(async ({ app }) => {
-            const capture = process.mainModule.require(`${app.getAppPath()}/screenshot/capture`);
+            const capture = process.mainModule.require(`${app.getAppPath()}/src/screenshot/capture`);
             return capture.startCaptureFlow();
         });
         expect(captureResult.ok).toBe(true);
