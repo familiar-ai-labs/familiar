@@ -89,7 +89,8 @@ const stubElectron = (handlers) => {
         scaleFactor: 1
       }),
       getPrimaryDisplay: () => ({
-        workAreaSize: { width: 1920, height: 1080 }
+        workAreaSize: { width: 1920, height: 1080 },
+        workArea: { x: 0, y: 0, width: 1920, height: 1080 }
       })
     },
     dialog: {

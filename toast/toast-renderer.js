@@ -15,12 +15,64 @@ const icons = {
   </svg>`
 }
 
-ipcRenderer.on('toast-data', (_event, { title, body, type = 'info' }) => {
-  document.getElementById('title').textContent = title || ''
-  document.getElementById('body').textContent = body || ''
-  document.getElementById('icon').innerHTML = icons[type] || icons.info
+const toastEl = document.getElementById('toast')
+const titleEl = document.getElementById('title')
+const bodyEl = document.getElementById('body')
+const iconEl = document.getElementById('icon')
+const closeBtn = document.getElementById('close-btn')
+const actionsEl = document.getElementById('actions')
+
+ipcRenderer.on('toast-data', (_event, { title, body, type = 'info', size = 'compact', actions = [] }) => {
+  titleEl.textContent = title || ''
+  bodyEl.textContent = body || ''
+  iconEl.innerHTML = icons[type] || icons.info
+
+  // Apply size-specific styles
+  if (size === 'large') {
+    toastEl.classList.remove('items-center', 'max-w-[320px]')
+    toastEl.classList.add('items-start', 'max-w-[420px]')
+    bodyEl.classList.remove('truncate')
+    bodyEl.classList.add('whitespace-pre-line', 'break-all', 'leading-relaxed')
+    iconEl.classList.add('mt-0.5')
+    closeBtn.classList.remove('hidden')
+  } else {
+    toastEl.classList.remove('items-start', 'max-w-[420px]')
+    toastEl.classList.add('items-center', 'max-w-[320px]')
+    bodyEl.classList.remove('whitespace-pre-line', 'break-all', 'leading-relaxed')
+    bodyEl.classList.add('truncate')
+    iconEl.classList.remove('mt-0.5')
+    closeBtn.classList.add('hidden')
+  }
+
+  // Render action buttons
+  actionsEl.innerHTML = ''
+  if (actions.length > 0) {
+    actionsEl.classList.remove('hidden')
+    actions.forEach(({ label, action, data }) => {
+      const btn = document.createElement('button')
+      btn.textContent = label
+      btn.className =
+        'px-3 py-1.5 text-xs font-medium rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors'
+      btn.addEventListener('click', () => {
+        ipcRenderer.send('toast-action', { action, data })
+      })
+      actionsEl.appendChild(btn)
+    })
+  } else {
+    actionsEl.classList.add('hidden')
+  }
+
+  // IMPORTANT: after DOM updates & layout, measure actual height and ask main to resize the window
+  // Two rAFs makes sure layout is fully computed after class changes + button insertion.
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      const rect = toastEl.getBoundingClientRect()
+      const desiredHeight = Math.ceil(rect.height)
+      ipcRenderer.send('toast-resize', { height: desiredHeight })
+    })
+  })
 })
 
-document.getElementById('close-btn').addEventListener('click', () => {
+closeBtn.addEventListener('click', () => {
   ipcRenderer.send('toast-close')
 })

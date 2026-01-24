@@ -72,7 +72,11 @@ const createAnalysisHandler = ({
     title: 'Analysis Complete',
     body: `Context: ${nodeName}\nSaved: ${shortPath}`,
     type: 'success',
-    duration: 15000
+    size: 'large',
+    duration: 15000,
+    actions: [
+      { label: 'Open in Folder', action: 'open-in-folder', data: result.outputPath }
+    ]
   })
 
   return result
