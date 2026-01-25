@@ -139,4 +139,5 @@ module.exports = {
     saveSettings,
     validateContextFolderPath,
     resolveSettingsDir,
+    resolveSettingsPath,
 };

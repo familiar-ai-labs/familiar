@@ -1,6 +1,7 @@
 const { app, BrowserWindow, dialog, ipcMain } = require('electron');
+const fs = require('node:fs');
 const path = require('node:path');
-const { loadSettings, saveSettings, validateContextFolderPath } = require('../settings');
+const { loadSettings, resolveSettingsPath, saveSettings, validateContextFolderPath } = require('../settings');
 const { DEFAULT_CAPTURE_HOTKEY, DEFAULT_CLIPBOARD_HOTKEY } = require('../hotkeys');
 
 /**
@@ -16,6 +17,8 @@ function registerSettingsHandlers() {
 
 function handleGetSettings() {
     try {
+        const settingsPath = resolveSettingsPath();
+        const isFirstRun = !fs.existsSync(settingsPath);
         const settings = loadSettings();
         const contextFolderPath = settings.contextFolderPath || '';
         const llmProviderName = settings?.llm_provider?.provider || '';
@@ -36,7 +39,7 @@ function handleGetSettings() {
             }
         }
 
-        return { contextFolderPath, validationMessage, llmProviderName, llmProviderApiKey, exclusions, captureHotkey, clipboardHotkey };
+        return { contextFolderPath, validationMessage, llmProviderName, llmProviderApiKey, exclusions, captureHotkey, clipboardHotkey, isFirstRun };
     } catch (error) {
         console.error('Failed to load settings', error);
         return {
@@ -46,7 +49,8 @@ function handleGetSettings() {
             llmProviderApiKey: '',
             exclusions: [],
             captureHotkey: DEFAULT_CAPTURE_HOTKEY,
-            clipboardHotkey: DEFAULT_CLIPBOARD_HOTKEY
+            clipboardHotkey: DEFAULT_CLIPBOARD_HOTKEY,
+            isFirstRun: false
         };
     }
 }

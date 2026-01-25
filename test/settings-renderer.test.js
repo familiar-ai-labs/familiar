@@ -5,11 +5,31 @@ const { test } = require('node:test')
 class TestElement {
   constructor() {
     this.style = {}
+    this._classes = new Set()
     this.classList = {
-      toggle: () => {},
-      add: () => {},
-      remove: () => {},
-      contains: () => false
+      toggle: (name, force) => {
+        if (force === undefined) {
+          if (this._classes.has(name)) {
+            this._classes.delete(name)
+            return false
+          }
+          this._classes.add(name)
+          return true
+        }
+        if (force) {
+          this._classes.add(name)
+        } else {
+          this._classes.delete(name)
+        }
+        return force
+      },
+      add: (...names) => {
+        names.forEach((name) => this._classes.add(name))
+      },
+      remove: (...names) => {
+        names.forEach((name) => this._classes.delete(name))
+      },
+      contains: (name) => this._classes.has(name)
     }
     this.hidden = false
     this.disabled = false
@@ -44,6 +64,26 @@ class TestElement {
   querySelector() {
     return null
   }
+
+  setAttribute() {}
+
+  matches(selector) {
+    if (selector.startsWith('.')) {
+      return this._classes.has(selector.slice(1))
+    }
+    const attrMatch = selector.match(/^\[data-([a-z-]+)(?:="([^"]*)")?\]$/)
+    if (attrMatch) {
+      const key = attrMatch[1].replace(/-([a-z])/g, (_, char) => char.toUpperCase())
+      if (!(key in this.dataset)) {
+        return false
+      }
+      if (attrMatch[2] !== undefined) {
+        return this.dataset[key] === attrMatch[2]
+      }
+      return true
+    }
+    return false
+  }
 }
 
 class TestDocument {
@@ -58,6 +98,10 @@ class TestDocument {
 
   getElementById(id) {
     return this._elements[id] || null
+  }
+
+  querySelectorAll(selector) {
+    return Object.values(this._elements).filter((element) => element.matches(selector))
   }
 
   createElement() {
@@ -96,36 +140,79 @@ const createJiminy = (overrides = {}) => ({
   ...overrides
 })
 
-const createElements = () => ({
-  'advanced-toggle-btn': new TestElement(),
-  'advanced-options': new TestElement(),
-  'add-exclusion': new TestElement(),
-  'capture-hotkey': new TestElement(),
-  'clipboard-hotkey': new TestElement(),
-  'context-folder-path': new TestElement(),
-  'context-folder-choose': new TestElement(),
-  'context-folder-error': new TestElement(),
-  'context-folder-status': new TestElement(),
-  'llm-api-key': new TestElement(),
-  'llm-api-key-save': new TestElement(),
-  'llm-api-key-error': new TestElement(),
-  'llm-api-key-status': new TestElement(),
-  'llm-provider': new TestElement(),
-  'llm-provider-error': new TestElement(),
-  'context-graph-sync': new TestElement(),
-  'context-graph-status': new TestElement(),
-  'context-graph-progress': new TestElement(),
-  'context-graph-warning': new TestElement(),
-  'context-graph-error': new TestElement(),
-  'context-graph-prune': new TestElement(),
-  'context-graph-prune-status': new TestElement(),
-  'exclusions-list': new TestElement(),
-  'exclusions-error': new TestElement(),
-  'hotkeys-save': new TestElement(),
-  'hotkeys-reset': new TestElement(),
-  'hotkeys-status': new TestElement(),
-  'hotkeys-error': new TestElement()
-})
+const createElements = () => {
+  const elements = {
+    'advanced-toggle-btn': new TestElement(),
+    'advanced-options': new TestElement(),
+    'add-exclusion': new TestElement(),
+    'capture-hotkey': new TestElement(),
+    'clipboard-hotkey': new TestElement(),
+    'context-folder-path': new TestElement(),
+    'context-folder-choose': new TestElement(),
+    'context-folder-error': new TestElement(),
+    'context-folder-status': new TestElement(),
+    'llm-api-key': new TestElement(),
+    'llm-api-key-save': new TestElement(),
+    'llm-api-key-error': new TestElement(),
+    'llm-api-key-status': new TestElement(),
+    'llm-provider': new TestElement(),
+    'llm-provider-error': new TestElement(),
+    'context-graph-sync': new TestElement(),
+    'context-graph-status': new TestElement(),
+    'context-graph-progress': new TestElement(),
+    'context-graph-warning': new TestElement(),
+    'context-graph-error': new TestElement(),
+    'context-graph-prune': new TestElement(),
+    'context-graph-prune-status': new TestElement(),
+    'context-graph-stats': new TestElement(),
+    'exclusions-list': new TestElement(),
+    'exclusions-error': new TestElement(),
+    'hotkeys-save': new TestElement(),
+    'hotkeys-reset': new TestElement(),
+    'hotkeys-status': new TestElement(),
+    'hotkeys-error': new TestElement(),
+    'settings-header': new TestElement(),
+    'settings-content': new TestElement(),
+    'section-title': new TestElement(),
+    'section-subtitle': new TestElement()
+  }
+
+  elements['context-folder-path'].dataset.setting = 'context-folder-path'
+  elements['context-folder-choose'].dataset.action = 'context-folder-choose'
+  elements['context-folder-error'].dataset.settingError = 'context-folder-error'
+  elements['context-folder-status'].dataset.settingStatus = 'context-folder-status'
+
+  elements['llm-provider'].dataset.setting = 'llm-provider'
+  elements['llm-provider-error'].dataset.settingError = 'llm-provider-error'
+  elements['llm-api-key'].dataset.setting = 'llm-api-key'
+  elements['llm-api-key-save'].dataset.action = 'llm-api-key-save'
+  elements['llm-api-key-error'].dataset.settingError = 'llm-api-key-error'
+  elements['llm-api-key-status'].dataset.settingStatus = 'llm-api-key-status'
+
+  elements['context-graph-sync'].dataset.action = 'context-graph-sync'
+  elements['context-graph-status'].dataset.settingStatus = 'context-graph-status'
+  elements['context-graph-progress'].dataset.settingStatus = 'context-graph-progress'
+  elements['context-graph-warning'].dataset.settingStatus = 'context-graph-warning'
+  elements['context-graph-error'].dataset.settingError = 'context-graph-error'
+  elements['context-graph-prune'].dataset.action = 'context-graph-prune'
+  elements['context-graph-prune-status'].dataset.settingStatus = 'context-graph-prune-status'
+  elements['context-graph-stats'].dataset.settingStatus = 'context-graph-stats'
+
+  elements['exclusions-list'].dataset.settingList = 'exclusions'
+  elements['add-exclusion'].dataset.action = 'add-exclusion'
+  elements['exclusions-error'].dataset.settingError = 'exclusions-error'
+
+  elements['capture-hotkey'].dataset.hotkeyRole = 'capture'
+  elements['capture-hotkey'].classList.add('hotkey-recorder')
+  elements['clipboard-hotkey'].dataset.hotkeyRole = 'clipboard'
+  elements['clipboard-hotkey'].classList.add('hotkey-recorder')
+  elements['hotkeys-save'].dataset.action = 'hotkeys-save'
+  elements['hotkeys-reset'].dataset.action = 'hotkeys-reset'
+  elements['hotkeys-status'].dataset.settingStatus = 'hotkeys-status'
+  elements['hotkeys-error'].dataset.settingError = 'hotkeys-error'
+
+  return elements
+}
 
 test('refreshes context graph status when context path changes', async () => {
   const statusCalls = []

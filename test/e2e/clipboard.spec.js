@@ -34,6 +34,7 @@ test.describe('clipboard capture flow', () => {
 
             const window = await electronApp.firstWindow();
             await window.waitForLoadState('domcontentloaded');
+            await window.getByRole('tab', { name: 'General' }).click();
 
             // Set context folder first
             await window.locator('#context-folder-choose').click();
@@ -88,6 +89,7 @@ test.describe('clipboard capture flow', () => {
 
             const window = await electronApp.firstWindow();
             await window.waitForLoadState('domcontentloaded');
+            await window.getByRole('tab', { name: 'General' }).click();
 
             // Set context folder only (no LLM provider, so analysis will be skipped)
             await window.locator('#context-folder-choose').click();
@@ -164,6 +166,7 @@ test.describe('clipboard capture flow', () => {
 
             const window = await electronApp.firstWindow();
             await window.waitForLoadState('domcontentloaded');
+            await window.getByRole('tab', { name: 'General' }).click();
 
             // Set context folder and LLM provider
             await window.locator('#context-folder-choose').click();
