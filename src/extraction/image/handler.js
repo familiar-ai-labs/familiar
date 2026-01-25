@@ -21,10 +21,20 @@ const handleImageExtractionEvent = async (event) => {
     : undefined
   if (!provider) {
     console.warn('Skipping image extraction due to missing LLM provider', { imagePath })
+    showToast({
+      title: 'LLM provider required',
+      body: 'Select an LLM provider in Settings to extract text from images.',
+      type: 'warning'
+    })
     return { skipped: true, reason: 'missing_provider' }
   }
   if (!apiKey && !isLlmMockEnabled()) {
     console.warn('Skipping image extraction due to missing LLM API key', { imagePath })
+    showToast({
+      title: 'LLM API key required',
+      body: 'Add your LLM API key in Settings to extract text from images.',
+      type: 'warning'
+    })
     return { skipped: true, reason: 'missing_api_key' }
   }
 

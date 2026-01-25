@@ -398,6 +398,31 @@ document.addEventListener('DOMContentLoaded', () => {
     return false
   }
 
+  const saveLlmProviderSelection = async (providerName) => {
+    if (!jiminy.saveSettings) {
+      return false
+    }
+
+    if (!providerName) {
+      setMessage(llmProviderError, 'Select an LLM provider.')
+      return false
+    }
+
+    try {
+      const result = await jiminy.saveSettings({ llmProviderName: providerName })
+      if (result && result.ok) {
+        console.log('LLM provider saved', { provider: providerName })
+        return true
+      }
+      setMessage(llmProviderError, result?.message || 'Failed to save LLM provider.')
+    } catch (error) {
+      console.error('Failed to save LLM provider', error)
+      setMessage(llmProviderError, 'Failed to save LLM provider.')
+    }
+
+    return false
+  }
+
   const loadSettings = async () => {
     if (!jiminy.getSettings || !contextFolderInput) {
       return
@@ -524,8 +549,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   if (llmProviderSelect) {
-    llmProviderSelect.addEventListener('change', () => {
+    llmProviderSelect.addEventListener('change', async () => {
       setMessage(llmProviderError, '')
+      await saveLlmProviderSelection(llmProviderSelect.value)
     })
   }
 

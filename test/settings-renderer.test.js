@@ -19,6 +19,13 @@ class TestElement {
     this._listeners[event] = handler
   }
 
+  async trigger(event) {
+    if (this._listeners[event]) {
+      return await this._listeners[event]()
+    }
+    return undefined
+  }
+
   async click() {
     if (this._listeners.click) {
       return await this._listeners.click()
@@ -235,6 +242,51 @@ test('prune button reports nothing to prune when graph is missing', async () => 
     assert.equal(pruneCalls.length, 1)
     assert.equal(elements['context-graph-prune-status'].textContent, 'Nothing to prune.')
     assert.equal(statusCalls.length, 2)
+  } finally {
+    global.document = priorDocument
+    global.window = priorWindow
+  }
+})
+
+test('auto-saves LLM provider selection', async () => {
+  const saveCalls = []
+  const jiminy = {
+    getSettings: async () => ({
+      contextFolderPath: '',
+      llmProviderName: 'gemini',
+      llmProviderApiKey: '',
+      exclusions: []
+    }),
+    pickContextFolder: async () => ({ canceled: true }),
+    saveSettings: async (payload) => {
+      saveCalls.push(payload)
+      return { ok: true }
+    },
+    getContextGraphStatus: async () => ({ syncedNodes: 0, totalNodes: 0, maxNodesExceeded: false })
+  }
+
+  const elements = createElements()
+  const document = new TestDocument(elements)
+  const priorDocument = global.document
+  const priorWindow = global.window
+  global.document = document
+  global.window = { jiminy }
+
+  try {
+    const rendererPath = path.join(__dirname, '..', 'src', 'settings-renderer.js')
+    const resolvedRendererPath = require.resolve(rendererPath)
+    delete require.cache[resolvedRendererPath]
+    require(resolvedRendererPath)
+
+    document.trigger('DOMContentLoaded')
+    await flushPromises()
+
+    elements['llm-provider'].value = 'openai'
+    await elements['llm-provider'].trigger('change')
+    await flushPromises()
+
+    assert.equal(saveCalls.length, 1)
+    assert.deepEqual(saveCalls[0], { llmProviderName: 'openai' })
   } finally {
     global.document = priorDocument
     global.window = priorWindow

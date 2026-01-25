@@ -36,10 +36,20 @@ const createAnalysisHandler =
                 : undefined;
         if (!provider) {
             console.warn('Skipping analysis due to missing LLM provider', { resultMdPath });
+            showToast({
+                title: 'LLM provider required',
+                body: 'Select an LLM provider in Settings to run analysis.',
+                type: 'warning',
+            });
             return { skipped: true, reason: 'missing_provider' };
         }
         if (!apiKey && !isLlmMockEnabled()) {
             console.warn('Skipping analysis due to missing LLM API key', { resultMdPath });
+            showToast({
+                title: 'LLM API key required',
+                body: 'Add your LLM API key in Settings to run analysis.',
+                type: 'warning',
+            });
             return { skipped: true, reason: 'missing_api_key' };
         }
 
@@ -49,6 +59,11 @@ const createAnalysisHandler =
 
         if (!contextFolderPath && !contextGraph?.rootPath) {
             console.warn('Skipping analysis due to missing context folder path', { resultMdPath });
+            showToast({
+                title: 'Context folder required',
+                body: 'Set a Context Folder Path in Settings to run analysis.',
+                type: 'warning',
+            });
             return { skipped: true, reason: 'missing_context_folder' };
         }
 
