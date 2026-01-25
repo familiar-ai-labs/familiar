@@ -89,7 +89,8 @@ test('hotkey re-registration triggers toast warnings on failure', async () => {
             request === './clipboard' ||
             request === './extraction' ||
             request === './analysis' ||
-            request === './utils/window'
+            request === './utils/window' ||
+            request === './tray/busy'
         ) {
             return {
                 buildTrayMenuTemplate: () => [],
@@ -101,6 +102,7 @@ test('hotkey re-registration triggers toast warnings on failure', async () => {
                 registerExtractionHandlers: () => {},
                 registerAnalysisHandlers: () => {},
                 showWindow: () => ({ shown: false, reason: 'test', focused: false }),
+                registerTrayBusyIndicator: () => ({ dispose: () => {} }),
             };
         }
 

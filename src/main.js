@@ -18,11 +18,13 @@ const { showWindow } = require('./utils/window');
 const { loadSettings } = require('./settings');
 const { initLogging } = require('./logger');
 const { showToast } = require('./toast');
+const { registerTrayBusyIndicator } = require('./tray/busy');
 
 const trayIconPath = path.join(__dirname, 'icon.png');
 
 let tray = null;
 let trayHandlers = null;
+let trayBusyIndicator = null;
 let settingsWindow = null;
 let isQuitting = false;
 
@@ -205,6 +207,7 @@ function createTray() {
 
     tray = new Tray(trayIcon);
     tray.setToolTip('Jiminy');
+    trayBusyIndicator = registerTrayBusyIndicator({ tray, baseIcon: trayIcon });
 
     trayHandlers = {
         onCapture: () => {
@@ -299,6 +302,9 @@ app.whenReady().then(() => {
 
 app.on('before-quit', () => {
     isQuitting = true;
+    if (trayBusyIndicator) {
+        trayBusyIndicator.dispose();
+    }
     unregisterGlobalHotkeys();
     closeOverlayWindow();
 });
