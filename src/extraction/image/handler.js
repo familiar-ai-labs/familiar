@@ -76,6 +76,11 @@ const handleImageExtractionEvent = async (event) => {
   void enqueueAnalysis({ result_md_path: outputPath })
     .catch((error) => {
       console.error('Failed to enqueue analysis event', { error, outputPath })
+      showToast({
+        title: 'Analysis Queue Failed',
+        body: 'Image text extracted, but analysis could not be queued. Try again.',
+        type: 'warning'
+      })
     })
 
   return { outputPath }

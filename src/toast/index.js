@@ -93,7 +93,7 @@ function showToast ({ title, body, type = 'info', size = 'compact', duration = T
     } catch (e) {
       // If measurement fails, just keep initial height.
       // (This avoids breaking toast completely.)
-      // console.warn('Toast autosize failed:', e)
+      console.warn('Toast autosize failed', { error: e })
     }
   }
 

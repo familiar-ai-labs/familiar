@@ -30,26 +30,47 @@ class JsonContextGraphStore extends ContextGraphStore {
     this.graphPath = this.contextFolderPath
       ? path.join(this.contextFolderPath, JIMINY_BEHIND_THE_SCENES_DIR_NAME, CONTEXT_GRAPH_FILE_NAME)
       : null
+    this.lastError = null
   }
 
   getPath () {
     return this.graphPath
   }
 
+  getLastError () {
+    return this.lastError
+  }
+
   load () {
+    this.lastError = null
     if (!this.graphPath || !fs.existsSync(this.graphPath)) {
       return null
     }
 
-    const raw = fs.readFileSync(this.graphPath, 'utf-8')
+    let raw
+    try {
+      raw = fs.readFileSync(this.graphPath, 'utf-8')
+    } catch (error) {
+      this.lastError = error
+      console.error('Failed to read context graph', { path: this.graphPath, error })
+      return null
+    }
     if (!raw.trim()) {
       return null
     }
 
     try {
-      return JSON.parse(raw)
+      const parsed = JSON.parse(raw)
+      if (!parsed || typeof parsed !== 'object') {
+        const error = new Error('Context graph data is not a JSON object.')
+        this.lastError = error
+        console.error('Failed to parse context graph', { path: this.graphPath, error })
+        return null
+      }
+      return parsed
     } catch (error) {
-      console.error('Failed to parse context graph', error)
+      this.lastError = error
+      console.error('Failed to parse context graph', { path: this.graphPath, error })
       return null
     }
   }

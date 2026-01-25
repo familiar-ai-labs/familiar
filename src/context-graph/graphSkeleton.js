@@ -146,6 +146,9 @@ const loadGitignoreRules = (directoryPath, logger) => {
   try {
     stat = fs.statSync(gitignorePath)
   } catch (error) {
+    if (error && error.code !== 'ENOENT') {
+      logger.warn('Failed to stat .gitignore', { path: gitignorePath, error })
+    }
     return null
   }
 

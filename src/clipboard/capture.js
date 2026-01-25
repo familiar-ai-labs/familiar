@@ -46,14 +46,19 @@ async function captureClipboard () {
     const { path: savedPath } = await saveClipboardToDirectory(text, clipboardDirectory)
     console.log('Clipboard captured', { path: savedPath })
 
-    void enqueueAnalysis({ result_md_path: savedPath }).catch((error) => {
-      console.error('Failed to enqueue clipboard analysis', { error, savedPath })
-    })
-
     showToast({
       title: 'Clipboard Captured',
       body: 'Text content saved and queued for analysis.',
       type: 'success'
+    })
+
+    void enqueueAnalysis({ result_md_path: savedPath }).catch((error) => {
+      console.error('Failed to enqueue clipboard analysis', { error, savedPath })
+      showToast({
+        title: 'Clipboard Captured (Not Queued)',
+        body: 'Text content saved, but analysis could not be queued. Try again.',
+        type: 'warning'
+      })
     })
 
     return { ok: true, path: savedPath }

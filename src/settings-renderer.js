@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const advancedOptions = document.getElementById('advanced-options')
   const exclusionsList = document.getElementById('exclusions-list')
   const addExclusionBtn = document.getElementById('add-exclusion')
+  const exclusionsError = document.getElementById('exclusions-error')
   const captureHotkeyBtn = document.getElementById('capture-hotkey')
   const clipboardHotkeyBtn = document.getElementById('clipboard-hotkey')
   const hotkeysSaveButton = document.getElementById('hotkeys-save')
@@ -141,6 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('Global hotkeys suspended for recording')
       } catch (error) {
         console.error('Failed to suspend hotkeys', error)
+        setMessage(hotkeysError, 'Failed to suspend hotkeys. Try again or restart the app.')
       }
     }
 
@@ -153,7 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
    * Stop recording mode for a hotkey button
    */
   const stopRecording = async (button) => {
-    if (!button) return
+    if (!button) return true
     button.classList.remove('ring-2', 'ring-blue-500', 'bg-blue-50', 'dark:bg-blue-900/30')
     updateHotkeyDisplay(button, button.dataset.hotkey)
 
@@ -162,6 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
       recordingElement = null
     }
 
+    let resumeOk = true
     // Resume global hotkeys after recording ends
     if (wasRecording && jiminy.resumeHotkeys) {
       try {
@@ -169,8 +172,12 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('Global hotkeys resumed after recording')
       } catch (error) {
         console.error('Failed to resume hotkeys', error)
+        setMessage(hotkeysError, 'Failed to resume hotkeys. Restart the app.')
+        resumeOk = false
       }
     }
+
+    return resumeOk
   }
 
   /**
@@ -186,8 +193,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (accelerator) {
       const button = recordingElement
       button.dataset.hotkey = accelerator
-      await stopRecording(button)
-      setMessage(hotkeysError, '')
+      const resumeOk = await stopRecording(button)
+      if (resumeOk) {
+        setMessage(hotkeysError, '')
+      }
     }
   }
 
@@ -352,9 +361,11 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       await jiminy.saveSettings({ exclusions: currentExclusions })
       console.log('Exclusions saved', currentExclusions)
+      setMessage(exclusionsError, '')
       await refreshContextGraphStatus()
     } catch (error) {
       console.error('Failed to save exclusions', error)
+      setMessage(exclusionsError, 'Failed to save exclusions.')
     }
   }
 
@@ -652,24 +663,29 @@ document.addEventListener('DOMContentLoaded', () => {
     addExclusionBtn.addEventListener('click', async () => {
       if (!jiminy.pickExclusion) {
         console.error('pickExclusion not available')
+        setMessage(exclusionsError, 'Exclusion picker unavailable. Restart the app.')
         return
       }
 
       const contextPath = contextFolderInput?.value || ''
       if (!contextPath) {
         console.warn('No context folder selected')
+        setMessage(exclusionsError, 'Select a context folder before adding exclusions.')
         return
       }
 
       try {
         const result = await jiminy.pickExclusion(contextPath)
         if (result && !result.canceled && result.path) {
+          setMessage(exclusionsError, '')
           addExclusion(result.path)
         } else if (result && result.error) {
           console.error('Failed to pick exclusion:', result.error)
+          setMessage(exclusionsError, result.error)
         }
       } catch (error) {
         console.error('Failed to pick exclusion', error)
+        setMessage(exclusionsError, 'Failed to open exclusion picker.')
       }
     })
   }

@@ -13,10 +13,12 @@ npm start
 
 ```bash
 npm test
+npm run test:unit:timed
 npm run test:modelProviderTests
 ```
 
 - `npm test` runs unit tests (excludes `test/modelProviderTests`).
+- `npm run test:unit:timed` runs unit tests and fails if they take longer than 2s (override with `JIMINY_UNIT_TEST_TIME_LIMIT_MS`).
 - `npm run test:modelProviderTests` runs live provider tests (requires `LLM_API_KEY`).
 
 ## E2E Tests (Playwright)

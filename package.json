@@ -11,10 +11,11 @@
     "start": "npm run css:build && electron .",
     "dev": "tailwindcss -i ./src/input.css -o ./src/styles.css --watch & electron .",
     "test": "find test -name \"*.test.js\" -not -path \"*/e2e/*\" -not -path \"*/modelProviderTests/*\" -print0 | xargs -0 node --test",
+    "test:unit:timed": "node scripts/run-unit-tests-with-timeout.js",
     "test:modelProviderTests": "find test/modelProviderTests -name \"*.test.js\" -print0 | xargs -0 node --test",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "test:all": "npm run test && npm run test:modelProviderTests && npm run test:e2e"
+    "test:all": "npm run test && npm run test:modelProviderTests && npm run test:e2e && npm run test:unit:timed"
   },
   "repository": "https://github.com/jiminy-org/jiminy",
   "keywords": [

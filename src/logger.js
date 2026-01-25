@@ -9,6 +9,16 @@ const LOG_BACKUP_FILENAME = 'jiminy.log.1'
 
 let initialized = false
 
+const reportLoggerError = (message, error) => {
+  try {
+    const details = error && error.message ? `: ${error.message}` : ''
+    const line = `[jiminy logger] ${message}${details}\n`
+    process.stderr.write(line)
+  } catch (_error) {
+    // Swallow to avoid cascading failures if stderr is unavailable.
+  }
+}
+
 const ensureDirectory = (dirPath) => {
   fs.mkdirSync(dirPath, { recursive: true })
 }
@@ -27,7 +37,7 @@ const rotateIfNeeded = (logFilePath, backupFilePath) => {
     fs.renameSync(logFilePath, backupFilePath)
   } catch (error) {
     if (error && error.code !== 'ENOENT') {
-      // Avoid throwing if we cannot rotate; still allow logging to continue.
+      reportLoggerError('Failed to rotate log file', error)
     }
   }
 }
@@ -45,7 +55,7 @@ const createLogger = () => {
       const line = `${new Date().toISOString()} [${level}] ${message}\n`
       fs.appendFileSync(logFilePath, line, 'utf8')
     } catch (error) {
-      // Ignore logging failures to avoid crashing the app.
+      reportLoggerError('Failed to write log line', error)
     }
   }
 

@@ -9,6 +9,7 @@ const {
   saveSettings,
   validateContextFolderPath
 } = require('../src/settings')
+const { SETTINGS_FILE_NAME } = require('../src/const')
 
 test('saveSettings persists contextFolderPath', () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-'))
@@ -111,4 +112,19 @@ test('saveSettings preserves other settings when updating hotkeys', () => {
   assert.equal(loaded.contextFolderPath, contextDir)
   assert.equal(loaded.llm_provider?.api_key, 'key123')
   assert.equal(loaded.llm_provider?.provider, 'openai')
+})
+
+test('loadSettings exposes parse errors for diagnostics', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-'))
+  const settingsDir = path.join(tempRoot, 'settings')
+  fs.mkdirSync(settingsDir, { recursive: true })
+
+  const settingsPath = path.join(settingsDir, SETTINGS_FILE_NAME)
+  fs.writeFileSync(settingsPath, '{not-json', 'utf-8')
+
+  const loaded = loadSettings({ settingsDir })
+  assert.ok(loaded.__loadError)
+  assert.equal(loaded.__loadError.path, settingsPath)
+  assert.equal(typeof loaded.__loadError.message, 'string')
+  assert.ok(loaded.__loadError.message.length > 0)
 })

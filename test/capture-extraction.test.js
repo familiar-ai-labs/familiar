@@ -24,7 +24,7 @@ const resetRequireCache = () => {
     delete require.cache[extractionPath];
 };
 
-const stubElectron = (handlers) => {
+const stubElectron = ({ handlers, toastCalls } = {}) => {
     class FakeWindow {
         constructor() {
             this._listeners = new Map();
@@ -112,6 +112,15 @@ const stubElectron = (handlers) => {
         if (request === 'electron') {
             return stub;
         }
+        if (request === '../toast') {
+            return {
+                showToast: (payload) => {
+                    if (toastCalls) {
+                        toastCalls.push(payload);
+                    }
+                },
+            };
+        }
 
         return originalLoad.call(this, request, parent, isMain);
     };
@@ -123,7 +132,7 @@ const stubElectron = (handlers) => {
 
 test('capture enqueues image extraction event after save', async () => {
     const handlers = {};
-    const restoreElectron = stubElectron(handlers);
+    const restoreElectron = stubElectron({ handlers });
     resetRequireCache();
     const extraction = require('../src/extraction');
     const originalEnqueue = extraction.extractionQueue.enqueue;
@@ -164,6 +173,62 @@ test('capture enqueues image extraction event after save', async () => {
             sourceType: 'image',
             metadata: { path: result.savedPath },
         });
+    } finally {
+        extraction.extractionQueue.enqueue = originalEnqueue;
+        restoreElectron();
+        resetRequireCache();
+        if (typeof previousSettingsDir === 'undefined') {
+            delete process.env.JIMINY_SETTINGS_DIR;
+        } else {
+            process.env.JIMINY_SETTINGS_DIR = previousSettingsDir;
+        }
+    }
+});
+
+test('capture surfaces extraction enqueue failures', async () => {
+    const handlers = {};
+    const toastCalls = [];
+    const restoreElectron = stubElectron({ handlers, toastCalls });
+    resetRequireCache();
+    const extraction = require('../src/extraction');
+    const originalEnqueue = extraction.extractionQueue.enqueue;
+
+    extraction.extractionQueue.enqueue = async () => {
+        throw new Error('enqueue failed');
+    };
+
+    const tempSettingsDir = await fs.mkdtemp(path.join(os.tmpdir(), 'jiminy-settings-'));
+    const tempContextDir = await fs.mkdtemp(path.join(os.tmpdir(), 'jiminy-context-'));
+    const settingsPath = path.join(tempSettingsDir, 'settings.json');
+
+    const previousSettingsDir = process.env.JIMINY_SETTINGS_DIR;
+    process.env.JIMINY_SETTINGS_DIR = tempSettingsDir;
+
+    try {
+        await fs.writeFile(settingsPath, JSON.stringify({ contextFolderPath: tempContextDir }, null, 2), 'utf-8');
+
+        const capture = require('../src/screenshot/capture');
+        capture.registerCaptureHandlers();
+
+        await capture.startCaptureFlow();
+
+        const grabHandler = handlers['capture:grab'];
+        assert.equal(typeof grabHandler, 'function');
+
+        const result = await grabHandler(null, {
+            rectCss: { x: 0, y: 0, width: 50, height: 50 },
+            viewport: { width: 100, height: 100 },
+            screenOffset: { x: 0, y: 0 },
+        });
+
+        await new Promise((resolve) => setImmediate(resolve));
+
+        assert.equal(result.ok, true);
+        assert.equal(toastCalls.length, 2);
+        assert.equal(toastCalls[0].type, 'success');
+        assert.equal(toastCalls[0].title, 'Screenshot Captured');
+        assert.equal(toastCalls[1].type, 'warning');
+        assert.equal(toastCalls[1].title, 'Screenshot Captured (Not Queued)');
     } finally {
         extraction.extractionQueue.enqueue = originalEnqueue;
         restoreElectron();

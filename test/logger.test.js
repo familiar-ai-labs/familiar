@@ -91,3 +91,54 @@ test('initLogging rotates logs when size exceeds limit', async () => {
         }
     }
 });
+
+test('initLogging reports write failures to stderr', async () => {
+    const tempSettingsDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'jiminy-settings-'));
+    const previousSettingsDir = process.env.JIMINY_SETTINGS_DIR;
+    process.env.JIMINY_SETTINGS_DIR = tempSettingsDir;
+
+    const originalConsole = {
+        log: console.log,
+        info: console.info,
+        warn: console.warn,
+        error: console.error,
+    };
+
+    const originalAppendFileSync = fs.appendFileSync;
+    const originalStderrWrite = process.stderr.write;
+    const stderrLines = [];
+
+    resetLoggerModule();
+
+    try {
+        fs.appendFileSync = () => {
+            const error = new Error('disk full');
+            error.code = 'ENOSPC';
+            throw error;
+        };
+        process.stderr.write = (chunk) => {
+            stderrLines.push(chunk.toString());
+            return true;
+        };
+
+        const { initLogging } = require('../src/logger');
+        initLogging();
+
+        console.log('logger test message');
+
+        assert.ok(stderrLines.some((line) => line.includes('Failed to write log line')));
+    } finally {
+        fs.appendFileSync = originalAppendFileSync;
+        process.stderr.write = originalStderrWrite;
+        console.log = originalConsole.log;
+        console.info = originalConsole.info;
+        console.warn = originalConsole.warn;
+        console.error = originalConsole.error;
+        resetLoggerModule();
+        if (typeof previousSettingsDir === 'undefined') {
+            delete process.env.JIMINY_SETTINGS_DIR;
+        } else {
+            process.env.JIMINY_SETTINGS_DIR = previousSettingsDir;
+        }
+    }
+});

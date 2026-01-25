@@ -283,6 +283,11 @@ async function handleCaptureGrab (_event, payload) {
       metadata: { path: savedPath }
     }).catch((error) => {
       console.error('Failed to enqueue extraction event', { error, savedPath })
+      showToast({
+        title: 'Screenshot Captured (Not Queued)',
+        body: 'Screenshot saved, but analysis could not be queued. Try again.',
+        type: 'warning'
+      })
     })
 
     return result

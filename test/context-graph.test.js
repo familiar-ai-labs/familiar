@@ -142,6 +142,22 @@ test('context graph store delete removes the persisted file', () => {
     assert.equal(second.deleted, false);
 });
 
+test('context graph store exposes load errors for diagnostics', () => {
+    const contextRoot = createTempDir('jiminy-context-');
+    const store = createStore(contextRoot);
+    const graphPath = store.getPath();
+
+    fs.mkdirSync(path.dirname(graphPath), { recursive: true });
+    fs.writeFileSync(graphPath, '{invalid-json', 'utf-8');
+
+    const loaded = store.load();
+    assert.equal(loaded, null);
+    const lastError = store.getLastError();
+    assert.ok(lastError);
+    assert.equal(typeof lastError.message, 'string');
+    assert.ok(lastError.message.length > 0);
+});
+
 test('context graph store writes under jiminy-behind-the-scenes', () => {
     const contextRoot = createTempDir('jiminy-context-');
     const store = createStore(contextRoot);
@@ -575,6 +591,38 @@ test('sync respects scoped .gitignore patterns', async () => {
     for (const pathValue of expectedAbsent) {
         assert.equal(paths.has(pathValue), false, `Expected ${pathValue} to be excluded`);
     }
+});
+
+test('gitignore stat errors are logged for diagnostics', () => {
+    const contextRoot = createTempDir('jiminy-context-');
+    writeFixtureFiles(contextRoot);
+    fs.writeFileSync(path.join(contextRoot, '.gitignore'), 'ignored.txt', 'utf-8');
+
+    const warnings = [];
+    const logger = {
+        log: () => {},
+        warn: (...args) => warnings.push(args),
+        error: () => {},
+    };
+
+    const originalStatSync = fs.statSync;
+    fs.statSync = (targetPath) => {
+        const normalized = targetPath.replace(/\\/g, '/');
+        if (normalized.endsWith('/.gitignore')) {
+            const error = new Error('permission denied');
+            error.code = 'EACCES';
+            throw error;
+        }
+        return originalStatSync(targetPath);
+    };
+
+    try {
+        constructContextGraphSkeleton(contextRoot, { logger });
+    } finally {
+        fs.statSync = originalStatSync;
+    }
+
+    assert.ok(warnings.some((args) => args[0] === 'Failed to stat .gitignore'));
 });
 
 test('sync logs and removes deleted nodes from the stored graph', async () => {

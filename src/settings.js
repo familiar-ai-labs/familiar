@@ -30,8 +30,13 @@ const loadSettings = (options = {}) => {
 
         return data;
     } catch (error) {
-        console.error('Failed to load settings', error);
-        return {};
+        const loadError = {
+            message: error && error.message ? error.message : 'Unknown settings load error.',
+            code: error && error.code ? error.code : null,
+            path: settingsPath,
+        };
+        console.error('Failed to load settings', loadError);
+        return { __loadError: loadError };
     }
 };
 
