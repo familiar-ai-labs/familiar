@@ -15,7 +15,7 @@ test('buildTrayMenuTemplate returns the expected items', () => {
 
     const labels = template.filter((item) => item.label).map((item) => item.label);
 
-    assert.deepEqual(labels, ['Capture Selection', 'Capture Clipboard', 'Open Settings', 'About', 'Restart', 'Quit']);
+    assert.deepEqual(labels, ['Capture Selection', 'Capture Clipboard', 'Dashboard', 'About', 'Restart', 'Quit']);
     assert.equal(template[4].type, 'separator');
 });
 
@@ -45,7 +45,7 @@ test('about click does not trigger open settings', () => {
     assert.equal(openSettingsCalls, 0);
 });
 
-test('open settings click does not trigger about', () => {
+test('dashboard click does not trigger about', () => {
     let openSettingsCalls = 0;
     let aboutCalls = 0;
 
@@ -62,7 +62,7 @@ test('open settings click does not trigger about', () => {
         onQuit: () => {},
     });
 
-    const openItem = template.find((item) => item.label === 'Open Settings');
+    const openItem = template.find((item) => item.label === 'Dashboard');
     assert.ok(openItem);
 
     openItem.click();

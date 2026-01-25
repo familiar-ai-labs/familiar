@@ -21,7 +21,7 @@ function buildTrayMenuTemplate ({
   return [
     captureItem,
     clipboardItem,
-    { label: 'Open Settings', click: onOpenSettings },
+    { label: 'Dashboard', click: onOpenSettings },
     { label: 'About', click: onAbout },
     { type: 'separator' },
     { label: 'Restart', click: onRestart },
