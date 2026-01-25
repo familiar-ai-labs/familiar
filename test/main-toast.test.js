@@ -25,6 +25,7 @@ test('hotkey re-registration triggers toast warnings on failure', async () => {
             on: () => {},
             disableHardwareAcceleration: () => {},
             commandLine: { appendSwitch: () => {} },
+            setLoginItemSettings: () => {},
         },
         BrowserWindow: function () {},
         Menu: { buildFromTemplate: () => [] },
@@ -111,6 +112,7 @@ test('hotkey re-registration triggers toast warnings on failure', async () => {
     try {
         require('../src/main');
         assert.equal(typeof handlers['hotkeys:reregister'], 'function');
+        toastCalls.length = 0;
         await handlers['hotkeys:reregister']();
 
         assert.equal(toastCalls.length, 2);
