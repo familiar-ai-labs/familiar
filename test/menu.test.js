@@ -130,3 +130,41 @@ test('clipboard click does not trigger capture or settings', () => {
     assert.equal(captureCalls, 0);
     assert.equal(openSettingsCalls, 0);
 });
+
+test('buildTrayMenuTemplate applies accelerators when provided', () => {
+    const template = buildTrayMenuTemplate({
+        onCapture: () => {},
+        onClipboard: () => {},
+        onOpenSettings: () => {},
+        onAbout: () => {},
+        onRestart: () => {},
+        onQuit: () => {},
+        captureAccelerator: 'CommandOrControl+Shift+J',
+        clipboardAccelerator: 'CommandOrControl+J',
+    });
+
+    const captureItem = template.find((item) => item.label === 'Capture Selection');
+    const clipboardItem = template.find((item) => item.label === 'Capture Clipboard');
+
+    assert.equal(captureItem.accelerator, 'CommandOrControl+Shift+J');
+    assert.equal(clipboardItem.accelerator, 'CommandOrControl+J');
+});
+
+test('buildTrayMenuTemplate omits accelerators when empty', () => {
+    const template = buildTrayMenuTemplate({
+        onCapture: () => {},
+        onClipboard: () => {},
+        onOpenSettings: () => {},
+        onAbout: () => {},
+        onRestart: () => {},
+        onQuit: () => {},
+        captureAccelerator: '',
+        clipboardAccelerator: '',
+    });
+
+    const captureItem = template.find((item) => item.label === 'Capture Selection');
+    const clipboardItem = template.find((item) => item.label === 'Capture Clipboard');
+
+    assert.equal(captureItem.accelerator, undefined);
+    assert.equal(clipboardItem.accelerator, undefined);
+});

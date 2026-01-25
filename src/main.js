@@ -22,6 +22,7 @@ const { showToast } = require('./toast');
 const trayIconPath = path.join(__dirname, 'icon.png');
 
 let tray = null;
+let trayHandlers = null;
 let settingsWindow = null;
 let isQuitting = false;
 
@@ -107,8 +108,7 @@ function quitApp() {
     app.quit();
 }
 
-function registerHotkeysFromSettings() {
-    const settings = loadSettings();
+function resolveHotkeyAccelerators(settings = {}) {
     const captureAccelerator =
         typeof settings.captureHotkey === 'string' && settings.captureHotkey
             ? settings.captureHotkey
@@ -117,6 +117,40 @@ function registerHotkeysFromSettings() {
         typeof settings.clipboardHotkey === 'string' && settings.clipboardHotkey
             ? settings.clipboardHotkey
             : DEFAULT_CLIPBOARD_HOTKEY;
+
+    return { captureAccelerator, clipboardAccelerator };
+}
+
+function updateTrayMenu({ captureAccelerator, clipboardAccelerator } = {}) {
+    if (!tray) {
+        console.warn('Tray menu update skipped: tray not ready');
+        return;
+    }
+
+    if (!trayHandlers) {
+        console.warn('Tray menu update skipped: handlers not ready');
+        return;
+    }
+
+    const showHotkeys = process.platform === 'darwin';
+    const trayMenu = Menu.buildFromTemplate(
+        buildTrayMenuTemplate({
+            ...trayHandlers,
+            captureAccelerator: showHotkeys ? captureAccelerator : undefined,
+            clipboardAccelerator: showHotkeys ? clipboardAccelerator : undefined,
+        })
+    );
+
+    tray.setContextMenu(trayMenu);
+    console.log('Tray menu updated', {
+        captureAccelerator: Boolean(showHotkeys && captureAccelerator),
+        clipboardAccelerator: Boolean(showHotkeys && clipboardAccelerator),
+    });
+}
+
+function registerHotkeysFromSettings() {
+    const settings = loadSettings();
+    const { captureAccelerator, clipboardAccelerator } = resolveHotkeyAccelerators(settings);
 
     unregisterGlobalHotkeys();
 
@@ -158,7 +192,7 @@ function registerHotkeysFromSettings() {
         });
     }
 
-    return { captureResult, clipboardResult };
+    return { captureResult, clipboardResult, captureAccelerator, clipboardAccelerator };
 }
 
 function createTray() {
@@ -172,22 +206,21 @@ function createTray() {
     tray = new Tray(trayIcon);
     tray.setToolTip('Jiminy');
 
-    const trayMenu = Menu.buildFromTemplate(
-        buildTrayMenuTemplate({
-            onCapture: () => {
-                void startCaptureFlow();
-            },
-            onClipboard: () => {
-                void captureClipboard();
-            },
-            onOpenSettings: showSettingsWindow,
-            onAbout: showAboutDialog,
-            onRestart: restartApp,
-            onQuit: quitApp,
-        })
-    );
+    trayHandlers = {
+        onCapture: () => {
+            void startCaptureFlow();
+        },
+        onClipboard: () => {
+            void captureClipboard();
+        },
+        onOpenSettings: showSettingsWindow,
+        onAbout: showAboutDialog,
+        onRestart: restartApp,
+        onQuit: quitApp,
+    };
 
-    tray.setContextMenu(trayMenu);
+    const { captureAccelerator, clipboardAccelerator } = resolveHotkeyAccelerators(loadSettings());
+    updateTrayMenu({ captureAccelerator, clipboardAccelerator });
 
     console.log('Tray created');
 }
@@ -202,6 +235,10 @@ registerAnalysisHandlers();
 ipcMain.handle('hotkeys:reregister', () => {
     console.log('Re-registering hotkeys from settings');
     const result = registerHotkeysFromSettings();
+    updateTrayMenu({
+        captureAccelerator: result.captureAccelerator,
+        clipboardAccelerator: result.clipboardAccelerator,
+    });
     return {
         ok: result.captureResult.ok && result.clipboardResult.ok,
         captureHotkey: result.captureResult,
@@ -220,6 +257,10 @@ ipcMain.handle('hotkeys:suspend', () => {
 ipcMain.handle('hotkeys:resume', () => {
     console.log('Resuming global hotkeys after recording');
     const result = registerHotkeysFromSettings();
+    updateTrayMenu({
+        captureAccelerator: result.captureAccelerator,
+        clipboardAccelerator: result.clipboardAccelerator,
+    });
     return {
         ok: result.captureResult.ok && result.clipboardResult.ok,
         captureHotkey: result.captureResult,
