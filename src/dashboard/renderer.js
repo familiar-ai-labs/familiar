@@ -47,7 +47,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const llmProviderSelects = selectAll('[data-setting="llm-provider"]')
   const llmProviderErrors = selectAll('[data-setting-error="llm-provider-error"]')
   const llmKeyInputs = selectAll('[data-setting="llm-api-key"]')
-  const llmKeySaveButtons = selectAll('[data-action="llm-api-key-save"]')
   const llmKeyErrors = selectAll('[data-setting-error="llm-api-key-error"]')
   const llmKeyStatuses = selectAll('[data-setting-status="llm-api-key-status"]')
 
@@ -404,6 +403,43 @@ document.addEventListener('DOMContentLoaded', () => {
     return false
   }
 
+  const saveLlmApiKey = async (apiKey) => {
+    if (!jiminy.saveSettings) {
+      return false
+    }
+
+    setMessage(llmKeyStatuses, 'Saving...')
+    setMessage(llmKeyErrors, '')
+    setMessage(llmProviderErrors, '')
+
+    if (!currentLlmProviderName) {
+      setMessage(llmKeyStatuses, '')
+      setMessage(llmProviderErrors, 'Select an LLM provider.')
+      return false
+    }
+
+    try {
+      const result = await jiminy.saveSettings({
+        llmProviderName: currentLlmProviderName,
+        llmProviderApiKey: apiKey
+      })
+      if (result && result.ok) {
+        setMessage(llmKeyStatuses, 'Saved.')
+        setLlmApiKeySaved(apiKey)
+        console.log('LLM API key saved', { provider: currentLlmProviderName, hasKey: Boolean(apiKey) })
+        return true
+      }
+      setMessage(llmKeyStatuses, '')
+      setMessage(llmKeyErrors, result?.message || 'Failed to save LLM key.')
+    } catch (error) {
+      console.error('Failed to save LLM key', error)
+      setMessage(llmKeyStatuses, '')
+      setMessage(llmKeyErrors, 'Failed to save LLM key.')
+    }
+
+    return false
+  }
+
   const saveLlmProviderSelection = async (providerName) => {
     if (!jiminy.saveSettings) {
       return false
@@ -421,6 +457,9 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('LLM provider saved', { provider: providerName })
         setMessage(llmProviderErrors, '')
         setLlmProviderValue(providerName)
+        if (pendingLlmApiKey !== currentLlmApiKey) {
+          await saveLlmApiKey(pendingLlmApiKey)
+        }
         return true
       }
       setMessage(llmProviderErrors, result?.message || 'Failed to save LLM provider.')
@@ -575,37 +614,16 @@ document.addEventListener('DOMContentLoaded', () => {
       setMessage(llmKeyStatuses, '')
       setMessage(llmKeyErrors, '')
     })
-  })
 
-  llmKeySaveButtons.forEach((button) => {
-    button.addEventListener('click', async () => {
-      setMessage(llmKeyStatuses, 'Saving...')
-      setMessage(llmKeyErrors, '')
-      setMessage(llmProviderErrors, '')
-
-      if (!currentLlmProviderName) {
-        setMessage(llmKeyStatuses, '')
-        setMessage(llmProviderErrors, 'Select an LLM provider.')
+    input.addEventListener('change', async (event) => {
+      const nextValue = event.target.value || ''
+      if (pendingLlmApiKey !== nextValue) {
+        setLlmApiKeyPending(nextValue)
+      }
+      if (nextValue === currentLlmApiKey) {
         return
       }
-
-      try {
-        const result = await jiminy.saveSettings({
-          llmProviderName: currentLlmProviderName,
-          llmProviderApiKey: pendingLlmApiKey
-        })
-        if (result && result.ok) {
-          setMessage(llmKeyStatuses, 'Saved.')
-          setLlmApiKeySaved(pendingLlmApiKey)
-        } else {
-          setMessage(llmKeyStatuses, '')
-          setMessage(llmKeyErrors, result?.message || 'Failed to save LLM key.')
-        }
-      } catch (error) {
-        console.error('Failed to save LLM key', error)
-        setMessage(llmKeyStatuses, '')
-        setMessage(llmKeyErrors, 'Failed to save LLM key.')
-      }
+      await saveLlmApiKey(nextValue)
     })
   })
 

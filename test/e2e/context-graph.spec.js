@@ -44,7 +44,9 @@ test('sync now builds context graph with mocked summaries', async () => {
 
     await window.locator('#context-folder-choose').click()
     await window.locator('#llm-provider').selectOption('gemini')
-    await window.locator('#llm-api-key-save').click()
+    await window.locator('#llm-api-key').fill('test-key')
+    await window.locator('#llm-api-key').blur()
+    await expect(window.locator('#llm-api-key-status')).toHaveText('Saved.')
     const statsLocator = window.locator('#context-graph-stats')
     // Before sync: no stored graph, so all nodes are "new"
     await expect(statsLocator).toHaveText(`Synced: 0/${expectedTotalNodes} | Out of sync: 0/${expectedTotalNodes} | New: ${expectedTotalNodes}`)

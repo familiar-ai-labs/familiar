@@ -134,8 +134,7 @@
                 </div>
 
                 <div class="space-y-2">
-                  <div class="flex gap-2">
-                    <div class="input-ring relative flex-1 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg">
+                  <div class="input-ring relative w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg">
                       <svg viewBox="0 0 24 24" class="absolute left-3 top-2.5 w-3.5 h-3.5 text-zinc-400" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                         <path d="M14.5 10.5a3.5 3.5 0 1 0-7 0 3.5 3.5 0 0 0 7 0Z" />
                         <path d="M12 14v3m0 0h6m-6 0l2 2m-2-2l2-2" />
@@ -148,8 +147,6 @@
                         autocomplete="off"
                         class="w-full bg-transparent text-xs text-zinc-700 dark:text-zinc-300 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none py-2 pl-8 pr-3"
                       >
-                    </div>
-                    <button id="llm-api-key-save" data-action="llm-api-key-save" type="button" class="px-3 py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 border border-indigo-600 hover:border-indigo-700 rounded-lg text-white focus:outline-none transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">Save</button>
                   </div>
                   <p id="llm-api-key-error" data-setting-error="llm-api-key-error" class="text-xs text-red-600 dark:text-red-400 hidden" role="alert" aria-live="polite"></p>
                   <span id="llm-api-key-status" data-setting-status="llm-api-key-status" class="text-xs text-emerald-600 dark:text-emerald-400 hidden" aria-live="polite"></span>
@@ -229,7 +226,7 @@
             </section>
           </div>
 
-          <section id="section-wizard" data-section-pane="wizard" role="tabpanel" aria-label="Setup wizard" class="hidden flex-1 flex flex-col">
+          <section id="section-wizard" data-section-pane="wizard" role="tabpanel" aria-label="Setup wizard" class="hidden flex-1 flex flex-col min-h-0">
             <div class="flex-none px-6 py-4 border-b border-zinc-100 dark:border-zinc-800/50 flex justify-between items-center">
               <div>
                 <h2 class="text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Setup Wizard</h2>
@@ -275,7 +272,7 @@
               </div>
             </div>
 
-            <div class="flex-1 overflow-y-auto px-6 py-6 scrollbar-slim">
+            <div class="flex-1 min-h-0 overflow-y-auto px-6 py-6 scrollbar-slim">
               <div data-wizard-step="1" class="max-w-[360px] mx-auto space-y-5">
                 <div class="text-center space-y-1">
                   <h3 class="text-sm font-medium text-zinc-900 dark:text-zinc-100">Choose your primary context folder</h3>
@@ -336,8 +333,7 @@
                 </section>
                 <section class="space-y-2">
                   <label for="wizard-llm-api-key" class="section-label">API Key</label>
-                  <div class="flex gap-2">
-                    <div class="input-ring relative flex-1 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg">
+                  <div class="input-ring relative w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg">
                       <svg viewBox="0 0 24 24" class="absolute left-3 top-2.5 w-3.5 h-3.5 text-zinc-400" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                         <path d="M14.5 10.5a3.5 3.5 0 1 0-7 0 3.5 3.5 0 0 0 7 0Z" />
                         <path d="M12 14v3m0 0h6m-6 0l2 2m-2-2l2-2" />
@@ -350,8 +346,6 @@
                         autocomplete="off"
                         class="w-full bg-transparent text-xs text-zinc-700 dark:text-zinc-300 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none py-2 pl-8 pr-3"
                       >
-                    </div>
-                    <button id="wizard-llm-api-key-save" data-action="llm-api-key-save" type="button" class="px-3 py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 border border-indigo-600 hover:border-indigo-700 rounded-lg text-white focus:outline-none transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">Save</button>
                   </div>
                   <p id="wizard-llm-api-key-error" data-setting-error="llm-api-key-error" class="text-xs text-red-600 dark:text-red-400 hidden" role="alert" aria-live="polite"></p>
                   <span id="wizard-llm-api-key-status" data-setting-status="llm-api-key-status" class="text-xs text-emerald-600 dark:text-emerald-400 hidden" aria-live="polite"></span>

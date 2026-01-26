@@ -172,7 +172,9 @@ test.describe('clipboard capture flow', () => {
             await window.locator('#context-folder-choose').click();
             await expect(window.locator('#context-folder-status')).toHaveText('Saved.');
             await window.locator('#llm-provider').selectOption('gemini');
-            await window.locator('#llm-api-key-save').click();
+            await window.locator('#llm-api-key').fill('test-key');
+            await window.locator('#llm-api-key').blur();
+            await expect(window.locator('#llm-api-key-status')).toHaveText('Saved.');
 
             // Trigger clipboard capture and wait for the full flow to complete
             // The toast window will be created (compact), then destroyed and recreated (large) for analysis toast

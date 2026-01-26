@@ -152,7 +152,6 @@ const createElements = () => {
     'context-folder-error': new TestElement(),
     'context-folder-status': new TestElement(),
     'llm-api-key': new TestElement(),
-    'llm-api-key-save': new TestElement(),
     'llm-api-key-error': new TestElement(),
     'llm-api-key-status': new TestElement(),
     'llm-provider': new TestElement(),
@@ -185,7 +184,6 @@ const createElements = () => {
   elements['llm-provider'].dataset.setting = 'llm-provider'
   elements['llm-provider-error'].dataset.settingError = 'llm-provider-error'
   elements['llm-api-key'].dataset.setting = 'llm-api-key'
-  elements['llm-api-key-save'].dataset.action = 'llm-api-key-save'
   elements['llm-api-key-error'].dataset.settingError = 'llm-api-key-error'
   elements['llm-api-key-status'].dataset.settingStatus = 'llm-api-key-status'
 
@@ -261,6 +259,49 @@ test('refreshes context graph status when context path changes', async () => {
     assert.equal(elements['context-folder-status'].textContent, 'Saved.')
     assert.equal(statusCalls.length, 2)
     assert.equal(statusCalls[1].contextFolderPath, '/tmp/new-context')
+  } finally {
+    global.document = priorDocument
+    global.window = priorWindow
+  }
+})
+
+test('llm api key saves on change when provider is set', async () => {
+  const saveCalls = []
+  const jiminy = createJiminy({
+    getSettings: async () => ({
+      contextFolderPath: '',
+      llmProviderName: 'gemini',
+      llmProviderApiKey: '',
+      exclusions: []
+    }),
+    saveSettings: async (payload) => {
+      saveCalls.push(payload)
+      return { ok: true }
+    }
+  })
+
+  const elements = createElements()
+  const document = new TestDocument(elements)
+  const priorDocument = global.document
+  const priorWindow = global.window
+  global.document = document
+  global.window = { jiminy }
+
+  try {
+    loadRenderer()
+    document.trigger('DOMContentLoaded')
+    await flushPromises()
+
+    elements['llm-api-key'].value = 'new-key'
+    await elements['llm-api-key']._listeners.change({ target: elements['llm-api-key'] })
+    await flushPromises()
+
+    assert.equal(saveCalls.length, 1)
+    assert.deepEqual(saveCalls[0], {
+      llmProviderName: 'gemini',
+      llmProviderApiKey: 'new-key'
+    })
+    assert.equal(elements['llm-api-key-status'].textContent, 'Saved.')
   } finally {
     global.document = priorDocument
     global.window = priorWindow

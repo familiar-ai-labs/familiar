@@ -58,7 +58,7 @@ test('wizard happy flow completes setup and routes to General', async () => {
 
     await window.locator('#wizard-llm-provider').selectOption('gemini')
     await window.locator('#wizard-llm-api-key').fill('test-key')
-    await window.locator('#wizard-llm-api-key-save').click()
+    await window.locator('#wizard-llm-api-key').blur()
     await expect(window.locator('#wizard-llm-api-key-status')).toHaveText('Saved.')
 
     await nextButton.click()
@@ -112,7 +112,7 @@ test('wizard preserves state when navigating back and forth', async () => {
 
     await window.locator('#wizard-llm-provider').selectOption('openai')
     await window.locator('#wizard-llm-api-key').fill('persisted-key')
-    await window.locator('#wizard-llm-api-key-save').click()
+    await window.locator('#wizard-llm-api-key').blur()
     await expect(window.locator('#wizard-llm-api-key-status')).toHaveText('Saved.')
 
     await backButton.click()
@@ -127,6 +127,62 @@ test('wizard preserves state when navigating back and forth', async () => {
     await expect(window.locator('[data-wizard-step="3"]')).toBeVisible()
     await expect(window.locator('#wizard-llm-provider')).toHaveValue('openai')
     await expect(window.locator('#wizard-llm-api-key')).toHaveValue('persisted-key')
+  } finally {
+    await (await electronApp).close()
+  }
+})
+
+test('wizard exclusions step keeps footer visible when list overflows', async () => {
+  const appRoot = path.join(__dirname, '../..')
+  const contextPath = path.join(appRoot, 'test', 'fixtures', 'context')
+  const { electronApp } = launchElectron({ contextPath })
+
+  try {
+    const window = await (await electronApp).firstWindow()
+    await window.waitForLoadState('domcontentloaded')
+
+    await window.locator('#wizard-context-folder-choose').click()
+    const nextButton = window.locator('#wizard-next')
+
+    await nextButton.click()
+    await expect(window.locator('[data-wizard-step="2"]')).toBeVisible()
+
+    await window.evaluate(() => {
+      const list = document.getElementById('wizard-exclusions-list')
+      if (!list) return
+      for (let i = 0; i < 40; i += 1) {
+        const item = document.createElement('li')
+        item.className = 'flex items-center justify-between px-3 py-2 rounded-lg bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 text-[11px] text-zinc-700 dark:text-zinc-300'
+        item.textContent = `path-${i}`
+        list.appendChild(item)
+      }
+    })
+
+    const scrollResult = await window.evaluate(() => {
+      const container = document.querySelector('#section-wizard .scrollbar-slim')
+      if (!container) return { scrollable: false, clientHeight: 0, scrollHeight: 0 }
+      const before = container.scrollTop
+      container.scrollTop = container.scrollHeight
+      const after = container.scrollTop
+      return {
+        scrollable: after > before,
+        clientHeight: container.clientHeight,
+        scrollHeight: container.scrollHeight
+      }
+    })
+
+    expect(scrollResult.scrollHeight).toBeGreaterThan(scrollResult.clientHeight)
+    expect(scrollResult.scrollable).toBe(true)
+
+    const backButton = window.locator('#wizard-back')
+    const nextBox = await nextButton.boundingBox()
+    const backBox = await backButton.boundingBox()
+    const viewportHeight = await window.evaluate(() => window.innerHeight)
+
+    expect(nextBox).not.toBeNull()
+    expect(backBox).not.toBeNull()
+    expect(nextBox.y + nextBox.height).toBeLessThanOrEqual(viewportHeight)
+    expect(backBox.y + backBox.height).toBeLessThanOrEqual(viewportHeight)
   } finally {
     await (await electronApp).close()
   }
@@ -160,7 +216,7 @@ test('wizard intelligence step requires provider and saved api key', async () =>
     await window.locator('#wizard-llm-api-key').fill('unsaved-key')
     await expect(nextButton).toBeDisabled()
 
-    await window.locator('#wizard-llm-api-key-save').click()
+    await window.locator('#wizard-llm-api-key').blur()
     await expect(window.locator('#wizard-llm-api-key-status')).toHaveText('Saved.')
     await expect(nextButton).toBeEnabled()
   } finally {
@@ -188,7 +244,7 @@ test('wizard resets to first step after Done', async () => {
 
     await window.locator('#wizard-llm-provider').selectOption('gemini')
     await window.locator('#wizard-llm-api-key').fill('test-key')
-    await window.locator('#wizard-llm-api-key-save').click()
+    await window.locator('#wizard-llm-api-key').blur()
     await expect(window.locator('#wizard-llm-api-key-status')).toHaveText('Saved.')
 
     await nextButton.click()
