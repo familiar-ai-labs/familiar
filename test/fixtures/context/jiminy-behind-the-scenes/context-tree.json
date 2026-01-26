@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "rootPath": "/Users/talraviv/Dropbox/Perfect Lefts/R&D code projects/Jiminy/code/desktopapp/test/fixtures/context",
+  "generatedAt": "2026-01-26T09:30:43.037Z",
+  "model": "mock",
+  "rootId": "n_19ec2fb35088",
+  "counts": {
+    "files": 0,
+    "folders": 1
+  },
+  "nodes": {
+    "n_19ec2fb35088": {
+      "id": "n_19ec2fb35088",
+      "type": "folder",
+      "name": "context",
+      "relativePath": "",
+      "summary": "",
+      "summaryUpdatedAt": null,
+      "children": [],
+      "contentHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  }
+}
