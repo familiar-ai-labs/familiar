@@ -214,10 +214,10 @@ test.describe('clipboard capture flow', () => {
             // Verify the final toast shows analysis complete
             await expect(finalToastWindow.locator('#title')).toHaveText('Analysis Complete');
 
-            // Verify the final toast has the "Open in Folder" button
+            // Verify the final toast has the "Open in Folder" action icon
             const actionButton = finalToastWindow.locator('#actions button');
             await expect(actionButton).toBeVisible();
-            await expect(actionButton).toHaveText('Open in Folder');
+            await expect(actionButton).toHaveAttribute('aria-label', 'Open in Folder');
 
             // Verify the toast body contains the analysis path
             const bodyText = await finalToastWindow.locator('#body').textContent();

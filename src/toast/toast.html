@@ -25,15 +25,17 @@
           <div id="title" class="font-semibold text-xs text-zinc-900 dark:text-zinc-100 truncate"></div>
           <div id="body" class="text-[11px] text-zinc-500 dark:text-zinc-400 truncate"></div>
         </div>
-        <button id="close-btn" class="hidden flex-shrink-0 w-5 h-5 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors" title="Close">
-          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+        <div class="flex items-start gap-2 flex-shrink-0">
+          <div id="actions" class="hidden flex gap-2">
+            <!-- Action buttons inserted by JS -->
+          </div>
+          <button id="close-btn" class="hidden w-7 h-7 flex-shrink-0 flex items-center justify-center rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors" title="Close" aria-label="Close notification">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
       </div>
-    </div>
-    <div id="actions" class="hidden flex gap-2 mt-2 px-3">
-      <!-- Action buttons inserted by JS -->
     </div>
     <script src="./toast-renderer.js"></script>
   </body>

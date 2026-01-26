@@ -1,5 +1,28 @@
 document.addEventListener('DOMContentLoaded', () => {
   const jiminy = window.jiminy || {}
+  if (typeof require === 'function') {
+    const loadModule = (globalKey, modulePath) => {
+      if (window[globalKey]) {
+        return
+      }
+      try {
+        const moduleExports = require(modulePath)
+        if (moduleExports && typeof moduleExports.createWizard === 'function') {
+          window.JiminyWizard = moduleExports
+        } else if (moduleExports && typeof moduleExports.createExclusions === 'function') {
+          window.JiminyExclusions = moduleExports
+        } else if (moduleExports && typeof moduleExports.createHotkeys === 'function') {
+          window.JiminyHotkeys = moduleExports
+        }
+      } catch (error) {
+        console.warn(`Failed to load ${globalKey} module`, error)
+      }
+    }
+
+    loadModule('JiminyWizard', './wizard.js')
+    loadModule('JiminyExclusions', './exclusions.js')
+    loadModule('JiminyHotkeys', './hotkeys.js')
+  }
   const selectAll = (selector) => typeof document.querySelectorAll === 'function'
     ? Array.from(document.querySelectorAll(selector))
     : []
@@ -14,8 +37,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const wizardStepStatus = document.getElementById('wizard-step-status')
   const wizardStepPanels = selectAll('[data-wizard-step]')
   const wizardStepIndicators = selectAll('[data-wizard-step-indicator]')
-  const wizardStepCircles = selectAll('[data-wizard-step-circle]')
-  const wizardStepLabels = selectAll('[data-wizard-step-label]')
   const wizardStepConnectors = selectAll('[data-wizard-step-connector]')
 
   const contextFolderInputs = selectAll('[data-setting="context-folder-path"]')
@@ -59,8 +80,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const DEFAULT_CAPTURE_HOTKEY = 'CommandOrControl+Shift+J'
   const DEFAULT_CLIPBOARD_HOTKEY = 'CommandOrControl+J'
 
-  const WIZARD_STEP_COUNT = 5
-
   let currentContextFolderPath = ''
   let currentLlmProviderName = ''
   let currentLlmApiKey = ''
@@ -71,9 +90,37 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentExclusions = []
   let isContextGraphSynced = false
   let hasCompletedSync = false
-  let wizardStep = 1
   let isFirstRun = false
-  let recordingElement = null
+  let wizardApi = null
+  let exclusionsApi = null
+  let hotkeysApi = null
+
+  const updateWizardUI = () => {
+    if (wizardApi && wizardApi.updateWizardUI) {
+      wizardApi.updateWizardUI()
+    }
+  }
+
+  const setHotkeyValue = (role, value) => {
+    const nextValue = value || ''
+    if (role === 'capture') {
+      currentCaptureHotkey = nextValue
+      return
+    }
+    currentClipboardHotkey = nextValue
+  }
+
+  const setExclusionsState = (exclusions) => {
+    currentExclusions = Array.isArray(exclusions) ? [...exclusions] : []
+  }
+
+  const setExclusionsValue = (exclusions) => {
+    if (exclusionsApi && exclusionsApi.setExclusions) {
+      exclusionsApi.setExclusions(exclusions)
+      return
+    }
+    setExclusionsState(exclusions)
+  }
 
   const SECTION_META = {
     wizard: {
@@ -92,89 +139,6 @@ document.addEventListener('DOMContentLoaded', () => {
       title: 'Hotkeys',
       subtitle: 'Configure global keyboard shortcuts.'
     }
-  }
-
-  const isWizardStepComplete = (step) => {
-    switch (step) {
-      case 1:
-        return Boolean(currentContextFolderPath)
-      case 2:
-        return Boolean(currentContextFolderPath)
-      case 3:
-        return Boolean(currentLlmProviderName && currentLlmApiKey && isLlmApiKeySaved)
-      case 4:
-        return Boolean(hasCompletedSync || isContextGraphSynced)
-      case 5:
-        return Boolean(currentCaptureHotkey || currentClipboardHotkey)
-      default:
-        return false
-    }
-  }
-
-  const setWizardStep = (step) => {
-    const nextStep = Math.max(1, Math.min(WIZARD_STEP_COUNT, Number(step) || 1))
-    wizardStep = nextStep
-    console.log('Wizard step changed', { step: wizardStep })
-    updateWizardUI()
-  }
-
-  const updateWizardUI = () => {
-    if (!wizardSection) {
-      return
-    }
-
-    wizardStepPanels.forEach((panel) => {
-      const step = Number(panel.dataset.wizardStep)
-      panel.classList.toggle('hidden', step !== wizardStep)
-    })
-
-    const canAdvance = isWizardStepComplete(wizardStep)
-
-    if (wizardBackButton) {
-      wizardBackButton.disabled = wizardStep <= 1
-    }
-
-    if (wizardNextButton) {
-      wizardNextButton.classList.toggle('hidden', wizardStep >= WIZARD_STEP_COUNT)
-      wizardNextButton.disabled = !canAdvance
-    }
-
-    if (wizardDoneButton) {
-      const isDoneStep = wizardStep >= WIZARD_STEP_COUNT
-      wizardDoneButton.classList.toggle('hidden', !isDoneStep)
-      wizardDoneButton.disabled = !canAdvance
-    }
-
-    if (wizardCompleteStatus) {
-      wizardCompleteStatus.classList.toggle('hidden', !(wizardStep === WIZARD_STEP_COUNT && canAdvance))
-    }
-
-    if (wizardStepStatus) {
-      const needsAction = !canAdvance
-      wizardStepStatus.textContent = needsAction ? 'Complete this step to continue.' : ''
-      wizardStepStatus.classList.toggle('hidden', !needsAction)
-    }
-
-    wizardStepIndicators.forEach((indicator) => {
-      const step = Number(indicator.dataset.wizardStepIndicator)
-      const isActive = step === wizardStep
-      const isComplete = step < wizardStep
-      const circle = indicator.querySelector('[data-wizard-step-circle]')
-      const label = indicator.querySelector('[data-wizard-step-label]')
-
-      toggleClasses(circle, ['border-indigo-600', 'text-indigo-600', 'bg-indigo-50', 'dark:bg-indigo-900/30'], isActive)
-      toggleClasses(circle, ['bg-indigo-600', 'text-white', 'border-indigo-600'], isComplete)
-      toggleClasses(circle, ['border-zinc-200', 'dark:border-zinc-700', 'text-zinc-500'], !isActive && !isComplete)
-
-      toggleClasses(label, ['text-zinc-900', 'dark:text-zinc-100', 'font-semibold'], isActive)
-      toggleClasses(label, ['text-indigo-600', 'dark:text-indigo-400'], isComplete)
-      toggleClasses(label, ['text-zinc-500', 'dark:text-zinc-400'], !isActive && !isComplete)
-    })
-
-    wizardStepConnectors.forEach((connector) => {
-      const stepIndex = Number(connector.dataset.wizardStepConnector)
-      connector.style.width = wizardStep > stepIndex ? '100%' : '0%'
-    })
   }
 
   const setActiveSection = (nextSection) => {
@@ -223,203 +187,34 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('Settings section changed', { section: nextSection })
   }
 
-  /**
-   * Convert a KeyboardEvent to an Electron accelerator string
-   */
-  const keyEventToAccelerator = (event) => {
-    const parts = []
-
-    // Modifiers - use CommandOrControl for cross-platform compatibility
-    if (event.metaKey || event.ctrlKey) {
-      parts.push('CommandOrControl')
-    }
-    if (event.altKey) {
-      parts.push('Alt')
-    }
-    if (event.shiftKey) {
-      parts.push('Shift')
-    }
-
-    // Get the actual key
-    let key = event.key
-
-    // Skip if only modifier keys are pressed
-    if (['Meta', 'Control', 'Alt', 'Shift'].includes(key)) {
-      return null
-    }
-
-    // Map special keys to Electron accelerator names
-    const keyMap = {
-      ' ': 'Space',
-      'ArrowUp': 'Up',
-      'ArrowDown': 'Down',
-      'ArrowLeft': 'Left',
-      'ArrowRight': 'Right',
-      'Escape': 'Escape',
-      'Enter': 'Return',
-      'Backspace': 'Backspace',
-      'Delete': 'Delete',
-      'Tab': 'Tab',
-      'Home': 'Home',
-      'End': 'End',
-      'PageUp': 'PageUp',
-      'PageDown': 'PageDown',
-      'Insert': 'Insert'
-    }
-
-    if (keyMap[key]) {
-      key = keyMap[key]
-    } else if (key.length === 1) {
-      // Single character - uppercase it
-      key = key.toUpperCase()
-    } else if (key.startsWith('F') && /^F\d+$/.test(key)) {
-      // Function keys (F1-F12) - keep as is
-    } else {
-      // Unknown key
-      return null
-    }
-
-    // Must have at least one modifier for a global hotkey
-    if (parts.length === 0) {
-      return null
-    }
-
-    parts.push(key)
-    return parts.join('+')
-  }
-
-  /**
-   * Format an accelerator string for display
-   */
-  const formatAcceleratorForDisplay = (accelerator) => {
-    if (!accelerator) return 'Click to set...'
-
-    // Replace CommandOrControl with platform-specific symbol
-    const isMac = jiminy.platform === 'darwin'
-    return accelerator
-      .replace(/CommandOrControl/g, isMac ? '⌘' : 'Ctrl')
-      .replace(/Command/g, '⌘')
-      .replace(/Control/g, 'Ctrl')
-      .replace(/Alt/g, isMac ? '⌥' : 'Alt')
-      .replace(/Shift/g, isMac ? '⇧' : 'Shift')
-      .replace(/\+/g, ' + ')
-  }
-
-  /**
-   * Update a hotkey button's display
-   */
-  const updateHotkeyDisplay = (role, accelerator) => {
-    const buttons = role === 'capture' ? captureHotkeyButtons : clipboardHotkeyButtons
-    const value = accelerator || ''
-    buttons.forEach((button) => {
-      button.dataset.hotkey = value
-      button.textContent = formatAcceleratorForDisplay(value)
-    })
-    if (role === 'capture') {
-      currentCaptureHotkey = value
-    } else {
-      currentClipboardHotkey = value
-    }
-    updateWizardUI()
-  }
-
-  /**
-   * Start recording mode for a hotkey button
-   */
-  const startRecording = async (button) => {
-    if (recordingElement) {
-      await stopRecording(recordingElement)
-    }
-
-    // Suspend global hotkeys so they don't trigger during recording
-    if (jiminy.suspendHotkeys) {
-      try {
-        await jiminy.suspendHotkeys()
-        console.log('Global hotkeys suspended for recording')
-      } catch (error) {
-        console.error('Failed to suspend hotkeys', error)
-        setMessage(hotkeysErrors, 'Failed to suspend hotkeys. Try again or restart the app.')
+  if (window.JiminyWizard && typeof window.JiminyWizard.createWizard === 'function') {
+    wizardApi = window.JiminyWizard.createWizard({
+      elements: {
+        wizardSection,
+        wizardBackButton,
+        wizardNextButton,
+        wizardDoneButton,
+        wizardCompleteStatus,
+        wizardStepStatus,
+        wizardStepPanels,
+        wizardStepIndicators,
+        wizardStepConnectors
+      },
+      getState: () => ({
+        currentContextFolderPath,
+        currentLlmProviderName,
+        currentLlmApiKey,
+        isLlmApiKeySaved,
+        hasCompletedSync,
+        isContextGraphSynced,
+        currentCaptureHotkey,
+        currentClipboardHotkey
+      }),
+      onDone: () => {
+        setActiveSection('general')
       }
-    }
-
-    recordingElement = button
-    button.textContent = 'Press keys...'
-    button.classList.add('ring-2', 'ring-indigo-500', 'bg-indigo-50', 'dark:bg-indigo-900/30')
-  }
-
-  /**
-   * Stop recording mode for a hotkey button
-   */
-  const stopRecording = async (button) => {
-    if (!button) return true
-    button.classList.remove('ring-2', 'ring-indigo-500', 'bg-indigo-50', 'dark:bg-indigo-900/30')
-    const role = button.dataset.hotkeyRole || 'capture'
-    updateHotkeyDisplay(role, button.dataset.hotkey)
-
-    const wasRecording = recordingElement === button
-    if (wasRecording) {
-      recordingElement = null
-    }
-
-    let resumeOk = true
-    // Resume global hotkeys after recording ends
-    if (wasRecording && jiminy.resumeHotkeys) {
-      try {
-        await jiminy.resumeHotkeys()
-        console.log('Global hotkeys resumed after recording')
-      } catch (error) {
-        console.error('Failed to resume hotkeys', error)
-        setMessage(hotkeysErrors, 'Failed to resume hotkeys. Restart the app.')
-        resumeOk = false
-      }
-    }
-
-    return resumeOk
-  }
-
-  /**
-   * Handle keydown during recording
-   */
-  const handleHotkeyKeydown = async (event) => {
-    if (!recordingElement) return
-
-    event.preventDefault()
-    event.stopPropagation()
-
-    const accelerator = keyEventToAccelerator(event)
-    if (accelerator) {
-      const button = recordingElement
-      button.dataset.hotkey = accelerator
-      const resumeOk = await stopRecording(button)
-      if (resumeOk) {
-        setMessage(hotkeysErrors, '')
-      }
-    }
-  }
-
-  // Set up hotkey recording
-  const setupHotkeyRecorder = (button) => {
-    if (!button) return
-
-    button.addEventListener('click', () => {
-      void startRecording(button)
-    })
-
-    button.addEventListener('blur', () => {
-      // Small delay to allow keydown to process first
-      setTimeout(() => {
-        if (recordingElement === button) {
-          void stopRecording(button)
-        }
-      }, 100)
-    })
-
-    button.addEventListener('keydown', (event) => {
-      void handleHotkeyKeydown(event)
     })
   }
-
-  hotkeyButtons.forEach((button) => setupHotkeyRecorder(button))
 
   if (sectionNavButtons.length > 0) {
     sectionNavButtons.forEach((button) => {
@@ -429,33 +224,6 @@ document.addEventListener('DOMContentLoaded', () => {
           setActiveSection(target)
         }
       })
-    })
-  }
-
-  if (wizardBackButton) {
-    wizardBackButton.addEventListener('click', () => {
-      setWizardStep(wizardStep - 1)
-    })
-  }
-
-  if (wizardNextButton) {
-    wizardNextButton.addEventListener('click', () => {
-      if (!isWizardStepComplete(wizardStep)) {
-        updateWizardUI()
-        return
-      }
-      setWizardStep(wizardStep + 1)
-    })
-  }
-
-  if (wizardDoneButton) {
-    wizardDoneButton.addEventListener('click', () => {
-      if (!isWizardStepComplete(wizardStep)) {
-        updateWizardUI()
-        return
-      }
-      setWizardStep(1)
-      setActiveSection('general')
     })
   }
 
@@ -477,15 +245,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (element.value !== value) {
         element.value = value
       }
-    })
-  }
-
-  const toggleClasses = (element, classes, isActive) => {
-    if (!element) {
-      return
-    }
-    classes.forEach((className) => {
-      element.classList.toggle(className, isActive)
     })
   }
 
@@ -619,59 +378,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  const renderExclusions = () => {
-    exclusionsLists.forEach((list) => {
-      list.innerHTML = ''
-      for (const exclusion of currentExclusions) {
-        const li = document.createElement('li')
-        li.className = 'flex items-center justify-between px-3 py-2 rounded-lg bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 text-[11px] text-zinc-700 dark:text-zinc-300 group'
-
-        const pathSpan = document.createElement('span')
-        pathSpan.className = 'truncate'
-        pathSpan.textContent = exclusion
-        pathSpan.title = exclusion
-
-        const removeBtn = document.createElement('button')
-        removeBtn.className = 'ml-2 px-1.5 py-0.5 rounded text-[11px] text-zinc-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-zinc-200 dark:hover:bg-zinc-800 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer'
-        removeBtn.textContent = '×'
-        removeBtn.title = 'Remove exclusion'
-        removeBtn.addEventListener('click', () => removeExclusion(exclusion))
-
-        li.appendChild(pathSpan)
-        li.appendChild(removeBtn)
-        list.appendChild(li)
-      }
-    })
-  }
-
-  const saveExclusions = async () => {
-    if (!jiminy.saveSettings) return
-
-    try {
-      await jiminy.saveSettings({ exclusions: currentExclusions })
-      console.log('Exclusions saved', currentExclusions)
-      setMessage(exclusionsErrors, '')
-      await refreshContextGraphStatus()
-    } catch (error) {
-      console.error('Failed to save exclusions', error)
-      setMessage(exclusionsErrors, 'Failed to save exclusions.')
-    }
-  }
-
-  const addExclusion = (path) => {
-    if (!path || currentExclusions.includes(path)) return
-    currentExclusions.push(path)
-    currentExclusions.sort()
-    renderExclusions()
-    saveExclusions()
-  }
-
-  const removeExclusion = (path) => {
-    currentExclusions = currentExclusions.filter((p) => p !== path)
-    renderExclusions()
-    saveExclusions()
-  }
-
   const saveContextFolderPath = async (contextFolderPath) => {
     if (!jiminy.saveSettings) {
       return false
@@ -737,10 +443,17 @@ document.addEventListener('DOMContentLoaded', () => {
       setContextFolderValue(result.contextFolderPath || '')
       setLlmProviderValue(result.llmProviderName || '')
       setLlmApiKeySaved(result.llmProviderApiKey || '')
-      updateHotkeyDisplay('capture', result.captureHotkey || DEFAULT_CAPTURE_HOTKEY)
-      updateHotkeyDisplay('clipboard', result.clipboardHotkey || DEFAULT_CLIPBOARD_HOTKEY)
-      currentExclusions = Array.isArray(result.exclusions) ? [...result.exclusions] : []
-      renderExclusions()
+      if (hotkeysApi && hotkeysApi.setHotkeys) {
+        hotkeysApi.setHotkeys({
+          capture: result.captureHotkey || DEFAULT_CAPTURE_HOTKEY,
+          clipboard: result.clipboardHotkey || DEFAULT_CLIPBOARD_HOTKEY
+        })
+      } else {
+        setHotkeyValue('capture', result.captureHotkey || DEFAULT_CAPTURE_HOTKEY)
+        setHotkeyValue('clipboard', result.clipboardHotkey || DEFAULT_CLIPBOARD_HOTKEY)
+        updateWizardUI()
+      }
+      setExclusionsValue(result.exclusions)
       setMessage(contextFolderErrors, result.validationMessage || '')
       setMessage(contextFolderStatuses, '')
       setMessage(llmProviderErrors, '')
@@ -767,6 +480,52 @@ document.addEventListener('DOMContentLoaded', () => {
     setMessage(hotkeysErrors, 'Settings bridge unavailable. Restart the app.')
     updatePruneButtonState()
     return
+  }
+
+  if (window.JiminyExclusions && typeof window.JiminyExclusions.createExclusions === 'function') {
+    exclusionsApi = window.JiminyExclusions.createExclusions({
+      elements: {
+        exclusionsLists,
+        addExclusionButtons,
+        exclusionsErrors
+      },
+      jiminy,
+      getState: () => ({
+        currentContextFolderPath,
+        currentExclusions
+      }),
+      setExclusions: (exclusions) => {
+        setExclusionsState(exclusions)
+      },
+      setMessage,
+      refreshContextGraphStatus
+    })
+  }
+
+  if (window.JiminyHotkeys && typeof window.JiminyHotkeys.createHotkeys === 'function') {
+    hotkeysApi = window.JiminyHotkeys.createHotkeys({
+      elements: {
+        hotkeyButtons,
+        captureHotkeyButtons,
+        clipboardHotkeyButtons,
+        hotkeysSaveButtons,
+        hotkeysResetButtons,
+        hotkeysStatuses,
+        hotkeysErrors
+      },
+      jiminy,
+      setMessage,
+      updateWizardUI,
+      getState: () => ({
+        currentCaptureHotkey,
+        currentClipboardHotkey
+      }),
+      setHotkeyValue,
+      defaults: {
+        capture: DEFAULT_CAPTURE_HOTKEY,
+        clipboard: DEFAULT_CLIPBOARD_HOTKEY
+      }
+    })
   }
 
   if (jiminy.onContextGraphProgress && syncProgress.length > 0) {
@@ -947,102 +706,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } finally {
           setPruneState(false)
         }
-      })
-    })
-  }
-
-  if (addExclusionButtons.length > 0) {
-    addExclusionButtons.forEach((button) => {
-      button.addEventListener('click', async () => {
-        if (!jiminy.pickExclusion) {
-          console.error('pickExclusion not available')
-          setMessage(exclusionsErrors, 'Exclusion picker unavailable. Restart the app.')
-          return
-        }
-
-        const contextPath = currentContextFolderPath || ''
-        if (!contextPath) {
-          console.warn('No context folder selected')
-          setMessage(exclusionsErrors, 'Select a context folder before adding exclusions.')
-          return
-        }
-
-        try {
-          const result = await jiminy.pickExclusion(contextPath)
-          if (result && !result.canceled && result.path) {
-            setMessage(exclusionsErrors, '')
-            addExclusion(result.path)
-          } else if (result && result.error) {
-            console.error('Failed to pick exclusion:', result.error)
-            setMessage(exclusionsErrors, result.error)
-          }
-        } catch (error) {
-          console.error('Failed to pick exclusion', error)
-          setMessage(exclusionsErrors, 'Failed to open exclusion picker.')
-        }
-      })
-    })
-  }
-
-  if (hotkeysSaveButtons.length > 0) {
-    hotkeysSaveButtons.forEach((button) => {
-      button.addEventListener('click', async () => {
-        setMessage(hotkeysStatuses, 'Saving...')
-        setMessage(hotkeysErrors, '')
-
-        const captureHotkey = currentCaptureHotkey
-        const clipboardHotkey = currentClipboardHotkey
-
-        if (!captureHotkey && !clipboardHotkey) {
-          setMessage(hotkeysStatuses, '')
-          setMessage(hotkeysErrors, 'At least one hotkey is required.')
-          return
-        }
-
-        try {
-          const result = await jiminy.saveSettings({ captureHotkey, clipboardHotkey })
-          if (result && result.ok) {
-            // Re-register hotkeys with the new values
-            if (jiminy.reregisterHotkeys) {
-              const reregisterResult = await jiminy.reregisterHotkeys()
-              if (reregisterResult && reregisterResult.ok) {
-                setMessage(hotkeysStatuses, 'Saved and applied.')
-              } else {
-                const captureError = reregisterResult?.captureHotkey?.ok === false
-                const clipboardError = reregisterResult?.clipboardHotkey?.ok === false
-                if (captureError || clipboardError) {
-                  const errorParts = []
-                  if (captureError) errorParts.push('capture')
-                  if (clipboardError) errorParts.push('clipboard')
-                  setMessage(hotkeysStatuses, 'Saved.')
-                  setMessage(hotkeysErrors, `Failed to register ${errorParts.join(' and ')} hotkey. The shortcut may be in use by another app.`)
-                } else {
-                  setMessage(hotkeysStatuses, 'Saved.')
-                }
-              }
-            } else {
-              setMessage(hotkeysStatuses, 'Saved. Restart to apply.')
-            }
-          } else {
-            setMessage(hotkeysStatuses, '')
-            setMessage(hotkeysErrors, result?.message || 'Failed to save hotkeys.')
-          }
-        } catch (error) {
-          console.error('Failed to save hotkeys', error)
-          setMessage(hotkeysStatuses, '')
-          setMessage(hotkeysErrors, 'Failed to save hotkeys.')
-        }
-      })
-    })
-  }
-
-  if (hotkeysResetButtons.length > 0) {
-    hotkeysResetButtons.forEach((button) => {
-      button.addEventListener('click', () => {
-        updateHotkeyDisplay('capture', DEFAULT_CAPTURE_HOTKEY)
-        updateHotkeyDisplay('clipboard', DEFAULT_CLIPBOARD_HOTKEY)
-        setMessage(hotkeysStatuses, '')
-        setMessage(hotkeysErrors, '')
       })
     })
   }

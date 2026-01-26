@@ -15,6 +15,16 @@ const icons = {
   </svg>`
 }
 
+const actionIcons = {
+  'open-in-folder': `<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h5l2 2h7a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+  </svg>`
+}
+
+const actionTitles = {
+  'open-in-folder': 'Open in Folder'
+}
+
 const toastEl = document.getElementById('toast')
 const titleEl = document.getElementById('title')
 const bodyEl = document.getElementById('body')
@@ -77,9 +87,22 @@ ipcRenderer.on('toast-data', (_event, { title, body, type = 'info', size = 'comp
     actionsEl.classList.remove('hidden')
     actions.forEach(({ label, action, data }) => {
       const btn = document.createElement('button')
-      btn.textContent = label
-      btn.className =
-        'px-3 py-1.5 text-xs font-medium rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors'
+      btn.type = 'button'
+      const iconMarkup = actionIcons[action]
+      if (iconMarkup) {
+        btn.innerHTML = iconMarkup
+        const title = actionTitles[action] || label
+        if (title) {
+          btn.setAttribute('aria-label', title)
+          btn.title = title
+        }
+        btn.className =
+          'w-7 h-7 flex items-center justify-center rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors'
+      } else {
+        btn.textContent = label
+        btn.className =
+          'px-3 py-1.5 text-xs font-medium rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors'
+      }
       btn.addEventListener('click', () => {
         ipcRenderer.send('toast-action', { action, data })
       })
