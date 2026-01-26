@@ -13,6 +13,8 @@ document.addEventListener('DOMContentLoaded', () => {
           window.JiminyExclusions = moduleExports
         } else if (moduleExports && typeof moduleExports.createHotkeys === 'function') {
           window.JiminyHotkeys = moduleExports
+        } else if (moduleExports && typeof moduleExports.createSettings === 'function') {
+          window.JiminySettings = moduleExports
         }
       } catch (error) {
         console.warn(`Failed to load ${globalKey} module`, error)
@@ -22,6 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadModule('JiminyWizard', './wizard.js')
     loadModule('JiminyExclusions', './exclusions.js')
     loadModule('JiminyHotkeys', './hotkeys.js')
+    loadModule('JiminySettings', './settings.js')
   }
   const selectAll = (selector) => typeof document.querySelectorAll === 'function'
     ? Array.from(document.querySelectorAll(selector))
@@ -93,6 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let wizardApi = null
   let exclusionsApi = null
   let hotkeysApi = null
+  let settingsApi = null
 
   const updateWizardUI = () => {
     if (wizardApi && wizardApi.updateWizardUI) {
@@ -377,147 +381,63 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  const saveContextFolderPath = async (contextFolderPath) => {
-    if (!jiminy.saveSettings) {
-      return false
-    }
-
-    setMessage(contextFolderStatuses, 'Saving...')
-    setMessage(contextFolderErrors, '')
-
-    try {
-      const result = await jiminy.saveSettings({ contextFolderPath })
-      if (result && result.ok) {
-        setMessage(contextFolderStatuses, 'Saved.')
-        console.log('Context folder saved', contextFolderPath)
-        return true
-      }
-      setMessage(contextFolderStatuses, '')
-      setMessage(contextFolderErrors, result?.message || 'Failed to save settings.')
-    } catch (error) {
-      console.error('Failed to save settings', error)
-      setMessage(contextFolderStatuses, '')
-      setMessage(contextFolderErrors, 'Failed to save settings.')
-    }
-
-    return false
-  }
-
-  const saveLlmApiKey = async (apiKey) => {
-    if (!jiminy.saveSettings) {
-      return false
-    }
-
-    setMessage(llmKeyStatuses, 'Saving...')
-    setMessage(llmKeyErrors, '')
-    setMessage(llmProviderErrors, '')
-
-    if (!currentLlmProviderName) {
-      setMessage(llmKeyStatuses, '')
-      setMessage(llmProviderErrors, 'Select an LLM provider.')
-      return false
-    }
-
-    try {
-      const result = await jiminy.saveSettings({
-        llmProviderName: currentLlmProviderName,
-        llmProviderApiKey: apiKey
-      })
-      if (result && result.ok) {
-        setMessage(llmKeyStatuses, 'Saved.')
-        setLlmApiKeySaved(apiKey)
-        console.log('LLM API key saved', { provider: currentLlmProviderName, hasKey: Boolean(apiKey) })
-        return true
-      }
-      setMessage(llmKeyStatuses, '')
-      setMessage(llmKeyErrors, result?.message || 'Failed to save LLM key.')
-    } catch (error) {
-      console.error('Failed to save LLM key', error)
-      setMessage(llmKeyStatuses, '')
-      setMessage(llmKeyErrors, 'Failed to save LLM key.')
-    }
-
-    return false
-  }
-
-  const saveLlmProviderSelection = async (providerName) => {
-    if (!jiminy.saveSettings) {
-      return false
-    }
-
-    if (!providerName) {
-      setMessage(llmProviderErrors, 'Select an LLM provider.')
-      updateWizardUI()
-      return false
-    }
-
-    try {
-      const result = await jiminy.saveSettings({ llmProviderName: providerName })
-      if (result && result.ok) {
-        console.log('LLM provider saved', { provider: providerName })
-        setMessage(llmProviderErrors, '')
-        setLlmProviderValue(providerName)
-        if (pendingLlmApiKey !== currentLlmApiKey) {
-          await saveLlmApiKey(pendingLlmApiKey)
+  if (window.JiminySettings && typeof window.JiminySettings.createSettings === 'function') {
+    settingsApi = window.JiminySettings.createSettings({
+      elements: {
+        contextFolderChooseButtons,
+        contextFolderErrors,
+        contextFolderStatuses,
+        llmProviderSelects,
+        llmProviderErrors,
+        llmKeyInputs,
+        llmKeyErrors,
+        llmKeyStatuses,
+        hotkeysErrors,
+        hotkeysStatuses
+      },
+      jiminy,
+      defaults: {
+        capture: DEFAULT_CAPTURE_HOTKEY,
+        clipboard: DEFAULT_CLIPBOARD_HOTKEY
+      },
+      getState: () => ({
+        currentContextFolderPath,
+        currentLlmProviderName,
+        currentLlmApiKey,
+        pendingLlmApiKey,
+        currentExclusions
+      }),
+      setContextFolderValue,
+      setLlmProviderValue,
+      setLlmApiKeyPending,
+      setLlmApiKeySaved,
+      setHotkeys: (hotkeys) => {
+        if (hotkeysApi && hotkeysApi.setHotkeys) {
+          hotkeysApi.setHotkeys(hotkeys)
+          return
         }
-        return true
-      }
-      setMessage(llmProviderErrors, result?.message || 'Failed to save LLM provider.')
-    } catch (error) {
-      console.error('Failed to save LLM provider', error)
-      setMessage(llmProviderErrors, 'Failed to save LLM provider.')
-    }
-
-    return false
-  }
-
-  const loadSettings = async () => {
-    if (!jiminy.getSettings) {
-      return
-    }
-
-    try {
-      const result = await jiminy.getSettings()
-      isFirstRun = Boolean(result?.isFirstRun)
-      setContextFolderValue(result.contextFolderPath || '')
-      setLlmProviderValue(result.llmProviderName || '')
-      setLlmApiKeySaved(result.llmProviderApiKey || '')
-      if (hotkeysApi && hotkeysApi.setHotkeys) {
-        hotkeysApi.setHotkeys({
-          capture: result.captureHotkey || DEFAULT_CAPTURE_HOTKEY,
-          clipboard: result.clipboardHotkey || DEFAULT_CLIPBOARD_HOTKEY
-        })
-      } else {
-        setHotkeyValue('capture', result.captureHotkey || DEFAULT_CAPTURE_HOTKEY)
-        setHotkeyValue('clipboard', result.clipboardHotkey || DEFAULT_CLIPBOARD_HOTKEY)
+        setHotkeyValue('capture', hotkeys.capture)
+        setHotkeyValue('clipboard', hotkeys.clipboard)
         updateWizardUI()
-      }
-      setExclusionsValue(result.exclusions)
-      setMessage(contextFolderErrors, result.validationMessage || '')
-      setMessage(contextFolderStatuses, '')
-      setMessage(llmProviderErrors, '')
-      setMessage(llmKeyErrors, '')
-      setMessage(llmKeyStatuses, '')
-      setMessage(hotkeysErrors, '')
-      setMessage(hotkeysStatuses, '')
-      updatePruneButtonState()
-      return result
-    } catch (error) {
-      console.error('Failed to load settings', error)
-      setMessage(contextFolderErrors, 'Failed to load settings.')
-      setMessage(llmProviderErrors, 'Failed to load settings.')
-      setMessage(llmKeyErrors, 'Failed to load settings.')
-      setMessage(hotkeysErrors, 'Failed to load settings.')
-    }
-    return null
+      },
+      setExclusions: setExclusionsValue,
+      setMessage,
+      refreshContextGraphStatus,
+      updatePruneButtonState,
+      updateWizardUI
+    })
   }
 
-  if (!jiminy.pickContextFolder || !jiminy.saveSettings || !jiminy.getSettings) {
-    setMessage(contextFolderErrors, 'Settings bridge unavailable. Restart the app.')
-    setMessage(llmProviderErrors, 'Settings bridge unavailable. Restart the app.')
-    setMessage(llmKeyErrors, 'Settings bridge unavailable. Restart the app.')
-    setMessage(hotkeysErrors, 'Settings bridge unavailable. Restart the app.')
+  if (!settingsApi) {
+    setMessage(contextFolderErrors, 'Settings module unavailable. Restart the app.')
+    setMessage(llmProviderErrors, 'Settings module unavailable. Restart the app.')
+    setMessage(llmKeyErrors, 'Settings module unavailable. Restart the app.')
+    setMessage(hotkeysErrors, 'Settings module unavailable. Restart the app.')
     updatePruneButtonState()
+    return
+  }
+
+  if (!settingsApi.isReady) {
     return
   }
 
@@ -578,67 +498,6 @@ document.addEventListener('DOMContentLoaded', () => {
       setMessage(syncProgress, progressText)
     })
   }
-
-  if (contextFolderChooseButtons.length > 0) {
-    contextFolderChooseButtons.forEach((button) => {
-      button.addEventListener('click', async () => {
-        try {
-          setMessage(contextFolderStatuses, 'Opening folder picker...')
-          const result = await jiminy.pickContextFolder()
-          if (result && !result.canceled && result.path) {
-            setContextFolderValue(result.path)
-            setMessage(contextFolderErrors, '')
-            setMessage(contextFolderStatuses, '')
-            const saved = await saveContextFolderPath(result.path)
-            if (saved) {
-              await refreshContextGraphStatus({ contextFolderPath: result.path, exclusions: currentExclusions })
-            }
-          } else if (result && result.error) {
-            setMessage(contextFolderStatuses, '')
-            setMessage(contextFolderErrors, result.error)
-          } else {
-            setMessage(contextFolderStatuses, '')
-          }
-        } catch (error) {
-          console.error('Failed to pick context folder', error)
-          setMessage(contextFolderStatuses, '')
-          setMessage(contextFolderErrors, 'Failed to open folder picker.')
-        }
-      })
-    })
-  }
-
-  llmKeyInputs.forEach((input) => {
-    input.addEventListener('input', (event) => {
-      setLlmApiKeyPending(event.target.value)
-      setMessage(llmKeyStatuses, '')
-      setMessage(llmKeyErrors, '')
-    })
-
-    input.addEventListener('change', async (event) => {
-      const nextValue = event.target.value || ''
-      if (pendingLlmApiKey !== nextValue) {
-        setLlmApiKeyPending(nextValue)
-      }
-      if (nextValue === currentLlmApiKey) {
-        return
-      }
-      await saveLlmApiKey(nextValue)
-    })
-  })
-
-  llmProviderSelects.forEach((select) => {
-    select.addEventListener('change', async () => {
-      setMessage(llmProviderErrors, '')
-      const nextValue = select.value
-      llmProviderSelects.forEach((other) => {
-        if (other.value !== nextValue) {
-          other.value = nextValue
-        }
-      })
-      await saveLlmProviderSelection(nextValue)
-    })
-  })
 
   if (syncButtons.length > 0) {
     syncButtons.forEach((button) => {
@@ -730,7 +589,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const initialize = async () => {
     showContextGraphLoading()
-    await loadSettings()
+    const settingsResult = await settingsApi.loadSettings()
+    isFirstRun = Boolean(settingsResult?.isFirstRun)
     await refreshContextGraphStatus()
     const defaultSection = isFirstRun ? 'wizard' : 'general'
     setActiveSection(defaultSection)
