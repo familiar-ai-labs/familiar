@@ -83,6 +83,20 @@ test('saveSettings persists captureHotkey and clipboardHotkey', () => {
   assert.equal(loaded.clipboardHotkey, 'Alt+C')
 })
 
+test('saveSettings persists control/option hotkey combinations', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-'))
+  const settingsDir = path.join(tempRoot, 'settings')
+
+  saveSettings(
+    { captureHotkey: 'CommandOrControl+Alt+J', clipboardHotkey: 'CommandOrControl+Alt+Shift+K' },
+    { settingsDir }
+  )
+
+  const loaded = loadSettings({ settingsDir })
+  assert.equal(loaded.captureHotkey, 'CommandOrControl+Alt+J')
+  assert.equal(loaded.clipboardHotkey, 'CommandOrControl+Alt+Shift+K')
+})
+
 test('saveSettings preserves hotkeys when updating other settings', () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-'))
   const settingsDir = path.join(tempRoot, 'settings')

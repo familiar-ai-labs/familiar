@@ -70,6 +70,20 @@
     animation: paneIn 0.25s ease-out;
   }
 
+  .bg-stripe {
+    background-image: linear-gradient(
+      45deg,
+      rgba(255, 255, 255, 0.2) 25%,
+      transparent 25%,
+      transparent 50%,
+      rgba(255, 255, 255, 0.2) 50%,
+      rgba(255, 255, 255, 0.2) 75%,
+      transparent 75%,
+      transparent
+    );
+    background-size: 1rem 1rem;
+  }
+
 }
 
 /* Select dropdown arrow for light/dark modes */

@@ -19,6 +19,8 @@ document.addEventListener('DOMContentLoaded', () => {
           window.JiminyUpdates = moduleExports
         } else if (moduleExports && typeof moduleExports.createSettings === 'function') {
           window.JiminySettings = moduleExports
+        } else if (moduleExports && typeof moduleExports.createGraph === 'function') {
+          window.JiminyGraph = moduleExports
         }
       } catch (error) {
         console.warn(`Failed to load ${globalKey} module`, error)
@@ -31,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadModule('JiminyHistory', './history.js')
     loadModule('JiminyUpdates', './updates.js')
     loadModule('JiminySettings', './settings.js')
+    loadModule('JiminyGraph', './graph.js')
   }
   const selectAll = (selector) => typeof document.querySelectorAll === 'function'
     ? Array.from(document.querySelectorAll(selector))
@@ -67,6 +70,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const syncErrors = selectAll('[data-setting-error="context-graph-error"]')
   const pruneButtons = selectAll('[data-action="context-graph-prune"]')
   const pruneStatuses = selectAll('[data-setting-status="context-graph-prune-status"]')
+  const graphStatusPill = document.getElementById('context-graph-status-pill')
+  const graphStatusDot = document.getElementById('context-graph-status-dot')
+  const graphStatusLabel = document.getElementById('context-graph-status-label')
+  const graphPercent = document.getElementById('context-graph-percent')
+  const graphBarSynced = document.getElementById('context-graph-bar-synced')
+  const graphBarPending = document.getElementById('context-graph-bar-pending')
+  const graphBarNew = document.getElementById('context-graph-bar-new')
+  const graphSyncedCount = document.getElementById('context-graph-synced-count')
+  const graphPendingCount = document.getElementById('context-graph-pending-count')
+  const graphNewCount = document.getElementById('context-graph-new-count')
   const updateButtons = selectAll('[data-action="updates-check"]')
   const updateStatuses = selectAll('[data-setting-status="updates-status"]')
   const updateErrors = selectAll('[data-setting-error="updates-error"]')
@@ -111,6 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let historyApi = null
   let updatesApi = null
   let settingsApi = null
+  let graphApi = null
 
   const updateWizardUI = () => {
     if (wizardApi && wizardApi.updateWizardUI) {
@@ -146,7 +160,11 @@ document.addEventListener('DOMContentLoaded', () => {
     },
     general: {
       title: 'General Settings',
-      subtitle: 'Core app configuration and sync controls.'
+      subtitle: 'Core app configuration and provider setup.'
+    },
+    graph: {
+      title: 'Context Graph',
+      subtitle: 'Monitor sync health and graph status.'
     },
     exclusions: {
       title: 'Exclusions',
@@ -211,6 +229,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (historyApi && historyApi.handleSectionChange) {
       historyApi.handleSectionChange(nextSection)
     }
+    if (graphApi && graphApi.handleSectionChange) {
+      graphApi.handleSectionChange(nextSection)
+    }
 
     console.log('Settings section changed', { section: nextSection })
   }
@@ -255,16 +276,55 @@ document.addEventListener('DOMContentLoaded', () => {
     })
   }
 
-  let isSyncing = false
-  let isMaxNodesExceeded = false
-  let isPruning = false
-
   const setMessage = (elements, message) => {
     const targets = Array.isArray(elements) ? elements : [elements]
     const value = message || ''
     targets.filter(Boolean).forEach((element) => {
       element.textContent = value
       element.classList.toggle('hidden', !value)
+    })
+  }
+
+  if (window.JiminyGraph && typeof window.JiminyGraph.createGraph === 'function') {
+    graphApi = window.JiminyGraph.createGraph({
+      elements: {
+        syncButtons,
+        syncStatuses,
+        syncStats,
+        syncProgress,
+        syncWarnings,
+        syncErrors,
+        pruneButtons,
+        pruneStatuses,
+        statusPill: graphStatusPill,
+        statusDot: graphStatusDot,
+        statusLabel: graphStatusLabel,
+        percentLabel: graphPercent,
+        barSynced: graphBarSynced,
+        barPending: graphBarPending,
+        barNew: graphBarNew,
+        syncedCount: graphSyncedCount,
+        pendingCount: graphPendingCount,
+        newCount: graphNewCount
+      },
+      jiminy,
+      getState: () => ({
+        currentContextFolderPath,
+        currentExclusions,
+        isContextGraphSynced,
+        hasCompletedSync
+      }),
+      setGraphState: (updates = {}) => {
+        if ('isContextGraphSynced' in updates) {
+          isContextGraphSynced = updates.isContextGraphSynced
+        }
+        if ('hasCompletedSync' in updates && updates.hasCompletedSync !== undefined) {
+          hasCompletedSync = updates.hasCompletedSync
+        }
+        updateWizardUI()
+      },
+      setMessage,
+      updateWizardUI
     })
   }
 
@@ -308,7 +368,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     currentContextFolderPath = nextValue
     setInputValues(contextFolderInputs, currentContextFolderPath)
-    updatePruneButtonState()
+    if (graphApi && graphApi.updatePruneButtonState) {
+      graphApi.updatePruneButtonState()
+    }
     updateWizardUI()
   }
 
@@ -334,100 +396,6 @@ document.addEventListener('DOMContentLoaded', () => {
     setLlmApiKeyPending(currentLlmApiKey)
     isLlmApiKeySaved = Boolean(currentLlmApiKey)
     updateWizardUI()
-  }
-
-  const updateSyncButtonState = () => {
-    syncButtons.forEach((button) => {
-      button.disabled = isSyncing || isPruning || isMaxNodesExceeded
-    })
-  }
-
-  const updatePruneButtonState = () => {
-    const hasContextPath = Boolean(currentContextFolderPath)
-    pruneButtons.forEach((button) => {
-      button.disabled = isSyncing || isPruning || !hasContextPath
-    })
-  }
-
-  const setSyncState = (nextIsSyncing) => {
-    isSyncing = Boolean(nextIsSyncing)
-    updateSyncButtonState()
-    updatePruneButtonState()
-  }
-
-  const setPruneState = (nextIsPruning) => {
-    isPruning = Boolean(nextIsPruning)
-    updateSyncButtonState()
-    updatePruneButtonState()
-  }
-
-  const showContextGraphLoading = () => {
-    syncButtons.forEach((button) => {
-      button.hidden = true
-    })
-    setMessage(syncStats, '')
-    setMessage(syncProgress, 'Loading...')
-  }
-
-  const showContextGraphCounts = ({ syncedNodes, outOfSyncNodes, newNodes, totalNodes }) => {
-    syncButtons.forEach((button) => {
-      button.hidden = false
-    })
-    const statsText = `Synced: ${syncedNodes}/${totalNodes} | Out of sync: ${outOfSyncNodes}/${totalNodes} | New: ${newNodes}`
-    setMessage(syncStats, statsText)
-    setMessage(syncProgress, '')
-  }
-
-  const refreshContextGraphStatus = async (options = {}) => {
-    if (!jiminy.getContextGraphStatus) {
-      setMessage(syncErrors, 'Context graph status bridge unavailable. Restart the app.')
-      syncButtons.forEach((button) => {
-        button.hidden = false
-      })
-      showContextGraphCounts({ syncedNodes: 0, outOfSyncNodes: 0, newNodes: 0, totalNodes: 0 })
-      return
-    }
-
-    if (isSyncing) {
-      return
-    }
-
-    showContextGraphLoading()
-    isMaxNodesExceeded = false
-    updateSyncButtonState()
-
-    try {
-      const contextFolderPath = typeof options.contextFolderPath === 'string'
-        ? options.contextFolderPath
-        : currentContextFolderPath
-      const exclusions = Array.isArray(options.exclusions) ? options.exclusions : currentExclusions
-      const result = await jiminy.getContextGraphStatus({ contextFolderPath, exclusions })
-      const syncedNodes = Number(result?.syncedNodes ?? 0)
-      const outOfSyncNodes = Number(result?.outOfSyncNodes ?? 0)
-      const newNodes = Number(result?.newNodes ?? 0)
-      const totalNodes = Number(result?.totalNodes ?? 0)
-      isMaxNodesExceeded = Boolean(result?.maxNodesExceeded)
-
-      if (isMaxNodesExceeded) {
-        setMessage(syncErrors, result?.message || 'Context graph exceeds MAX_NODES.')
-      } else {
-        setMessage(syncErrors, '')
-      }
-
-      showContextGraphCounts({ syncedNodes, outOfSyncNodes, newNodes, totalNodes })
-      isContextGraphSynced = totalNodes > 0 && outOfSyncNodes === 0 && newNodes === 0 && syncedNodes === totalNodes
-      if (isContextGraphSynced) {
-        hasCompletedSync = true
-      }
-      updateWizardUI()
-    } catch (error) {
-      console.error('Failed to load context graph status', error)
-      isMaxNodesExceeded = false
-      setMessage(syncErrors, 'Failed to load context graph status.')
-      showContextGraphCounts({ syncedNodes: 0, outOfSyncNodes: 0, newNodes: 0, totalNodes: 0 })
-    } finally {
-      updateSyncButtonState()
-    }
   }
 
   if (window.JiminySettings && typeof window.JiminySettings.createSettings === 'function') {
@@ -471,8 +439,17 @@ document.addEventListener('DOMContentLoaded', () => {
       },
       setExclusions: setExclusionsValue,
       setMessage,
-      refreshContextGraphStatus,
-      updatePruneButtonState,
+      refreshContextGraphStatus: (options) => {
+        if (graphApi && graphApi.refreshContextGraphStatus) {
+          return graphApi.refreshContextGraphStatus(options)
+        }
+        return undefined
+      },
+      updatePruneButtonState: () => {
+        if (graphApi && graphApi.updatePruneButtonState) {
+          graphApi.updatePruneButtonState()
+        }
+      },
       updateWizardUI
     })
   }
@@ -482,7 +459,9 @@ document.addEventListener('DOMContentLoaded', () => {
     setMessage(llmProviderErrors, 'Settings module unavailable. Restart the app.')
     setMessage(llmKeyErrors, 'Settings module unavailable. Restart the app.')
     setMessage(hotkeysErrors, 'Settings module unavailable. Restart the app.')
-    updatePruneButtonState()
+    if (graphApi && graphApi.updatePruneButtonState) {
+      graphApi.updatePruneButtonState()
+    }
     return
   }
 
@@ -506,7 +485,12 @@ document.addEventListener('DOMContentLoaded', () => {
         setExclusionsState(exclusions)
       },
       setMessage,
-      refreshContextGraphStatus
+      refreshContextGraphStatus: (options) => {
+        if (graphApi && graphApi.refreshContextGraphStatus) {
+          return graphApi.refreshContextGraphStatus(options)
+        }
+        return undefined
+      }
     })
   }
 
@@ -536,111 +520,15 @@ document.addEventListener('DOMContentLoaded', () => {
     })
   }
 
-  if (jiminy.onContextGraphProgress && syncProgress.length > 0) {
-    jiminy.onContextGraphProgress((payload) => {
-      if (!payload) {
-        return
-      }
-
-      const progressText = `${payload.completed}/${payload.total}` +
-        (payload.relativePath ? ` • ${payload.relativePath}` : '')
-      setMessage(syncProgress, progressText)
-    })
-  }
-
-  if (syncButtons.length > 0) {
-    syncButtons.forEach((button) => {
-      button.addEventListener('click', async () => {
-        if (!jiminy.syncContextGraph) {
-          setMessage(syncErrors, 'Sync bridge unavailable. Restart the app.')
-          return
-        }
-
-        let shouldRefreshStatus = false
-        setMessage(syncErrors, '')
-        setMessage(syncStatuses, 'Syncing...')
-        setMessage(syncWarnings, '')
-        setMessage(syncProgress, '0/0')
-        setSyncState(true)
-
-        try {
-          const result = await jiminy.syncContextGraph()
-          if (result && result.ok) {
-            const warnings = Array.isArray(result.warnings) ? result.warnings : []
-            const errorCount = Array.isArray(result.errors) ? result.errors.length : 0
-            const message = errorCount > 0
-              ? `Sync completed with ${errorCount} error${errorCount === 1 ? '' : 's'}.`
-              : warnings.length > 0
-                ? 'Sync completed with warnings.'
-                : 'Sync complete.'
-            setMessage(syncStatuses, message)
-            if (warnings.length > 0) {
-              const warningText = warnings[0]?.path
-                ? `Warning: cycle detected at ${warnings[0].path}.`
-                : 'Warning: cycle detected in context folder.'
-              setMessage(syncWarnings, warningText)
-            }
-            shouldRefreshStatus = true
-            hasCompletedSync = true
-            updateWizardUI()
-          } else {
-            setMessage(syncStatuses, '')
-            setMessage(syncWarnings, '')
-            setMessage(syncErrors, result?.message || 'Failed to sync context graph.')
-          }
-        } catch (error) {
-          console.error('Failed to sync context graph', error)
-          setMessage(syncStatuses, '')
-          setMessage(syncWarnings, '')
-          setMessage(syncErrors, 'Failed to sync context graph.')
-        } finally {
-          setSyncState(false)
-          if (shouldRefreshStatus) {
-            await refreshContextGraphStatus()
-          }
-        }
-      })
-    })
-  }
-
-  if (pruneButtons.length > 0) {
-    pruneButtons.forEach((button) => {
-      button.addEventListener('click', async () => {
-        if (!jiminy.pruneContextGraph) {
-          setMessage(syncErrors, 'Prune bridge unavailable. Restart the app.')
-          return
-        }
-
-        setMessage(syncErrors, '')
-        setMessage(pruneStatuses, 'Pruning...')
-        setPruneState(true)
-
-        try {
-          const result = await jiminy.pruneContextGraph()
-          if (result && result.ok) {
-            const message = result.deleted ? 'Pruned.' : 'Nothing to prune.'
-            setMessage(pruneStatuses, message)
-            await refreshContextGraphStatus()
-          } else {
-            setMessage(pruneStatuses, '')
-            setMessage(syncErrors, result?.message || 'Failed to prune context graph.')
-          }
-        } catch (error) {
-          console.error('Failed to prune context graph', error)
-          setMessage(pruneStatuses, '')
-          setMessage(syncErrors, 'Failed to prune context graph.')
-        } finally {
-          setPruneState(false)
-        }
-      })
-    })
-  }
-
   const initialize = async () => {
-    showContextGraphLoading()
+    if (graphApi && graphApi.showLoading) {
+      graphApi.showLoading()
+    }
     const settingsResult = await settingsApi.loadSettings()
     isFirstRun = Boolean(settingsResult?.isFirstRun)
-    await refreshContextGraphStatus()
+    if (graphApi && graphApi.refreshContextGraphStatus) {
+      await graphApi.refreshContextGraphStatus()
+    }
     const defaultSection = isFirstRun ? 'wizard' : 'general'
     setActiveSection(defaultSection)
     updateWizardUI()

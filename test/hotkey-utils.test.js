@@ -36,6 +36,18 @@ test('keyEventToAccelerator handles Alt + letter', () => {
 
 test('keyEventToAccelerator handles Cmd/Ctrl + Alt + letter', () => {
     assert.equal(keyEventToAccelerator({ metaKey: true, altKey: true, key: 'c' }), 'CommandOrControl+Alt+C');
+    assert.equal(keyEventToAccelerator({ ctrlKey: true, altKey: true, key: 'j' }), 'CommandOrControl+Alt+J');
+});
+
+test('keyEventToAccelerator falls back to event.code for non-ASCII option combos', () => {
+    assert.equal(
+        keyEventToAccelerator({ altKey: true, key: '≈', code: 'KeyX' }),
+        'Alt+X'
+    );
+    assert.equal(
+        keyEventToAccelerator({ metaKey: true, altKey: true, key: 'ø', code: 'KeyO' }),
+        'CommandOrControl+Alt+O'
+    );
 });
 
 test('keyEventToAccelerator handles all modifiers combined', () => {

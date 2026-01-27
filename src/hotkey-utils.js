@@ -17,6 +17,47 @@ function keyEventToAccelerator(event) {
     parts.push('Shift')
   }
 
+  const keyFromCode = (code) => {
+    if (typeof code !== 'string' || code.length === 0) {
+      return null
+    }
+
+    if (code.startsWith('Key') && code.length === 4) {
+      return code.slice(3)
+    }
+    if (code.startsWith('Digit') && code.length === 6) {
+      return code.slice(5)
+    }
+    if (code.startsWith('Numpad')) {
+      const numpadKey = code.slice(6)
+      if (/^\d$/.test(numpadKey)) {
+        return numpadKey
+      }
+    }
+
+    const codeMap = {
+      Minus: '-',
+      Equal: '=',
+      BracketLeft: '[',
+      BracketRight: ']',
+      Backslash: '\\',
+      Semicolon: ';',
+      Quote: "'",
+      Comma: ',',
+      Period: '.',
+      Slash: '/',
+      Backquote: '`'
+    }
+
+    return codeMap[code] || null
+  }
+
+  const isSingleAscii = (value) =>
+    typeof value === 'string' &&
+    value.length === 1 &&
+    value.charCodeAt(0) >= 32 &&
+    value.charCodeAt(0) <= 126
+
   // Get the actual key
   let key = event.key
 
@@ -47,13 +88,26 @@ function keyEventToAccelerator(event) {
   if (keyMap[key]) {
     key = keyMap[key]
   } else if (key.length === 1) {
-    // Single character - uppercase it
-    key = key.toUpperCase()
+    if (isSingleAscii(key)) {
+      // Single character - uppercase it
+      key = key.toUpperCase()
+    } else {
+      const codeKey = keyFromCode(event.code)
+      if (!codeKey) {
+        return null
+      }
+      key = codeKey
+    }
   } else if (key.startsWith('F') && /^F\d+$/.test(key)) {
     // Function keys (F1-F12) - keep as is
   } else {
-    // Unknown key
-    return null
+    const codeKey = keyFromCode(event.code)
+    if (codeKey) {
+      key = codeKey
+    } else {
+      // Unknown key
+      return null
+    }
   }
 
   // Must have at least one modifier for a global hotkey
