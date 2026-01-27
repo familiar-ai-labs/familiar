@@ -114,6 +114,20 @@ test('saveSettings preserves other settings when updating hotkeys', () => {
   assert.equal(loaded.llm_provider?.provider, 'openai')
 })
 
+test('saveSettings preserves updateLastCheckedAt when updating other settings', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-'))
+  const settingsDir = path.join(tempRoot, 'settings')
+  const contextDir = path.join(tempRoot, 'context')
+  fs.mkdirSync(contextDir)
+
+  saveSettings({ updateLastCheckedAt: 1711111111111 }, { settingsDir })
+  saveSettings({ contextFolderPath: contextDir }, { settingsDir })
+
+  const loaded = loadSettings({ settingsDir })
+  assert.equal(loaded.updateLastCheckedAt, 1711111111111)
+  assert.equal(loaded.contextFolderPath, contextDir)
+})
+
 test('loadSettings exposes parse errors for diagnostics', () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-'))
   const settingsDir = path.join(tempRoot, 'settings')

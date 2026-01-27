@@ -15,6 +15,8 @@ document.addEventListener('DOMContentLoaded', () => {
           window.JiminyHotkeys = moduleExports
         } else if (moduleExports && typeof moduleExports.createHistory === 'function') {
           window.JiminyHistory = moduleExports
+        } else if (moduleExports && typeof moduleExports.createUpdates === 'function') {
+          window.JiminyUpdates = moduleExports
         } else if (moduleExports && typeof moduleExports.createSettings === 'function') {
           window.JiminySettings = moduleExports
         }
@@ -27,6 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadModule('JiminyExclusions', './exclusions.js')
     loadModule('JiminyHotkeys', './hotkeys.js')
     loadModule('JiminyHistory', './history.js')
+    loadModule('JiminyUpdates', './updates.js')
     loadModule('JiminySettings', './settings.js')
   }
   const selectAll = (selector) => typeof document.querySelectorAll === 'function'
@@ -64,6 +67,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const syncErrors = selectAll('[data-setting-error="context-graph-error"]')
   const pruneButtons = selectAll('[data-action="context-graph-prune"]')
   const pruneStatuses = selectAll('[data-setting-status="context-graph-prune-status"]')
+  const updateButtons = selectAll('[data-action="updates-check"]')
+  const updateStatuses = selectAll('[data-setting-status="updates-status"]')
+  const updateErrors = selectAll('[data-setting-error="updates-error"]')
 
   const exclusionsLists = selectAll('[data-setting-list="exclusions"]')
   const addExclusionButtons = selectAll('[data-action="add-exclusion"]')
@@ -103,6 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let exclusionsApi = null
   let hotkeysApi = null
   let historyApi = null
+  let updatesApi = null
   let settingsApi = null
 
   const updateWizardUI = () => {
@@ -152,6 +159,10 @@ document.addEventListener('DOMContentLoaded', () => {
     history: {
       title: 'History',
       subtitle: 'Recent captures and analysis flows.'
+    },
+    updates: {
+      title: 'Updates',
+      subtitle: 'Check for new versions and download when available.'
     }
   }
 
@@ -263,6 +274,18 @@ document.addEventListener('DOMContentLoaded', () => {
         historyList,
         historyEmpty,
         historyError
+      },
+      jiminy,
+      setMessage
+    })
+  }
+
+  if (window.JiminyUpdates && typeof window.JiminyUpdates.createUpdates === 'function') {
+    updatesApi = window.JiminyUpdates.createUpdates({
+      elements: {
+        updateButtons,
+        updateStatuses,
+        updateErrors
       },
       jiminy,
       setMessage

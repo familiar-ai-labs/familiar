@@ -20,6 +20,7 @@ const { loadSettings } = require('./settings');
 const { initLogging } = require('./logger');
 const { showToast } = require('./toast');
 const { registerTrayBusyIndicator } = require('./tray/busy');
+const { initializeAutoUpdater, scheduleDailyUpdateCheck } = require('./updates');
 
 const trayIconPath = path.join(__dirname, 'icon.png');
 
@@ -326,6 +327,11 @@ app.whenReady().then(() => {
 
         createTray();
         registerHotkeysFromSettings();
+
+        const updateState = initializeAutoUpdater({ isE2E, isCI });
+        if (updateState.enabled) {
+            scheduleDailyUpdateCheck();
+        }
     } else if (isE2E) {
         console.log('E2E mode: running on non-macOS platform');
     }

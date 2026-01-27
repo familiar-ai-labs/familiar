@@ -52,6 +52,7 @@ const saveSettings = (settings, options = {}) => {
     const hasExclusions = Object.prototype.hasOwnProperty.call(settings, 'exclusions');
     const hasCaptureHotkey = Object.prototype.hasOwnProperty.call(settings, 'captureHotkey');
     const hasClipboardHotkey = Object.prototype.hasOwnProperty.call(settings, 'clipboardHotkey');
+    const hasUpdateLastCheckedAt = Object.prototype.hasOwnProperty.call(settings, 'updateLastCheckedAt');
     const existingProvider = existing && typeof existing.llm_provider === 'object' ? existing.llm_provider : {};
     const contextFolderPath = hasContextFolderPath
         ? typeof settings.contextFolderPath === 'string'
@@ -103,6 +104,13 @@ const saveSettings = (settings, options = {}) => {
             typeof settings.clipboardHotkey === 'string' ? settings.clipboardHotkey : DEFAULT_CLIPBOARD_HOTKEY;
     } else if (typeof existing.clipboardHotkey === 'string') {
         payload.clipboardHotkey = existing.clipboardHotkey;
+    }
+
+    if (hasUpdateLastCheckedAt) {
+        payload.updateLastCheckedAt =
+            typeof settings.updateLastCheckedAt === 'number' ? settings.updateLastCheckedAt : null;
+    } else if (typeof existing.updateLastCheckedAt === 'number') {
+        payload.updateLastCheckedAt = existing.updateLastCheckedAt;
     }
 
     fs.writeFileSync(settingsPath, JSON.stringify(payload, null, 2), 'utf-8');

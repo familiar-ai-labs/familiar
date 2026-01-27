@@ -1,6 +1,6 @@
 {
   "name": "jiminy-desktopapp",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Jiminy menu bar app shell (macOS)",
   "main": "src/main.js",
   "scripts": {
@@ -29,8 +29,16 @@
     "Jiminy"
   ],
   "build": {
-    "appId": "com.jiminy.jiminy",
+    "appId": "com.jiminy.jiminy-desktop",
     "productName": "Jiminy",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Jiminy-org",
+        "repo": "jiminy-releases",
+        "releaseType": "prerelease"
+      }
+    ],
     "directories": {
       "output": "dist"
     },
@@ -41,7 +49,8 @@
     ],
     "mac": {
       "target": [
-        "dmg"
+        "dmg",
+        "zip"
       ],
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
@@ -73,7 +82,9 @@
   "author": "Jiminy",
   "license": "CC0-1.0",
   "dependencies": {
-    "better-sqlite3": "^12.6.2"
+    "better-sqlite3": "^12.6.2",
+    "electron-log": "^5.3.4",
+    "electron-updater": "^6.6.2"
   },
   "devDependencies": {
     "@tailwindcss/cli": "^4.1.18",

@@ -92,6 +92,22 @@
               </svg>
               History
             </button>
+            <button
+              class="sidebar-item"
+              data-section-target="updates"
+              data-active="false"
+              role="tab"
+              aria-controls="section-updates"
+              aria-selected="false"
+              type="button"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <path d="M12 3v4m0 0 3-3m-3 3-3-3" />
+                <path d="M5 11a7 7 0 1 0 14 0" />
+                <path d="M12 19v2" />
+              </svg>
+              Updates
+            </button>
           </nav>
 
           <div class="px-3 mt-auto">
@@ -201,6 +217,15 @@
               </div>
               <ul id="exclusions-list" data-setting-list="exclusions" class="space-y-2 empty:hidden"></ul>
               <p id="exclusions-error" data-setting-error="exclusions-error" class="text-xs text-red-600 dark:text-red-400 hidden" role="alert" aria-live="polite"></p>
+            </section>
+
+            <!-- Updates -->
+            <section id="section-updates" data-section-pane="updates" role="tabpanel" aria-label="Updates" class="space-y-4 hidden">
+              <div class="flex flex-wrap items-center gap-2">
+                <button id="updates-check" data-action="updates-check" type="button" class="px-3 py-2 text-xs font-semibold bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">Check for Updates</button>
+                <span id="updates-status" data-setting-status="updates-status" class="text-xs text-emerald-600 dark:text-emerald-400 hidden" aria-live="polite"></span>
+              </div>
+              <p id="updates-error" data-setting-error="updates-error" class="text-xs text-red-600 dark:text-red-400 hidden" role="alert" aria-live="polite"></p>
             </section>
 
             <!-- Hotkeys -->

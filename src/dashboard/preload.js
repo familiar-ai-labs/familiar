@@ -21,6 +21,7 @@ contextBridge.exposeInMainWorld('jiminy', {
   getHistoryEvents: (flowId) => ipcRenderer.invoke('history:listEvents', flowId),
   exportHistoryFlow: (flowId) => ipcRenderer.invoke('history:exportFlow', flowId),
   openInFolder: (targetPath) => ipcRenderer.invoke('history:openInFolder', targetPath),
+  checkForUpdates: (payload) => ipcRenderer.invoke('updates:check', payload),
   onContextGraphProgress: (handler) => {
     const listener = (_event, payload) => handler(payload)
     ipcRenderer.on('contextGraph:progress', listener)

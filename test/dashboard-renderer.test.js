@@ -137,6 +137,7 @@ const createJiminy = (overrides = {}) => ({
   getContextGraphStatus: async () => ({ syncedNodes: 0, totalNodes: 0, maxNodesExceeded: false }),
   syncContextGraph: async () => ({ ok: true, warnings: [], errors: [] }),
   pruneContextGraph: async () => ({ ok: true, deleted: false }),
+  checkForUpdates: async () => ({ ok: true, updateInfo: null }),
   ...overrides
 })
 
@@ -164,6 +165,9 @@ const createElements = () => {
     'context-graph-prune': new TestElement(),
     'context-graph-prune-status': new TestElement(),
     'context-graph-stats': new TestElement(),
+    'updates-check': new TestElement(),
+    'updates-status': new TestElement(),
+    'updates-error': new TestElement(),
     'exclusions-list': new TestElement(),
     'exclusions-error': new TestElement(),
     'hotkeys-save': new TestElement(),
@@ -175,10 +179,12 @@ const createElements = () => {
     'section-title': new TestElement(),
     'section-subtitle': new TestElement(),
     'section-history': new TestElement(),
+    'section-updates': new TestElement(),
     'history-list': new TestElement(),
     'history-empty': new TestElement(),
     'history-error': new TestElement(),
-    'history-nav': new TestElement()
+    'history-nav': new TestElement(),
+    'updates-nav': new TestElement()
   }
 
   elements['context-folder-path'].dataset.setting = 'context-folder-path'
@@ -200,6 +206,9 @@ const createElements = () => {
   elements['context-graph-prune'].dataset.action = 'context-graph-prune'
   elements['context-graph-prune-status'].dataset.settingStatus = 'context-graph-prune-status'
   elements['context-graph-stats'].dataset.settingStatus = 'context-graph-stats'
+  elements['updates-check'].dataset.action = 'updates-check'
+  elements['updates-status'].dataset.settingStatus = 'updates-status'
+  elements['updates-error'].dataset.settingError = 'updates-error'
 
   elements['exclusions-list'].dataset.settingList = 'exclusions'
   elements['add-exclusion'].dataset.action = 'add-exclusion'
@@ -216,6 +225,8 @@ const createElements = () => {
 
   elements['section-history'].dataset.sectionPane = 'history'
   elements['history-nav'].dataset.sectionTarget = 'history'
+  elements['section-updates'].dataset.sectionPane = 'updates'
+  elements['updates-nav'].dataset.sectionTarget = 'updates'
 
   return elements
 }
@@ -662,6 +673,38 @@ test('auto-saves LLM provider selection', async () => {
 
     assert.equal(saveCalls.length, 1)
     assert.deepEqual(saveCalls[0], { llmProviderName: 'openai' })
+  } finally {
+    global.document = priorDocument
+    global.window = priorWindow
+  }
+})
+
+test('check for updates button reports download status', async () => {
+  const updateCalls = []
+  const jiminy = createJiminy({
+    checkForUpdates: async () => {
+      updateCalls.push(true)
+      return { ok: true, updateInfo: { version: '0.0.2' } }
+    }
+  })
+
+  const elements = createElements()
+  const document = new TestDocument(elements)
+  const priorDocument = global.document
+  const priorWindow = global.window
+  global.document = document
+  global.window = { jiminy }
+
+  try {
+    loadRenderer()
+    document.trigger('DOMContentLoaded')
+    await flushPromises()
+
+    await elements['updates-check'].click()
+    await flushPromises()
+
+    assert.equal(updateCalls.length, 1)
+    assert.equal(elements['updates-status'].textContent, 'Update 0.0.2 is available. Check the download prompt.')
   } finally {
     global.document = priorDocument
     global.window = priorWindow
