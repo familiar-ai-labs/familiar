@@ -1,7 +1,6 @@
-const { app, BrowserWindow, Menu, Tray, dialog, nativeImage, ipcMain } = require('electron');
+const { app, BrowserWindow, Tray, dialog, nativeImage, ipcMain } = require('electron');
 const path = require('node:path');
 
-const { buildTrayMenuTemplate } = require('./menu');
 const { registerIpcHandlers } = require('./ipc');
 const { registerCaptureHandlers, startCaptureFlow, closeOverlayWindow } = require('./screenshot/capture');
 const { captureClipboard } = require('./clipboard');
@@ -14,12 +13,15 @@ const {
 } = require('./hotkeys');
 const { registerExtractionHandlers } = require('./extraction');
 const { registerAnalysisHandlers } = require('./analysis');
-const { getRecentFlows } = require('./history');
 const { showWindow } = require('./utils/window');
 const { loadSettings } = require('./settings');
 const { initLogging } = require('./logger');
 const { showToast } = require('./toast');
 const { registerTrayBusyIndicator } = require('./tray/busy');
+const {
+    resolveHotkeyAccelerators,
+    createTrayMenuController,
+} = require('./tray/refresh');
 const { initializeAutoUpdater, scheduleDailyUpdateCheck } = require('./updates');
 
 const trayIconPath = path.join(__dirname, 'icon.png');
@@ -27,6 +29,7 @@ const trayIconPath = path.join(__dirname, 'icon.png');
 let tray = null;
 let trayHandlers = null;
 let trayBusyIndicator = null;
+let trayMenuController = null;
 let settingsWindow = null;
 let isQuitting = false;
 
@@ -112,77 +115,12 @@ function quitApp() {
     app.quit();
 }
 
-function resolveHotkeyAccelerators(settings = {}) {
-    const captureAccelerator =
-        typeof settings.captureHotkey === 'string' && settings.captureHotkey
-            ? settings.captureHotkey
-            : DEFAULT_CAPTURE_HOTKEY;
-    const clipboardAccelerator =
-        typeof settings.clipboardHotkey === 'string' && settings.clipboardHotkey
-            ? settings.clipboardHotkey
-            : DEFAULT_CLIPBOARD_HOTKEY;
-
-    return { captureAccelerator, clipboardAccelerator };
-}
-
-function resolveHistoryItems(settings = {}) {
-    const contextFolderPath =
-        typeof settings.contextFolderPath === 'string' ? settings.contextFolderPath : '';
-    if (!contextFolderPath) {
-        return [];
-    }
-
-    return getRecentFlows({ contextFolderPath, limit: 3 });
-}
-
-function buildTrayMenuPayload(settings = {}) {
-    const { captureAccelerator, clipboardAccelerator } = resolveHotkeyAccelerators(settings);
-    return {
-        captureAccelerator,
-        clipboardAccelerator,
-        historyItems: resolveHistoryItems(settings),
-    };
-}
-
-function updateTrayMenu({ captureAccelerator, clipboardAccelerator, historyItems } = {}) {
-    if (!tray) {
-        console.warn('Tray menu update skipped: tray not ready');
-        return;
-    }
-
-    if (!trayHandlers) {
-        console.warn('Tray menu update skipped: handlers not ready');
-        return;
-    }
-
-    const resolvedHistoryItems = Array.isArray(historyItems)
-        ? historyItems
-        : resolveHistoryItems(loadSettings());
-    const showHotkeys = process.platform === 'darwin';
-    const trayMenu = Menu.buildFromTemplate(
-        buildTrayMenuTemplate({
-            ...trayHandlers,
-            captureAccelerator: showHotkeys ? captureAccelerator : undefined,
-            clipboardAccelerator: showHotkeys ? clipboardAccelerator : undefined,
-            historyItems: resolvedHistoryItems,
-        })
-    );
-
-    tray.setContextMenu(trayMenu);
-    console.log('Tray menu updated', {
-        captureAccelerator: Boolean(showHotkeys && captureAccelerator),
-        clipboardAccelerator: Boolean(showHotkeys && clipboardAccelerator),
-    });
-}
-
-function refreshTrayMenuFromSettings() {
-    const settings = loadSettings();
-    updateTrayMenu(buildTrayMenuPayload(settings));
-}
-
 function registerHotkeysFromSettings() {
     const settings = loadSettings();
-    const { captureAccelerator, clipboardAccelerator } = resolveHotkeyAccelerators(settings);
+    const { captureAccelerator, clipboardAccelerator } = resolveHotkeyAccelerators(settings, {
+        DEFAULT_CAPTURE_HOTKEY,
+        DEFAULT_CLIPBOARD_HOTKEY,
+    });
 
     unregisterGlobalHotkeys();
 
@@ -252,19 +190,15 @@ function createTray() {
         onQuit: quitApp,
     };
 
-    refreshTrayMenuFromSettings();
+    trayMenuController = createTrayMenuController({
+        tray,
+        trayHandlers,
+        DEFAULT_CAPTURE_HOTKEY,
+        DEFAULT_CLIPBOARD_HOTKEY,
+    });
 
-    if (tray && typeof tray.on === 'function') {
-        tray.on('click', () => {
-            refreshTrayMenuFromSettings();
-        });
-
-        tray.on('right-click', () => {
-            refreshTrayMenuFromSettings();
-        });
-    } else {
-        console.warn('Tray menu refresh handlers unavailable');
-    }
+    trayMenuController.refreshTrayMenuFromSettings();
+    trayMenuController.registerTrayRefreshHandlers();
 
     console.log('Tray created');
 }
@@ -279,10 +213,14 @@ registerAnalysisHandlers();
 ipcMain.handle('hotkeys:reregister', () => {
     console.log('Re-registering hotkeys from settings');
     const result = registerHotkeysFromSettings();
-    updateTrayMenu({
-        captureAccelerator: result.captureAccelerator,
-        clipboardAccelerator: result.clipboardAccelerator,
-    });
+    if (trayMenuController) {
+        trayMenuController.updateTrayMenu({
+            captureAccelerator: result.captureAccelerator,
+            clipboardAccelerator: result.clipboardAccelerator,
+        });
+    } else {
+        console.warn('Tray menu update skipped: controller not ready');
+    }
     return {
         ok: result.captureResult.ok && result.clipboardResult.ok,
         captureHotkey: result.captureResult,
@@ -301,10 +239,14 @@ ipcMain.handle('hotkeys:suspend', () => {
 ipcMain.handle('hotkeys:resume', () => {
     console.log('Resuming global hotkeys after recording');
     const result = registerHotkeysFromSettings();
-    updateTrayMenu({
-        captureAccelerator: result.captureAccelerator,
-        clipboardAccelerator: result.clipboardAccelerator,
-    });
+    if (trayMenuController) {
+        trayMenuController.updateTrayMenu({
+            captureAccelerator: result.captureAccelerator,
+            clipboardAccelerator: result.clipboardAccelerator,
+        });
+    } else {
+        console.warn('Tray menu update skipped: controller not ready');
+    }
     return {
         ok: result.captureResult.ok && result.clipboardResult.ok,
         captureHotkey: result.captureResult,
