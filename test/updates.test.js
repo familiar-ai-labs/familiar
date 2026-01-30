@@ -45,6 +45,9 @@ const stubModules = ({ isPackaged = true, dialogResponse = 1 } = {}) => {
                 return { response: dialogResponse };
             },
         },
+        BrowserWindow: {
+            getAllWindows: () => [],
+        },
     };
 
     const stubElectronUpdater = { autoUpdater };
@@ -150,6 +153,32 @@ test(
 
         assert.equal(calls.showMessageBox.length, 1);
         assert.equal(calls.downloadUpdate, 1);
+
+        restore();
+        resetUpdatesModule();
+    }
+);
+
+test(
+    'installDownloadedUpdate restarts only after an update is downloaded',
+    { skip: process.platform !== 'darwin' },
+    async () => {
+        const { autoUpdater, calls, restore } = stubModules({ isPackaged: true, dialogResponse: 1 });
+        resetUpdatesModule();
+        const updates = require('../src/updates');
+
+        updates.initializeAutoUpdater({ isE2E: false, isCI: false });
+
+        const skipped = updates.installDownloadedUpdate({ reason: 'test' });
+        assert.equal(skipped, false);
+        assert.equal(calls.quitAndInstall, 0);
+
+        autoUpdater.emit('update-downloaded', { version: '0.0.2' });
+        await new Promise((resolve) => setTimeout(resolve, 0));
+
+        const applied = updates.installDownloadedUpdate({ reason: 'test' });
+        assert.equal(applied, true);
+        assert.equal(calls.quitAndInstall, 1);
 
         restore();
         resetUpdatesModule();

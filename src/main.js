@@ -22,7 +22,7 @@ const {
     resolveHotkeyAccelerators,
     createTrayMenuController,
 } = require('./tray/refresh');
-const { initializeAutoUpdater, scheduleDailyUpdateCheck } = require('./updates');
+const { initializeAutoUpdater, installDownloadedUpdate, scheduleDailyUpdateCheck } = require('./updates');
 
 const trayIconPath = path.join(__dirname, 'icon.png');
 
@@ -95,19 +95,42 @@ function showSettingsWindow(options = {}) {
 }
 
 function showAboutDialog() {
+    let version = 'unknown';
+    try {
+        version = app.getVersion();
+    } catch (error) {
+        console.error('Failed to read app version for About dialog', error);
+    }
+
+    let aboutIcon = null;
+    try {
+        const loadedIcon = nativeImage.createFromPath(trayIconPath);
+        if (loadedIcon && !loadedIcon.isEmpty()) {
+            aboutIcon = loadedIcon;
+        } else {
+            console.warn(`About dialog icon failed to load from ${trayIconPath}`);
+        }
+    } catch (error) {
+        console.error('Failed to load About dialog icon', error);
+    }
+
     dialog.showMessageBox({
         type: 'info',
         title: 'About Jiminy',
         message: 'Jiminy',
-        detail: 'Menu bar app shell (macOS).',
+        detail: `Menu bar app shell (macOS).\nVersion ${version}`,
+        icon: aboutIcon || undefined,
         buttons: ['OK'],
     });
 }
 
 function restartApp() {
     console.log('Restarting app');
+    if (installDownloadedUpdate({ reason: 'tray-restart' })) {
+        return;
+    }
     app.relaunch();
-    app.exit(0);
+    app.quit();
 }
 
 function quitApp() {

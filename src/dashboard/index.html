@@ -297,6 +297,12 @@
                 <button id="updates-check" data-action="updates-check" type="button" class="px-3 py-2 text-xs font-semibold bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">Check for Updates</button>
                 <span id="updates-status" data-setting-status="updates-status" class="text-xs text-emerald-600 dark:text-emerald-400 hidden" aria-live="polite"></span>
               </div>
+              <div id="updates-progress" class="space-y-2 hidden" aria-live="polite">
+                <div class="h-2 w-full rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+                  <div id="updates-progress-bar" class="h-full bg-emerald-500 transition-[width] duration-200" style="width: 0%"></div>
+                </div>
+                <span id="updates-progress-label" class="text-xs text-zinc-500 dark:text-zinc-400 hidden"></span>
+              </div>
               <p id="updates-error" data-setting-error="updates-error" class="text-xs text-red-600 dark:text-red-400 hidden" role="alert" aria-live="polite"></p>
             </section>
 

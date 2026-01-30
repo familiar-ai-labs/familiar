@@ -7,10 +7,79 @@
     const {
       updateButtons = [],
       updateStatuses = [],
-      updateErrors = []
+      updateErrors = [],
+      updateProgress = null,
+      updateProgressBar = null,
+      updateProgressLabel = null
     } = elements
 
     let isCheckingUpdates = false
+    let currentProgress = 0
+
+    const setProgressVisible = (visible) => {
+      if (!updateProgress) {
+        return
+      }
+      updateProgress.classList.toggle('hidden', !visible)
+    }
+
+    const setProgressBar = (value) => {
+      if (!updateProgressBar) {
+        return
+      }
+      updateProgressBar.style.width = `${value}%`
+      if (typeof updateProgressBar.setAttribute === 'function') {
+        updateProgressBar.setAttribute('aria-valuenow', String(value))
+      }
+    }
+
+    const setProgressLabel = (message) => {
+      if (!updateProgressLabel) {
+        return
+      }
+      updateProgressLabel.textContent = message || ''
+      updateProgressLabel.classList.toggle('hidden', !message)
+    }
+
+    const resetProgress = () => {
+      currentProgress = 0
+      setProgressBar(0)
+      setProgressLabel('')
+      setProgressVisible(false)
+    }
+
+    const updateProgressState = ({ percent, label }) => {
+      if (!Number.isFinite(percent)) {
+        return
+      }
+      const clamped = Math.max(0, Math.min(100, percent))
+      const rounded = Math.round(clamped)
+      currentProgress = rounded
+      setProgressBar(rounded)
+      setProgressLabel(label)
+      setProgressVisible(true)
+    }
+
+    const handleDownloadProgress = (payload) => {
+      const percent = payload && typeof payload.percent === 'number' ? payload.percent : null
+      if (!Number.isFinite(percent)) {
+        return
+      }
+      const clamped = Math.max(0, Math.min(100, percent))
+      const rounded = Math.round(clamped)
+      updateProgressState({
+        percent: rounded,
+        label: `Downloading update... ${rounded}%`
+      })
+    }
+
+    const handleDownloadComplete = (payload) => {
+      const version = payload && payload.version ? String(payload.version) : ''
+      const label = version
+        ? `Download complete. Restart to install ${version}.`
+        : 'Download complete. Restart to install.'
+      updateProgressState({ percent: 100, label })
+    }
 
     const parseVersionParts = (value) => {
       if (typeof value !== 'string') {
@@ -78,11 +147,15 @@
             console.warn('Missing current version; unable to compare update version', { version })
           }
           setMessage(updateStatuses, message)
+          if (message === 'No updates found.' && currentProgress === 0) {
+            resetProgress()
+          }
         } else if (result && result.reason === 'checking') {
           setMessage(updateStatuses, 'Already checking for updates...')
         } else if (result && result.reason === 'disabled') {
           setMessage(updateStatuses, '')
           setMessage(updateErrors, 'Auto-updates are disabled in this build.')
+          resetProgress()
         } else {
           setMessage(updateStatuses, '')
           setMessage(updateErrors, result?.message || 'Failed to check for updates.')
@@ -101,6 +174,18 @@
         button.addEventListener('click', () => {
           void handleCheck()
         })
+      })
+    }
+
+    if (typeof jiminy.onUpdateDownloadProgress === 'function') {
+      jiminy.onUpdateDownloadProgress((payload) => {
+        handleDownloadProgress(payload)
+      })
+    }
+
+    if (typeof jiminy.onUpdateDownloaded === 'function') {
+      jiminy.onUpdateDownloaded((payload) => {
+        handleDownloadComplete(payload)
       })
     }
 

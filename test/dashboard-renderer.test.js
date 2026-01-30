@@ -169,6 +169,9 @@ const createElements = () => {
     'updates-check': new TestElement(),
     'updates-status': new TestElement(),
     'updates-error': new TestElement(),
+    'updates-progress': new TestElement(),
+    'updates-progress-bar': new TestElement(),
+    'updates-progress-label': new TestElement(),
     'exclusions-list': new TestElement(),
     'exclusions-error': new TestElement(),
     'hotkeys-save': new TestElement(),
@@ -773,6 +776,50 @@ test('check for updates reports no update when latest matches current', async ()
 
     assert.equal(updateCalls.length, 1)
     assert.equal(elements['updates-status'].textContent, 'No updates found.')
+  } finally {
+    global.document = priorDocument
+    global.window = priorWindow
+  }
+})
+
+test('download progress updates the updates progress bar', async () => {
+  const progressHandlers = []
+  const downloadedHandlers = []
+  const jiminy = createJiminy({
+    onUpdateDownloadProgress: (handler) => {
+      progressHandlers.push(handler)
+    },
+    onUpdateDownloaded: (handler) => {
+      downloadedHandlers.push(handler)
+    }
+  })
+
+  const elements = createElements()
+  const document = new TestDocument(elements)
+  const priorDocument = global.document
+  const priorWindow = global.window
+  global.document = document
+  global.window = { jiminy }
+
+  try {
+    loadRenderer()
+    document.trigger('DOMContentLoaded')
+    await flushPromises()
+
+    assert.equal(progressHandlers.length, 1)
+    assert.equal(downloadedHandlers.length, 1)
+
+    progressHandlers[0]({ percent: 41.6 })
+    assert.equal(elements['updates-progress'].classList.contains('hidden'), false)
+    assert.equal(elements['updates-progress-bar'].style.width, '42%')
+    assert.equal(elements['updates-progress-label'].textContent, 'Downloading update... 42%')
+
+    downloadedHandlers[0]({ version: '0.0.2' })
+    assert.equal(elements['updates-progress-bar'].style.width, '100%')
+    assert.equal(
+      elements['updates-progress-label'].textContent,
+      'Download complete. Restart to install 0.0.2.'
+    )
   } finally {
     global.document = priorDocument
     global.window = priorWindow

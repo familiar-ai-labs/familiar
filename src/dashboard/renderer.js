@@ -84,6 +84,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const updateButtons = selectAll('[data-action="updates-check"]')
   const updateStatuses = selectAll('[data-setting-status="updates-status"]')
   const updateErrors = selectAll('[data-setting-error="updates-error"]')
+  const updateProgress = document.getElementById('updates-progress')
+  const updateProgressBar = document.getElementById('updates-progress-bar')
+  const updateProgressLabel = document.getElementById('updates-progress-label')
 
   const exclusionsLists = selectAll('[data-setting-list="exclusions"]')
   const addExclusionButtons = selectAll('[data-action="add-exclusion"]')
@@ -347,7 +350,10 @@ document.addEventListener('DOMContentLoaded', () => {
       elements: {
         updateButtons,
         updateStatuses,
-        updateErrors
+        updateErrors,
+        updateProgress,
+        updateProgressBar,
+        updateProgressLabel
       },
       jiminy,
       setMessage

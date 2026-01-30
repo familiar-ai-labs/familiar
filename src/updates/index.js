@@ -1,4 +1,4 @@
-const { app, dialog } = require('electron');
+const { app, dialog, BrowserWindow } = require('electron');
 const { loadSettings, saveSettings } = require('../settings');
 
 const STARTUP_CHECK_DELAY_MS = 10_000;
@@ -13,6 +13,24 @@ let updater = null;
 let updaterLogger = null;
 let dailyTimeoutId = null;
 let dailyIntervalId = null;
+let downloadedUpdateInfo = null;
+
+const broadcastToWindows = (channel, payload) => {
+  if (!BrowserWindow || typeof BrowserWindow.getAllWindows !== 'function') {
+    return;
+  }
+
+  BrowserWindow.getAllWindows().forEach((window) => {
+    if (!window || window.isDestroyed()) {
+      return;
+    }
+    try {
+      window.webContents.send(channel, payload);
+    } catch (error) {
+      console.warn('Failed to broadcast update event', { channel, error });
+    }
+  });
+};
 
 const shouldEnableAutoUpdates = ({ isE2E, isCI }) => {
   if (isE2E || isCI) {
@@ -185,10 +203,20 @@ const registerAutoUpdaterEvents = () => {
       total: progress.total,
       bytesPerSecond: progress.bytesPerSecond,
     });
+    broadcastToWindows('updates:download-progress', {
+      percent: progress.percent,
+      transferred: progress.transferred,
+      total: progress.total,
+      bytesPerSecond: progress.bytesPerSecond,
+    });
   });
 
   autoUpdater.on('update-downloaded', (info) => {
     console.log('Update downloaded', {
+      version: info && info.version ? info.version : 'unknown',
+    });
+    downloadedUpdateInfo = info || { version: 'unknown' };
+    broadcastToWindows('updates:downloaded', {
       version: info && info.version ? info.version : 'unknown',
     });
     void promptForRestart(info);
@@ -265,6 +293,24 @@ const checkForUpdates = async ({ reason = 'manual' } = {}) => {
   }
 };
 
+const installDownloadedUpdate = ({ reason = 'restart' } = {}) => {
+  if (!enabled) {
+    console.log('Update install skipped: auto-updates disabled', { reason });
+    return false;
+  }
+
+  if (!downloadedUpdateInfo) {
+    console.log('Update install skipped: no downloaded update', { reason });
+    return false;
+  }
+
+  const version =
+    downloadedUpdateInfo && downloadedUpdateInfo.version ? downloadedUpdateInfo.version : 'unknown';
+  console.log('Applying downloaded update', { version, reason });
+  getAutoUpdater().quitAndInstall();
+  return true;
+};
+
 const scheduleDailyUpdateCheck = ({ delayMs = STARTUP_CHECK_DELAY_MS } = {}) => {
   if (!enabled) {
     return { scheduled: false };
@@ -294,5 +340,6 @@ const scheduleDailyUpdateCheck = ({ delayMs = STARTUP_CHECK_DELAY_MS } = {}) => 
 module.exports = {
   checkForUpdates,
   initializeAutoUpdater,
+  installDownloadedUpdate,
   scheduleDailyUpdateCheck,
 };

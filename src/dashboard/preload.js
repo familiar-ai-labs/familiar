@@ -22,6 +22,16 @@ contextBridge.exposeInMainWorld('jiminy', {
   exportHistoryFlow: (flowId) => ipcRenderer.invoke('history:exportFlow', flowId),
   openInFolder: (targetPath) => ipcRenderer.invoke('history:openInFolder', targetPath),
   checkForUpdates: (payload) => ipcRenderer.invoke('updates:check', payload),
+  onUpdateDownloadProgress: (handler) => {
+    const listener = (_event, payload) => handler(payload)
+    ipcRenderer.on('updates:download-progress', listener)
+    return () => ipcRenderer.removeListener('updates:download-progress', listener)
+  },
+  onUpdateDownloaded: (handler) => {
+    const listener = (_event, payload) => handler(payload)
+    ipcRenderer.on('updates:downloaded', listener)
+    return () => ipcRenderer.removeListener('updates:downloaded', listener)
+  },
   onContextGraphProgress: (handler) => {
     const listener = (_event, payload) => handler(payload)
     ipcRenderer.on('contextGraph:progress', listener)
