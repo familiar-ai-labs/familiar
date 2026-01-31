@@ -3,6 +3,7 @@ const SETTINGS_FILE_NAME = 'settings.json'
 const JIMINY_BEHIND_THE_SCENES_DIR_NAME = 'jiminy'
 const CONTEXT_GRAPH_FILE_NAME = 'context-tree.json'
 const CAPTURES_DIR_NAME = 'jiminy-captures'
+const RECORDINGS_DIR_NAME = 'recordings'
 const EXTRA_CONTEXT_SUFFIX = 'jiminy-extra-context'
 const GENERAL_ANALYSIS_DIR_NAME = 'jiminy-general-analysis'
 const CAPTURE_FILENAME_PREFIX = ''
@@ -14,6 +15,7 @@ module.exports = {
   JIMINY_BEHIND_THE_SCENES_DIR_NAME,
   CONTEXT_GRAPH_FILE_NAME,
   CAPTURES_DIR_NAME,
+  RECORDINGS_DIR_NAME,
   EXTRA_CONTEXT_SUFFIX,
   GENERAL_ANALYSIS_DIR_NAME,
   CAPTURE_FILENAME_PREFIX,

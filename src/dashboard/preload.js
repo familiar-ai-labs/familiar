@@ -22,6 +22,9 @@ contextBridge.exposeInMainWorld('jiminy', {
   exportHistoryFlow: (flowId) => ipcRenderer.invoke('history:exportFlow', flowId),
   openInFolder: (targetPath) => ipcRenderer.invoke('history:openInFolder', targetPath),
   checkForUpdates: (payload) => ipcRenderer.invoke('updates:check', payload),
+  getScreenRecordingStatus: () => ipcRenderer.invoke('screenRecording:getStatus'),
+  startScreenRecording: () => ipcRenderer.invoke('screenRecording:start'),
+  stopScreenRecording: () => ipcRenderer.invoke('screenRecording:stop'),
   onUpdateDownloadProgress: (handler) => {
     const listener = (_event, payload) => handler(payload)
     ipcRenderer.on('updates:download-progress', listener)

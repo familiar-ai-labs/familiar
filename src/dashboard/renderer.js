@@ -19,6 +19,8 @@ document.addEventListener('DOMContentLoaded', () => {
           window.JiminyUpdates = moduleExports
         } else if (moduleExports && typeof moduleExports.createSettings === 'function') {
           window.JiminySettings = moduleExports
+        } else if (moduleExports && typeof moduleExports.createRecording === 'function') {
+          window.JiminyRecording = moduleExports
         } else if (moduleExports && typeof moduleExports.createGraph === 'function') {
           window.JiminyGraph = moduleExports
         }
@@ -33,6 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadModule('JiminyHistory', './history.js')
     loadModule('JiminyUpdates', './updates.js')
     loadModule('JiminySettings', './settings.js')
+    loadModule('JiminyRecording', './recording.js')
     loadModule('JiminyGraph', './graph.js')
   }
   const selectAll = (selector) => typeof document.querySelectorAll === 'function'
@@ -61,6 +64,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const llmKeyInputs = selectAll('[data-setting="llm-api-key"]')
   const llmKeyErrors = selectAll('[data-setting-error="llm-api-key-error"]')
   const llmKeyStatuses = selectAll('[data-setting-status="llm-api-key-status"]')
+  const alwaysRecordWhenActiveInputs = selectAll('[data-setting="always-record-when-active"]')
+  const alwaysRecordWhenActiveErrors = selectAll('[data-setting-error="always-record-when-active-error"]')
+  const alwaysRecordWhenActiveStatuses = selectAll('[data-setting-status="always-record-when-active-status"]')
+  const recordingDetails = document.getElementById('recording-details')
+  const recordingPath = document.getElementById('recording-path')
+  const recordingStatus = document.getElementById('recording-status')
+  const recordingActionButton = document.getElementById('recording-action')
+  const recordingPermission = document.getElementById('recording-permission')
 
   const syncButtons = selectAll('[data-action="context-graph-sync"]')
   const syncStatuses = selectAll('[data-setting-status="context-graph-status"]')
@@ -115,6 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentLlmProviderName = ''
   let currentLlmApiKey = ''
   let pendingLlmApiKey = ''
+  let currentAlwaysRecordWhenActive = false
   let isLlmApiKeySaved = false
   let currentCaptureHotkey = DEFAULT_CAPTURE_HOTKEY
   let currentClipboardHotkey = DEFAULT_CLIPBOARD_HOTKEY
@@ -128,6 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let historyApi = null
   let updatesApi = null
   let settingsApi = null
+  let recordingApi = null
   let graphApi = null
 
   const updateWizardUI = () => {
@@ -185,6 +198,10 @@ document.addEventListener('DOMContentLoaded', () => {
     updates: {
       title: 'Updates',
       subtitle: 'Check for new versions and download when available.'
+    },
+    recording: {
+      title: 'Recording',
+      subtitle: 'Control always-on screen recording.'
     }
   }
 
@@ -235,6 +252,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (graphApi && graphApi.handleSectionChange) {
       graphApi.handleSectionChange(nextSection)
+    }
+    if (recordingApi && recordingApi.handleSectionChange) {
+      recordingApi.handleSectionChange(nextSection)
     }
 
     console.log('Settings section changed', { section: nextSection })
@@ -360,6 +380,23 @@ document.addEventListener('DOMContentLoaded', () => {
     })
   }
 
+  if (window.JiminyRecording && typeof window.JiminyRecording.createRecording === 'function') {
+    recordingApi = window.JiminyRecording.createRecording({
+      elements: {
+        recordingDetails,
+        recordingPath,
+        recordingStatus,
+        recordingActionButton,
+        recordingPermission
+      },
+      jiminy,
+      getState: () => ({
+        currentContextFolderPath,
+        currentAlwaysRecordWhenActive
+      })
+    })
+  }
+
   const setInputValues = (elements, value) => {
     elements.forEach((element) => {
       if (element.value !== value) {
@@ -376,6 +413,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     currentContextFolderPath = nextValue
     setInputValues(contextFolderInputs, currentContextFolderPath)
+    if (recordingApi && recordingApi.updateRecordingUI) {
+      recordingApi.updateRecordingUI()
+    }
     if (graphApi && graphApi.updatePruneButtonState) {
       graphApi.updatePruneButtonState()
     }
@@ -406,6 +446,18 @@ document.addEventListener('DOMContentLoaded', () => {
     updateWizardUI()
   }
 
+  const setAlwaysRecordWhenActiveValue = (value) => {
+    currentAlwaysRecordWhenActive = Boolean(value)
+    alwaysRecordWhenActiveInputs.forEach((input) => {
+      if (input.checked !== currentAlwaysRecordWhenActive) {
+        input.checked = currentAlwaysRecordWhenActive
+      }
+    })
+    if (recordingApi && recordingApi.updateRecordingUI) {
+      recordingApi.updateRecordingUI()
+    }
+  }
+
   if (window.JiminySettings && typeof window.JiminySettings.createSettings === 'function') {
     settingsApi = window.JiminySettings.createSettings({
       elements: {
@@ -417,6 +469,9 @@ document.addEventListener('DOMContentLoaded', () => {
         llmKeyInputs,
         llmKeyErrors,
         llmKeyStatuses,
+        alwaysRecordWhenActiveInputs,
+        alwaysRecordWhenActiveErrors,
+        alwaysRecordWhenActiveStatuses,
         hotkeysErrors,
         hotkeysStatuses
       },
@@ -430,12 +485,14 @@ document.addEventListener('DOMContentLoaded', () => {
         currentLlmProviderName,
         currentLlmApiKey,
         pendingLlmApiKey,
-        currentExclusions
+        currentExclusions,
+        currentAlwaysRecordWhenActive
       }),
       setContextFolderValue,
       setLlmProviderValue,
       setLlmApiKeyPending,
       setLlmApiKeySaved,
+      setAlwaysRecordWhenActiveValue,
       setHotkeys: (hotkeys) => {
         if (hotkeysApi && hotkeysApi.setHotkeys) {
           hotkeysApi.setHotkeys(hotkeys)
@@ -534,6 +591,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     const settingsResult = await settingsApi.loadSettings()
     isFirstRun = Boolean(settingsResult?.isFirstRun)
+    if (recordingApi && recordingApi.setPermissionStatus) {
+      recordingApi.setPermissionStatus(settingsResult?.screenRecordingPermissionStatus || '')
+    }
+    if (recordingApi && recordingApi.updateRecordingUI) {
+      recordingApi.updateRecordingUI()
+    }
     if (graphApi && graphApi.refreshContextGraphStatus) {
       await graphApi.refreshContextGraphStatus()
     }

@@ -3,11 +3,15 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { loadSettings, resolveSettingsPath, saveSettings, validateContextFolderPath } = require('../settings');
 const { DEFAULT_CAPTURE_HOTKEY, DEFAULT_CLIPBOARD_HOTKEY } = require('../hotkeys');
+const { getScreenRecordingPermissionStatus } = require('../screen-recording/permissions');
+
+let onSettingsSaved = null;
 
 /**
  * Registers IPC handlers for settings operations.
  */
-function registerSettingsHandlers() {
+function registerSettingsHandlers(options = {}) {
+    onSettingsSaved = typeof options.onSettingsSaved === 'function' ? options.onSettingsSaved : null;
     ipcMain.handle('settings:get', handleGetSettings);
     ipcMain.handle('settings:save', handleSaveSettings);
     ipcMain.handle('settings:pickContextFolder', handlePickContextFolder);
@@ -26,6 +30,8 @@ function handleGetSettings() {
         const exclusions = Array.isArray(settings.exclusions) ? settings.exclusions : [];
         const captureHotkey = typeof settings.captureHotkey === 'string' ? settings.captureHotkey : DEFAULT_CAPTURE_HOTKEY;
         const clipboardHotkey = typeof settings.clipboardHotkey === 'string' ? settings.clipboardHotkey : DEFAULT_CLIPBOARD_HOTKEY;
+        const alwaysRecordWhenActive = settings.alwaysRecordWhenActive === true;
+        const screenRecordingPermissionStatus = getScreenRecordingPermissionStatus();
         let validationMessage = '';
 
         if (contextFolderPath) {
@@ -39,7 +45,18 @@ function handleGetSettings() {
             }
         }
 
-        return { contextFolderPath, validationMessage, llmProviderName, llmProviderApiKey, exclusions, captureHotkey, clipboardHotkey, isFirstRun };
+        return {
+            contextFolderPath,
+            validationMessage,
+            llmProviderName,
+            llmProviderApiKey,
+            exclusions,
+            captureHotkey,
+            clipboardHotkey,
+            alwaysRecordWhenActive,
+            screenRecordingPermissionStatus,
+            isFirstRun
+        };
     } catch (error) {
         console.error('Failed to load settings', error);
         return {
@@ -50,6 +67,8 @@ function handleGetSettings() {
             exclusions: [],
             captureHotkey: DEFAULT_CAPTURE_HOTKEY,
             clipboardHotkey: DEFAULT_CLIPBOARD_HOTKEY,
+            alwaysRecordWhenActive: false,
+            screenRecordingPermissionStatus: getScreenRecordingPermissionStatus(),
             isFirstRun: false
         };
     }
@@ -62,9 +81,18 @@ function handleSaveSettings(_event, payload) {
     const hasExclusions = Object.prototype.hasOwnProperty.call(payload || {}, 'exclusions');
     const hasCaptureHotkey = Object.prototype.hasOwnProperty.call(payload || {}, 'captureHotkey');
     const hasClipboardHotkey = Object.prototype.hasOwnProperty.call(payload || {}, 'clipboardHotkey');
+    const hasAlwaysRecordWhenActive = Object.prototype.hasOwnProperty.call(payload || {}, 'alwaysRecordWhenActive');
     const settingsPayload = {};
 
-    if (!hasContextFolderPath && !hasLlmProviderApiKey && !hasLlmProviderName && !hasExclusions && !hasCaptureHotkey && !hasClipboardHotkey) {
+    if (
+        !hasContextFolderPath &&
+        !hasLlmProviderApiKey &&
+        !hasLlmProviderName &&
+        !hasExclusions &&
+        !hasCaptureHotkey &&
+        !hasClipboardHotkey &&
+        !hasAlwaysRecordWhenActive
+    ) {
         return { ok: false, message: 'No settings provided.' };
     }
 
@@ -111,9 +139,31 @@ function handleSaveSettings(_event, payload) {
             : DEFAULT_CLIPBOARD_HOTKEY;
     }
 
+    if (hasAlwaysRecordWhenActive) {
+        const nextValue = payload.alwaysRecordWhenActive === true;
+        if (nextValue) {
+            const permissionStatus = getScreenRecordingPermissionStatus();
+            if (permissionStatus !== 'granted') {
+                return {
+                    ok: false,
+                    message: 'Screen Recording permission required. Open System Settings → Privacy & Security → Screen Recording.',
+                    permissionStatus
+                };
+            }
+        }
+        settingsPayload.alwaysRecordWhenActive = nextValue;
+    }
+
     try {
         saveSettings(settingsPayload);
         console.log('Settings saved');
+        if (onSettingsSaved) {
+            try {
+                onSettingsSaved(loadSettings());
+            } catch (error) {
+                console.error('Failed to notify settings update', error);
+            }
+        }
         return { ok: true, hotkeysChanged: hasCaptureHotkey || hasClipboardHotkey };
     } catch (error) {
         console.error('Failed to save settings', error);

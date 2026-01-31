@@ -33,6 +33,7 @@ class TestElement {
     }
     this.hidden = false
     this.disabled = false
+    this.checked = false
     this.value = ''
     this.textContent = ''
     this.title = ''
@@ -130,10 +131,15 @@ const createJiminy = (overrides = {}) => ({
     contextFolderPath: '',
     llmProviderName: 'gemini',
     llmProviderApiKey: '',
-    exclusions: []
+    exclusions: [],
+    alwaysRecordWhenActive: false,
+    screenRecordingPermissionStatus: 'granted'
   }),
   pickContextFolder: async () => ({ canceled: true }),
   saveSettings: async () => ({ ok: true }),
+  getScreenRecordingStatus: async () => ({ ok: true, state: 'armed', isRecording: false }),
+  startScreenRecording: async () => ({ ok: true, state: 'recording', isRecording: true }),
+  stopScreenRecording: async () => ({ ok: true, state: 'armed', isRecording: false }),
   getContextGraphStatus: async () => ({ syncedNodes: 0, totalNodes: 0, maxNodesExceeded: false }),
   syncContextGraph: async () => ({ ok: true, warnings: [], errors: [] }),
   pruneContextGraph: async () => ({ ok: true, deleted: false }),
@@ -155,6 +161,14 @@ const createElements = () => {
     'llm-api-key': new TestElement(),
     'llm-api-key-error': new TestElement(),
     'llm-api-key-status': new TestElement(),
+    'always-record-when-active': new TestElement(),
+    'always-record-when-active-error': new TestElement(),
+    'always-record-when-active-status': new TestElement(),
+    'recording-details': new TestElement(),
+    'recording-path': new TestElement(),
+    'recording-status': new TestElement(),
+    'recording-action': new TestElement(),
+    'recording-permission': new TestElement(),
     'llm-provider': new TestElement(),
     'llm-provider-error': new TestElement(),
     'context-graph-sync': new TestElement(),
@@ -184,11 +198,13 @@ const createElements = () => {
     'section-subtitle': new TestElement(),
     'section-history': new TestElement(),
     'section-updates': new TestElement(),
+    'section-recording': new TestElement(),
     'history-list': new TestElement(),
     'history-empty': new TestElement(),
     'history-error': new TestElement(),
     'history-nav': new TestElement(),
-    'updates-nav': new TestElement()
+    'updates-nav': new TestElement(),
+    'recording-nav': new TestElement()
   }
 
   elements['context-folder-path'].dataset.setting = 'context-folder-path'
@@ -201,6 +217,9 @@ const createElements = () => {
   elements['llm-api-key'].dataset.setting = 'llm-api-key'
   elements['llm-api-key-error'].dataset.settingError = 'llm-api-key-error'
   elements['llm-api-key-status'].dataset.settingStatus = 'llm-api-key-status'
+  elements['always-record-when-active'].dataset.setting = 'always-record-when-active'
+  elements['always-record-when-active-error'].dataset.settingError = 'always-record-when-active-error'
+  elements['always-record-when-active-status'].dataset.settingStatus = 'always-record-when-active-status'
 
   elements['context-graph-sync'].dataset.action = 'context-graph-sync'
   elements['context-graph-status'].dataset.settingStatus = 'context-graph-status'
@@ -231,6 +250,8 @@ const createElements = () => {
   elements['history-nav'].dataset.sectionTarget = 'history'
   elements['section-updates'].dataset.sectionPane = 'updates'
   elements['updates-nav'].dataset.sectionTarget = 'updates'
+  elements['section-recording'].dataset.sectionPane = 'recording'
+  elements['recording-nav'].dataset.sectionTarget = 'recording'
 
   return elements
 }
@@ -357,6 +378,92 @@ test('llm api key saves on change when provider is set', async () => {
       llmProviderApiKey: 'new-key'
     })
     assert.equal(elements['llm-api-key-status'].textContent, 'Saved.')
+  } finally {
+    global.document = priorDocument
+    global.window = priorWindow
+  }
+})
+
+test('always record toggle saves on change', async () => {
+  const saveCalls = []
+  const jiminy = createJiminy({
+    getSettings: async () => ({
+      contextFolderPath: '',
+      llmProviderName: 'gemini',
+      llmProviderApiKey: '',
+      exclusions: [],
+      alwaysRecordWhenActive: false
+    }),
+    saveSettings: async (payload) => {
+      saveCalls.push(payload)
+      return { ok: true }
+    }
+  })
+
+  const elements = createElements()
+  const document = new TestDocument(elements)
+  const priorDocument = global.document
+  const priorWindow = global.window
+  global.document = document
+  global.window = { jiminy }
+
+  try {
+    loadRenderer()
+    document.trigger('DOMContentLoaded')
+    await flushPromises()
+
+    elements['always-record-when-active'].checked = true
+    await elements['always-record-when-active']._listeners.change({
+      target: elements['always-record-when-active']
+    })
+    await flushPromises()
+
+    assert.equal(saveCalls.length, 1)
+    assert.deepEqual(saveCalls[0], { alwaysRecordWhenActive: true })
+    assert.equal(elements['always-record-when-active-status'].textContent, 'Saved.')
+  } finally {
+    global.document = priorDocument
+    global.window = priorWindow
+  }
+})
+
+test('recording action button starts recording when inactive', async () => {
+  const startCalls = []
+  const jiminy = createJiminy({
+    getSettings: async () => ({
+      contextFolderPath: '/tmp/context',
+      llmProviderName: 'gemini',
+      llmProviderApiKey: '',
+      exclusions: [],
+      alwaysRecordWhenActive: true,
+      screenRecordingPermissionStatus: 'granted'
+    }),
+    getScreenRecordingStatus: async () => ({ ok: true, state: 'armed', isRecording: false }),
+    startScreenRecording: async () => {
+      startCalls.push(true)
+      return { ok: true, state: 'recording', isRecording: true }
+    }
+  })
+
+  const elements = createElements()
+  const document = new TestDocument(elements)
+  const priorDocument = global.document
+  const priorWindow = global.window
+  global.document = document
+  global.window = { jiminy }
+
+  try {
+    loadRenderer()
+    document.trigger('DOMContentLoaded')
+    await flushPromises()
+
+    await elements['recording-nav'].click()
+    await flushPromises()
+
+    await elements['recording-action'].click()
+    await flushPromises()
+
+    assert.equal(startCalls.length, 1)
   } finally {
     global.document = priorDocument
     global.window = priorWindow

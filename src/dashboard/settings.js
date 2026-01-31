@@ -16,6 +16,9 @@
     const setLlmApiKeySaved = typeof options.setLlmApiKeySaved === 'function'
       ? options.setLlmApiKeySaved
       : () => {}
+    const setAlwaysRecordWhenActiveValue = typeof options.setAlwaysRecordWhenActiveValue === 'function'
+      ? options.setAlwaysRecordWhenActiveValue
+      : () => {}
     const setHotkeys = typeof options.setHotkeys === 'function' ? options.setHotkeys : () => {}
     const setExclusions = typeof options.setExclusions === 'function' ? options.setExclusions : () => {}
     const setMessage = typeof options.setMessage === 'function' ? options.setMessage : () => {}
@@ -36,6 +39,9 @@
       llmKeyInputs = [],
       llmKeyErrors = [],
       llmKeyStatuses = [],
+      alwaysRecordWhenActiveInputs = [],
+      alwaysRecordWhenActiveErrors = [],
+      alwaysRecordWhenActiveStatuses = [],
       hotkeysErrors = [],
       hotkeysStatuses = []
     } = elements
@@ -141,6 +147,33 @@
       return false
     }
 
+    const saveAlwaysRecordWhenActive = async (enabled) => {
+      if (!isReady) {
+        return false
+      }
+
+      setMessage(alwaysRecordWhenActiveStatuses, 'Saving...')
+      setMessage(alwaysRecordWhenActiveErrors, '')
+
+      try {
+        const result = await jiminy.saveSettings({ alwaysRecordWhenActive: enabled })
+        if (result && result.ok) {
+          setMessage(alwaysRecordWhenActiveStatuses, 'Saved.')
+          setAlwaysRecordWhenActiveValue(enabled)
+          console.log('Always record when active saved', { enabled })
+          return true
+        }
+        setMessage(alwaysRecordWhenActiveStatuses, '')
+        setMessage(alwaysRecordWhenActiveErrors, result?.message || 'Failed to save setting.')
+      } catch (error) {
+        console.error('Failed to save always record setting', error)
+        setMessage(alwaysRecordWhenActiveStatuses, '')
+        setMessage(alwaysRecordWhenActiveErrors, 'Failed to save setting.')
+      }
+
+      return false
+    }
+
     const loadSettings = async () => {
       if (!isReady) {
         return null
@@ -151,6 +184,7 @@
         setContextFolderValue(result.contextFolderPath || '')
         setLlmProviderValue(result.llmProviderName || '')
         setLlmApiKeySaved(result.llmProviderApiKey || '')
+        setAlwaysRecordWhenActiveValue(result.alwaysRecordWhenActive === true)
         setHotkeys({
           capture: result.captureHotkey || DEFAULT_CAPTURE_HOTKEY,
           clipboard: result.clipboardHotkey || DEFAULT_CLIPBOARD_HOTKEY
@@ -161,6 +195,8 @@
         setMessage(llmProviderErrors, '')
         setMessage(llmKeyErrors, '')
         setMessage(llmKeyStatuses, '')
+        setMessage(alwaysRecordWhenActiveErrors, '')
+        setMessage(alwaysRecordWhenActiveStatuses, '')
         setMessage(hotkeysErrors, '')
         setMessage(hotkeysStatuses, '')
         updatePruneButtonState()
@@ -180,6 +216,7 @@
       setMessage(contextFolderErrors, message)
       setMessage(llmProviderErrors, message)
       setMessage(llmKeyErrors, message)
+      setMessage(alwaysRecordWhenActiveErrors, message)
       setMessage(hotkeysErrors, message)
       updatePruneButtonState()
       return {
@@ -248,6 +285,20 @@
           }
         })
         await saveLlmProviderSelection(nextValue)
+      })
+    })
+
+    alwaysRecordWhenActiveInputs.forEach((input) => {
+      input.addEventListener('change', async (event) => {
+        const nextValue = Boolean(event.target.checked)
+        const { currentAlwaysRecordWhenActive } = getState()
+        if (nextValue === currentAlwaysRecordWhenActive) {
+          return
+        }
+        const saved = await saveAlwaysRecordWhenActive(nextValue)
+        if (!saved) {
+          setAlwaysRecordWhenActiveValue(currentAlwaysRecordWhenActive)
+        }
       })
     })
 

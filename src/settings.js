@@ -53,6 +53,7 @@ const saveSettings = (settings, options = {}) => {
     const hasCaptureHotkey = Object.prototype.hasOwnProperty.call(settings, 'captureHotkey');
     const hasClipboardHotkey = Object.prototype.hasOwnProperty.call(settings, 'clipboardHotkey');
     const hasUpdateLastCheckedAt = Object.prototype.hasOwnProperty.call(settings, 'updateLastCheckedAt');
+    const hasAlwaysRecordWhenActive = Object.prototype.hasOwnProperty.call(settings, 'alwaysRecordWhenActive');
     const existingProvider = existing && typeof existing.llm_provider === 'object' ? existing.llm_provider : {};
     const contextFolderPath = hasContextFolderPath
         ? typeof settings.contextFolderPath === 'string'
@@ -111,6 +112,12 @@ const saveSettings = (settings, options = {}) => {
             typeof settings.updateLastCheckedAt === 'number' ? settings.updateLastCheckedAt : null;
     } else if (typeof existing.updateLastCheckedAt === 'number') {
         payload.updateLastCheckedAt = existing.updateLastCheckedAt;
+    }
+
+    if (hasAlwaysRecordWhenActive) {
+        payload.alwaysRecordWhenActive = settings.alwaysRecordWhenActive === true;
+    } else if (typeof existing.alwaysRecordWhenActive === 'boolean') {
+        payload.alwaysRecordWhenActive = existing.alwaysRecordWhenActive;
     }
 
     fs.writeFileSync(settingsPath, JSON.stringify(payload, null, 2), 'utf-8');
