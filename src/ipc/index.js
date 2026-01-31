@@ -6,8 +6,8 @@ const { registerUpdateHandlers } = require('./updates');
 /**
  * Registers all IPC handlers for the main process.
  */
-function registerIpcHandlers() {
-    registerSettingsHandlers();
+function registerIpcHandlers(options = {}) {
+    registerSettingsHandlers({ onSettingsSaved: options.onSettingsSaved });
     registerContextGraphHandlers();
     registerHistoryHandlers();
     registerUpdateHandlers();

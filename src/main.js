@@ -23,6 +23,7 @@ const {
     createTrayMenuController,
 } = require('./tray/refresh');
 const { initializeAutoUpdater, installDownloadedUpdate, scheduleDailyUpdateCheck } = require('./updates');
+const { createScreenRecordingController } = require('./screen-recording');
 
 const trayIconPath = path.join(__dirname, 'icon.png');
 
@@ -32,11 +33,34 @@ let trayBusyIndicator = null;
 let trayMenuController = null;
 let settingsWindow = null;
 let isQuitting = false;
+let screenRecordingController = null;
+let recordingShutdownInProgress = false;
 
 const isE2E = process.env.JIMINY_E2E === '1';
 const isCI = process.env.CI === 'true' || process.env.CI === '1';
 
 initLogging();
+
+const updateScreenRecordingFromSettings = () => {
+    if (!screenRecordingController) {
+        return;
+    }
+    const settings = loadSettings();
+    screenRecordingController.updateSettings({
+        enabled: settings.alwaysRecordWhenActive === true,
+        contextFolderPath: typeof settings.contextFolderPath === 'string' ? settings.contextFolderPath : ''
+    });
+};
+
+const attemptRecordingShutdown = (reason) => {
+    if (!screenRecordingController) {
+        return;
+    }
+    screenRecordingController.shutdown(reason)
+        .catch((error) => {
+            console.error('Failed to stop screen recording', error);
+        });
+};
 
 if (process.platform === 'linux' && (isE2E || isCI)) {
     console.log('Applying Linux CI/E2E Electron flags');
@@ -227,7 +251,7 @@ function createTray() {
 }
 
 // Register all IPC handlers
-registerIpcHandlers();
+registerIpcHandlers({ onSettingsSaved: updateScreenRecordingFromSettings });
 registerCaptureHandlers();
 registerExtractionHandlers();
 registerAnalysisHandlers();
@@ -277,6 +301,35 @@ ipcMain.handle('hotkeys:resume', () => {
     };
 });
 
+ipcMain.handle('screenRecording:getStatus', () => {
+    if (!screenRecordingController) {
+        return { ok: false, state: 'disabled', isRecording: false };
+    }
+    const state = screenRecordingController.getState();
+    const isRecording = state.state === 'recording' || state.state === 'idleGrace';
+    return { ok: true, state: state.state, isRecording };
+});
+
+ipcMain.handle('screenRecording:start', async () => {
+    if (!screenRecordingController) {
+        return { ok: false, message: 'Recording controller unavailable.' };
+    }
+    const result = await screenRecordingController.manualStart();
+    const state = screenRecordingController.getState();
+    const isRecording = state.state === 'recording' || state.state === 'idleGrace';
+    return { ...result, state: state.state, isRecording };
+});
+
+ipcMain.handle('screenRecording:stop', async () => {
+    if (!screenRecordingController) {
+        return { ok: false, message: 'Recording controller unavailable.' };
+    }
+    const result = await screenRecordingController.manualStop();
+    const state = screenRecordingController.getState();
+    const isRecording = state.state === 'recording' || state.state === 'idleGrace';
+    return { ...result, state: state.state, isRecording };
+});
+
 app.whenReady().then(() => {
     if (process.platform !== 'darwin' && !isE2E) {
         console.error('Jiminy desktop app is macOS-only right now.');
@@ -292,6 +345,22 @@ app.whenReady().then(() => {
 
         createTray();
         registerHotkeysFromSettings();
+        screenRecordingController = createScreenRecordingController({
+            logger: console,
+            onError: ({ message }) => {
+                if (!message) {
+                    return;
+                }
+                showToast({
+                    title: 'Screen recording issue',
+                    body: message,
+                    type: 'warning',
+                    size: 'large'
+                });
+            }
+        });
+        screenRecordingController.start();
+        updateScreenRecordingFromSettings();
 
         const updateState = initializeAutoUpdater({ isE2E, isCI });
         if (updateState.enabled) {
@@ -311,10 +380,28 @@ app.whenReady().then(() => {
     });
 });
 
-app.on('before-quit', () => {
+app.on('before-quit', (event) => {
     isQuitting = true;
     if (trayBusyIndicator) {
         trayBusyIndicator.dispose();
+    }
+    if (screenRecordingController) {
+        const state = screenRecordingController.getState().state;
+        const isRecording = state === 'recording' || state === 'idleGrace';
+        if (isRecording && !recordingShutdownInProgress) {
+            recordingShutdownInProgress = true;
+            event.preventDefault();
+            screenRecordingController.shutdown('quit')
+                .catch((error) => {
+                    console.error('Failed to stop screen recording on quit', error);
+                })
+                .finally(() => {
+                    screenRecordingController.dispose();
+                    app.quit();
+                });
+            return;
+        }
+        screenRecordingController.dispose();
     }
     unregisterGlobalHotkeys();
     closeOverlayWindow();
@@ -322,14 +409,17 @@ app.on('before-quit', () => {
 
 process.on('uncaughtException', (error) => {
     console.error('Uncaught exception in main process', error);
+    attemptRecordingShutdown('crash');
 });
 
 process.on('unhandledRejection', (reason) => {
     console.error('Unhandled rejection in main process', reason);
+    attemptRecordingShutdown('crash');
 });
 
 app.on('render-process-gone', (_event, details) => {
     console.error('Renderer process gone', details);
+    attemptRecordingShutdown('renderer-gone');
 });
 
 app.on('window-all-closed', (event) => {

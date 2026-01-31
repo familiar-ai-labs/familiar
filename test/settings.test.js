@@ -142,6 +142,30 @@ test('saveSettings preserves updateLastCheckedAt when updating other settings', 
   assert.equal(loaded.contextFolderPath, contextDir)
 })
 
+test('saveSettings persists alwaysRecordWhenActive', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-'))
+  const settingsDir = path.join(tempRoot, 'settings')
+
+  saveSettings({ alwaysRecordWhenActive: true }, { settingsDir })
+
+  const loaded = loadSettings({ settingsDir })
+  assert.equal(loaded.alwaysRecordWhenActive, true)
+})
+
+test('saveSettings preserves alwaysRecordWhenActive when updating other settings', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-'))
+  const settingsDir = path.join(tempRoot, 'settings')
+  const contextDir = path.join(tempRoot, 'context')
+  fs.mkdirSync(contextDir)
+
+  saveSettings({ alwaysRecordWhenActive: true }, { settingsDir })
+  saveSettings({ contextFolderPath: contextDir }, { settingsDir })
+
+  const loaded = loadSettings({ settingsDir })
+  assert.equal(loaded.alwaysRecordWhenActive, true)
+  assert.equal(loaded.contextFolderPath, contextDir)
+})
+
 test('loadSettings exposes parse errors for diagnostics', () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-'))
   const settingsDir = path.join(tempRoot, 'settings')
