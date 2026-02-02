@@ -1,46 +1,79 @@
-document.addEventListener('DOMContentLoaded', () => {
-  const jiminy = window.jiminy || {}
-  if (typeof require === 'function') {
-    const loadModule = (globalKey, modulePath) => {
-      if (window[globalKey]) {
-        return
-      }
-      try {
-        const moduleExports = require(modulePath)
-        if (moduleExports && typeof moduleExports.createWizard === 'function') {
-          window.JiminyWizard = moduleExports
-        } else if (moduleExports && typeof moduleExports.createExclusions === 'function') {
-          window.JiminyExclusions = moduleExports
-        } else if (moduleExports && typeof moduleExports.createHotkeys === 'function') {
-          window.JiminyHotkeys = moduleExports
-        } else if (moduleExports && typeof moduleExports.createHistory === 'function') {
-          window.JiminyHistory = moduleExports
-        } else if (moduleExports && typeof moduleExports.createUpdates === 'function') {
-          window.JiminyUpdates = moduleExports
-        } else if (moduleExports && typeof moduleExports.createSettings === 'function') {
-          window.JiminySettings = moduleExports
-        } else if (moduleExports && typeof moduleExports.createRecording === 'function') {
-          window.JiminyRecording = moduleExports
-        } else if (moduleExports && typeof moduleExports.createGraph === 'function') {
-          window.JiminyGraph = moduleExports
-        }
-      } catch (error) {
-        console.warn(`Failed to load ${globalKey} module`, error)
+document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
+  function resolveModule(globalKey, localPath) {
+    if (window[globalKey]) {
+      return window[globalKey]
+    }
+    if (typeof require === 'function') {
+      return require(localPath)
+    }
+    return null
+  }
+
+  function resolveBootstrapModules() {
+    if (window.JiminyDashboardBootstrap) {
+      return window.JiminyDashboardBootstrap
+    }
+    if (typeof require === 'function') {
+      return {
+        ...require('./bootstrap/exclusions'),
+        ...require('./bootstrap/graph'),
+        ...require('./bootstrap/history'),
+        ...require('./bootstrap/hotkeys'),
+        ...require('./bootstrap/recording'),
+        ...require('./bootstrap/settings'),
+        ...require('./bootstrap/updates'),
+        ...require('./bootstrap/wizard')
       }
     }
-
-    loadModule('JiminyWizard', './wizard.js')
-    loadModule('JiminyExclusions', './exclusions.js')
-    loadModule('JiminyHotkeys', './hotkeys.js')
-    loadModule('JiminyHistory', './history.js')
-    loadModule('JiminyUpdates', './updates.js')
-    loadModule('JiminySettings', './settings.js')
-    loadModule('JiminyRecording', './recording.js')
-    loadModule('JiminyGraph', './graph.js')
+    return {}
   }
-  const selectAll = (selector) => typeof document.querySelectorAll === 'function'
-    ? Array.from(document.querySelectorAll(selector))
-    : []
+
+  const jiminy = window.jiminy || {}
+  const moduleLoader = resolveModule('JiminyDashboardModuleLoader', './module-loader')
+  const stateModule = resolveModule('JiminyDashboardState', './state')
+  const bootstrap = resolveBootstrapModules()
+  const loadDashboardModules = moduleLoader?.loadDashboardModules
+  const createDashboardState = stateModule?.createDashboardState
+  const {
+    bootstrapExclusions,
+    bootstrapGraph,
+    bootstrapHistory,
+    bootstrapHotkeys,
+    bootstrapRecording,
+    bootstrapSettings,
+    bootstrapUpdates,
+    bootstrapWizard
+  } = bootstrap
+
+  if (typeof createDashboardState !== 'function') {
+    console.error('Dashboard state module unavailable.')
+    return
+  }
+
+  function selectAll(selector) {
+    if (typeof document.querySelectorAll !== 'function') {
+      return []
+    }
+    return Array.from(document.querySelectorAll(selector))
+  }
+
+  function toArray(value) {
+    if (Array.isArray(value)) {
+      return value
+    }
+    return [value]
+  }
+
+  function callIfAvailable(target, method, ...args) {
+    if (target && typeof target[method] === 'function') {
+      return target[method](...args)
+    }
+    return undefined
+  }
+
+  if (typeof loadDashboardModules === 'function') {
+    loadDashboardModules(window)
+  }
 
   const settingsHeader = document.getElementById('settings-header')
   const settingsContent = document.getElementById('settings-content')
@@ -82,6 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const recordingQueryAnswer = document.getElementById('recording-query-answer')
   const recordingQueryAvailability = document.getElementById('recording-query-availability')
   const recordingQueryEstimate = document.getElementById('recording-query-estimate')
+  const recordingQueryPath = document.getElementById('recording-query-path')
 
   const syncButtons = selectAll('[data-action="context-graph-sync"]')
   const syncStatuses = selectAll('[data-setting-status="context-graph-status"]')
@@ -114,9 +148,18 @@ document.addEventListener('DOMContentLoaded', () => {
   const exclusionsErrors = selectAll('[data-setting-error="exclusions-error"]')
 
   const hotkeyButtons = selectAll('.hotkey-recorder')
-  const captureHotkeyButtons = hotkeyButtons.filter((button) => button.dataset.hotkeyRole === 'capture')
-  const clipboardHotkeyButtons = hotkeyButtons.filter((button) => button.dataset.hotkeyRole === 'clipboard')
-  const recordingHotkeyButtons = hotkeyButtons.filter((button) => button.dataset.hotkeyRole === 'recording')
+  function isCaptureHotkey(button) {
+    return button.dataset.hotkeyRole === 'capture'
+  }
+  function isClipboardHotkey(button) {
+    return button.dataset.hotkeyRole === 'clipboard'
+  }
+  function isRecordingHotkey(button) {
+    return button.dataset.hotkeyRole === 'recording'
+  }
+  const captureHotkeyButtons = hotkeyButtons.filter(isCaptureHotkey)
+  const clipboardHotkeyButtons = hotkeyButtons.filter(isClipboardHotkey)
+  const recordingHotkeyButtons = hotkeyButtons.filter(isRecordingHotkey)
   const hotkeysSaveButtons = selectAll('[data-action="hotkeys-save"]')
   const hotkeysResetButtons = selectAll('[data-action="hotkeys-reset"]')
   const hotkeysStatuses = selectAll('[data-setting-status="hotkeys-status"]')
@@ -134,58 +177,31 @@ document.addEventListener('DOMContentLoaded', () => {
   const DEFAULT_CLIPBOARD_HOTKEY = 'CommandOrControl+J'
   const DEFAULT_RECORDING_HOTKEY = 'CommandOrControl+R'
 
-  let currentContextFolderPath = ''
-  let currentLlmProviderName = ''
-  let currentLlmApiKey = ''
-  let pendingLlmApiKey = ''
-  let currentAlwaysRecordWhenActive = false
-  let isLlmApiKeySaved = false
-  let currentCaptureHotkey = DEFAULT_CAPTURE_HOTKEY
-  let currentClipboardHotkey = DEFAULT_CLIPBOARD_HOTKEY
-  let currentRecordingHotkey = DEFAULT_RECORDING_HOTKEY
-  let currentExclusions = []
-  let isContextGraphSynced = false
-  let hasCompletedSync = false
-  let isFirstRun = false
-  let wizardApi = null
-  let exclusionsApi = null
-  let hotkeysApi = null
-  let historyApi = null
-  let updatesApi = null
-  let settingsApi = null
-  let recordingApi = null
-  let graphApi = null
-
-  const updateWizardUI = () => {
-    if (wizardApi && wizardApi.updateWizardUI) {
-      wizardApi.updateWizardUI()
-    }
+  const apis = {
+    wizardApi: null,
+    exclusionsApi: null,
+    hotkeysApi: null,
+    historyApi: null,
+    updatesApi: null,
+    settingsApi: null,
+    recordingApi: null,
+    graphApi: null
   }
 
-  const setHotkeyValue = (role, value) => {
-    const nextValue = value || ''
-    if (role === 'capture') {
-      currentCaptureHotkey = nextValue
-      return
-    }
-    if (role === 'recording') {
-      currentRecordingHotkey = nextValue
-      return
-    }
-    currentClipboardHotkey = nextValue
-  }
-
-  const setExclusionsState = (exclusions) => {
-    currentExclusions = Array.isArray(exclusions) ? [...exclusions] : []
-  }
-
-  const setExclusionsValue = (exclusions) => {
-    if (exclusionsApi && exclusionsApi.setExclusions) {
-      exclusionsApi.setExclusions(exclusions)
-      return
-    }
-    setExclusionsState(exclusions)
-  }
+  const state = createDashboardState({
+    defaults: {
+      capture: DEFAULT_CAPTURE_HOTKEY,
+      clipboard: DEFAULT_CLIPBOARD_HOTKEY,
+      recording: DEFAULT_RECORDING_HOTKEY
+    },
+    elements: {
+      contextFolderInputs,
+      llmProviderSelects,
+      llmKeyInputs,
+      alwaysRecordWhenActiveInputs
+    },
+    apis
+  })
 
   const SECTION_META = {
     wizard: {
@@ -222,15 +238,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  const setActiveSection = (nextSection) => {
-    if (!SECTION_META[nextSection]) {
+  function setActiveSection(nextSection) {
+    const sectionMeta = SECTION_META[nextSection]
+    if (!sectionMeta) {
       console.warn('Unknown settings section', nextSection)
       return
     }
 
     const isWizard = nextSection === 'wizard'
 
-    sectionPanes.forEach((pane) => {
+    for (const pane of sectionPanes) {
       const isActive = pane.dataset.sectionPane === nextSection
       pane.classList.toggle('hidden', !isActive)
       pane.setAttribute('aria-hidden', String(!isActive))
@@ -239,20 +256,20 @@ document.addEventListener('DOMContentLoaded', () => {
         void pane.offsetHeight
         pane.classList.add('pane-enter')
       }
-    })
+    }
 
-    sectionNavButtons.forEach((button) => {
+    for (const button of sectionNavButtons) {
       const isActive = button.dataset.sectionTarget === nextSection
       button.dataset.active = isActive ? 'true' : 'false'
       button.setAttribute('aria-selected', String(isActive))
       button.tabIndex = isActive ? 0 : -1
-    })
+    }
 
     if (sectionTitle) {
-      sectionTitle.textContent = SECTION_META[nextSection].title
+      sectionTitle.textContent = sectionMeta.title
     }
     if (sectionSubtitle) {
-      sectionSubtitle.textContent = SECTION_META[nextSection].subtitle
+      sectionSubtitle.textContent = sectionMeta.subtitle
     }
 
     if (settingsHeader) {
@@ -262,388 +279,256 @@ document.addEventListener('DOMContentLoaded', () => {
       settingsContent.classList.toggle('hidden', isWizard)
     }
     if (isWizard) {
-      updateWizardUI()
+      state.updateWizardUI()
     }
-    if (historyApi && historyApi.handleSectionChange) {
-      historyApi.handleSectionChange(nextSection)
-    }
-    if (graphApi && graphApi.handleSectionChange) {
-      graphApi.handleSectionChange(nextSection)
-    }
-    if (recordingApi && recordingApi.handleSectionChange) {
-      recordingApi.handleSectionChange(nextSection)
-    }
+    callIfAvailable(apis.historyApi, 'handleSectionChange', nextSection)
+    callIfAvailable(apis.graphApi, 'handleSectionChange', nextSection)
+    callIfAvailable(apis.recordingApi, 'handleSectionChange', nextSection)
 
     console.log('Settings section changed', { section: nextSection })
   }
 
-  if (window.JiminyWizard && typeof window.JiminyWizard.createWizard === 'function') {
-    wizardApi = window.JiminyWizard.createWizard({
-      elements: {
-        wizardSection,
-        wizardBackButton,
-        wizardNextButton,
-        wizardDoneButton,
-        wizardCompleteStatus,
-        wizardStepStatus,
-        wizardStepPanels,
-        wizardStepIndicators,
-        wizardStepConnectors
-      },
-      getState: () => ({
-        currentContextFolderPath,
-        currentLlmProviderName,
-        currentLlmApiKey,
-        isLlmApiKeySaved,
-        hasCompletedSync,
-        isContextGraphSynced,
-        currentCaptureHotkey,
-        currentClipboardHotkey,
-        currentRecordingHotkey
-      }),
-      onDone: () => {
-        setActiveSection('general')
-      }
+  function handleWizardDone() {
+    setActiveSection('general')
+  }
+
+  const runBootstrapWizard = typeof bootstrapWizard === 'function' ? bootstrapWizard : () => null
+  const runBootstrapGraph = typeof bootstrapGraph === 'function' ? bootstrapGraph : () => null
+  const runBootstrapHistory = typeof bootstrapHistory === 'function' ? bootstrapHistory : () => null
+  const runBootstrapUpdates = typeof bootstrapUpdates === 'function' ? bootstrapUpdates : () => null
+  const runBootstrapRecording = typeof bootstrapRecording === 'function' ? bootstrapRecording : () => null
+  const runBootstrapSettings = typeof bootstrapSettings === 'function' ? bootstrapSettings : () => null
+  const runBootstrapExclusions = typeof bootstrapExclusions === 'function' ? bootstrapExclusions : () => null
+  const runBootstrapHotkeys = typeof bootstrapHotkeys === 'function' ? bootstrapHotkeys : () => null
+
+  apis.wizardApi = runBootstrapWizard({
+    window,
+    elements: {
+      wizardSection,
+      wizardBackButton,
+      wizardNextButton,
+      wizardDoneButton,
+      wizardCompleteStatus,
+      wizardStepStatus,
+      wizardStepPanels,
+      wizardStepIndicators,
+      wizardStepConnectors
+    },
+    getState: state.getWizardState,
+    onDone: handleWizardDone
+  })
+
+  function handleSectionNavClick(targetElement) {
+    const target = targetElement?.dataset?.sectionTarget
+    if (target) {
+      setActiveSection(target)
+    }
+  }
+
+  for (const button of sectionNavButtons) {
+    button.addEventListener('click', function onSectionNavClick(event) {
+      const targetElement = event?.currentTarget || button
+      handleSectionNavClick(targetElement)
     })
   }
 
-  if (sectionNavButtons.length > 0) {
-    sectionNavButtons.forEach((button) => {
-      button.addEventListener('click', () => {
-        const target = button.dataset.sectionTarget
-        if (target) {
-          setActiveSection(target)
-        }
-      })
-    })
-  }
-
-  const setMessage = (elements, message) => {
-    const targets = Array.isArray(elements) ? elements : [elements]
+  function setMessage(elements, message) {
+    const targets = toArray(elements)
     const value = message || ''
-    targets.filter(Boolean).forEach((element) => {
+    for (const element of targets) {
+      if (!element) {
+        continue
+      }
       element.textContent = value
       element.classList.toggle('hidden', !value)
-    })
-  }
-
-  if (window.JiminyGraph && typeof window.JiminyGraph.createGraph === 'function') {
-    graphApi = window.JiminyGraph.createGraph({
-      elements: {
-        syncButtons,
-        syncStatuses,
-        syncStats,
-        syncProgress,
-        syncWarnings,
-        syncErrors,
-        pruneButtons,
-        pruneStatuses,
-        statusPill: graphStatusPill,
-        statusDot: graphStatusDot,
-        statusLabel: graphStatusLabel,
-        percentLabel: graphPercent,
-        barSynced: graphBarSynced,
-        barPending: graphBarPending,
-        barNew: graphBarNew,
-        syncedCount: graphSyncedCount,
-        pendingCount: graphPendingCount,
-        newCount: graphNewCount,
-        ignoredCount: graphIgnoredCount
-      },
-      jiminy,
-      getState: () => ({
-        currentContextFolderPath,
-        currentExclusions,
-        isContextGraphSynced,
-        hasCompletedSync
-      }),
-      setGraphState: (updates = {}) => {
-        if ('isContextGraphSynced' in updates) {
-          isContextGraphSynced = updates.isContextGraphSynced
-        }
-        if ('hasCompletedSync' in updates && updates.hasCompletedSync !== undefined) {
-          hasCompletedSync = updates.hasCompletedSync
-        }
-        updateWizardUI()
-      },
-      setMessage,
-      updateWizardUI
-    })
-  }
-
-  if (window.JiminyHistory && typeof window.JiminyHistory.createHistory === 'function') {
-    historyApi = window.JiminyHistory.createHistory({
-      elements: {
-        historyList,
-        historyEmpty,
-        historyError
-      },
-      jiminy,
-      setMessage
-    })
-  }
-
-  if (window.JiminyUpdates && typeof window.JiminyUpdates.createUpdates === 'function') {
-    updatesApi = window.JiminyUpdates.createUpdates({
-      elements: {
-        updateButtons,
-        updateStatuses,
-        updateErrors,
-        updateProgress,
-        updateProgressBar,
-        updateProgressLabel
-      },
-      jiminy,
-      setMessage
-    })
-  }
-
-  if (window.JiminyRecording && typeof window.JiminyRecording.createRecording === 'function') {
-    recordingApi = window.JiminyRecording.createRecording({
-      elements: {
-        recordingDetails,
-        recordingPath,
-        recordingStatus,
-        recordingActionButton,
-        recordingPermission,
-        recordingQueryQuestion,
-        recordingQueryFrom,
-        recordingQueryTo,
-        recordingQuerySubmit,
-        recordingQuerySpinner,
-        recordingQueryStatus,
-        recordingQueryError,
-        recordingQueryAnswer,
-        recordingQueryAvailability,
-        recordingQueryEstimate
-      },
-      jiminy,
-      getState: () => ({
-        currentContextFolderPath,
-        currentAlwaysRecordWhenActive,
-        currentLlmProviderName,
-        currentLlmApiKey
-      })
-    })
-  }
-
-  const setInputValues = (elements, value) => {
-    elements.forEach((element) => {
-      if (element.value !== value) {
-        element.value = value
-      }
-    })
-  }
-
-  const setContextFolderValue = (value) => {
-    const nextValue = value || ''
-    if (currentContextFolderPath !== nextValue) {
-      hasCompletedSync = false
-      isContextGraphSynced = false
-    }
-    currentContextFolderPath = nextValue
-    setInputValues(contextFolderInputs, currentContextFolderPath)
-    if (recordingApi && recordingApi.updateRecordingUI) {
-      recordingApi.updateRecordingUI()
-    }
-    if (graphApi && graphApi.updatePruneButtonState) {
-      graphApi.updatePruneButtonState()
-    }
-    updateWizardUI()
-  }
-
-  const setLlmProviderValue = (value) => {
-    currentLlmProviderName = value || ''
-    llmProviderSelects.forEach((select) => {
-      if (select.value !== currentLlmProviderName) {
-        select.value = currentLlmProviderName
-      }
-    })
-    if (recordingApi && recordingApi.updateRecordingUI) {
-      recordingApi.updateRecordingUI()
-    }
-    updateWizardUI()
-  }
-
-  const setLlmApiKeyPending = (value) => {
-    pendingLlmApiKey = value || ''
-    setInputValues(llmKeyInputs, pendingLlmApiKey)
-    isLlmApiKeySaved = pendingLlmApiKey.length > 0 && pendingLlmApiKey === currentLlmApiKey
-    updateWizardUI()
-  }
-
-  const setLlmApiKeySaved = (value) => {
-    currentLlmApiKey = value || ''
-    setLlmApiKeyPending(currentLlmApiKey)
-    isLlmApiKeySaved = Boolean(currentLlmApiKey)
-    if (recordingApi && recordingApi.updateRecordingUI) {
-      recordingApi.updateRecordingUI()
-    }
-    updateWizardUI()
-  }
-
-  const setAlwaysRecordWhenActiveValue = (value) => {
-    currentAlwaysRecordWhenActive = Boolean(value)
-    alwaysRecordWhenActiveInputs.forEach((input) => {
-      if (input.checked !== currentAlwaysRecordWhenActive) {
-        input.checked = currentAlwaysRecordWhenActive
-      }
-    })
-    if (recordingApi && recordingApi.updateRecordingUI) {
-      recordingApi.updateRecordingUI()
     }
   }
 
-  if (window.JiminySettings && typeof window.JiminySettings.createSettings === 'function') {
-    settingsApi = window.JiminySettings.createSettings({
-      elements: {
-        contextFolderChooseButtons,
-        contextFolderErrors,
-        contextFolderStatuses,
-        llmProviderSelects,
-        llmProviderErrors,
-        llmKeyInputs,
-        llmKeyErrors,
-        llmKeyStatuses,
-        alwaysRecordWhenActiveInputs,
-        alwaysRecordWhenActiveErrors,
-        alwaysRecordWhenActiveStatuses,
-        hotkeysErrors,
-        hotkeysStatuses
-      },
-      jiminy,
-      defaults: {
-        capture: DEFAULT_CAPTURE_HOTKEY,
-        clipboard: DEFAULT_CLIPBOARD_HOTKEY,
-        recording: DEFAULT_RECORDING_HOTKEY
-      },
-      getState: () => ({
-        currentContextFolderPath,
-        currentLlmProviderName,
-        currentLlmApiKey,
-        pendingLlmApiKey,
-        currentExclusions,
-        currentAlwaysRecordWhenActive
-      }),
-      setContextFolderValue,
-      setLlmProviderValue,
-      setLlmApiKeyPending,
-      setLlmApiKeySaved,
-      setAlwaysRecordWhenActiveValue,
-      setHotkeys: (hotkeys) => {
-        if (hotkeysApi && hotkeysApi.setHotkeys) {
-          hotkeysApi.setHotkeys(hotkeys)
-          return
-        }
-        setHotkeyValue('capture', hotkeys.capture)
-        setHotkeyValue('clipboard', hotkeys.clipboard)
-        setHotkeyValue('recording', hotkeys.recording)
-        updateWizardUI()
-      },
-      setExclusions: setExclusionsValue,
-      setMessage,
-      refreshContextGraphStatus: (options) => {
-        if (graphApi && graphApi.refreshContextGraphStatus) {
-          return graphApi.refreshContextGraphStatus(options)
-        }
-        return undefined
-      },
-      updatePruneButtonState: () => {
-        if (graphApi && graphApi.updatePruneButtonState) {
-          graphApi.updatePruneButtonState()
-        }
-      },
-      updateWizardUI
-    })
+  apis.graphApi = runBootstrapGraph({
+    window,
+    elements: {
+      syncButtons,
+      syncStatuses,
+      syncStats,
+      syncProgress,
+      syncWarnings,
+      syncErrors,
+      pruneButtons,
+      pruneStatuses,
+      statusPill: graphStatusPill,
+      statusDot: graphStatusDot,
+      statusLabel: graphStatusLabel,
+      percentLabel: graphPercent,
+      barSynced: graphBarSynced,
+      barPending: graphBarPending,
+      barNew: graphBarNew,
+      syncedCount: graphSyncedCount,
+      pendingCount: graphPendingCount,
+      newCount: graphNewCount,
+      ignoredCount: graphIgnoredCount
+    },
+    jiminy,
+    getState: state.getGraphState,
+    setGraphState: state.setGraphState,
+    setMessage,
+    updateWizardUI: state.updateWizardUI
+  })
+
+  apis.historyApi = runBootstrapHistory({
+    window,
+    elements: {
+      historyList,
+      historyEmpty,
+      historyError
+    },
+    jiminy,
+    setMessage
+  })
+
+  apis.updatesApi = runBootstrapUpdates({
+    window,
+    elements: {
+      updateButtons,
+      updateStatuses,
+      updateErrors,
+      updateProgress,
+      updateProgressBar,
+      updateProgressLabel
+    },
+    jiminy,
+    setMessage
+  })
+
+  apis.recordingApi = runBootstrapRecording({
+    window,
+    elements: {
+      recordingDetails,
+      recordingPath,
+      recordingStatus,
+      recordingActionButton,
+      recordingPermission,
+      recordingQueryQuestion,
+      recordingQueryFrom,
+      recordingQueryTo,
+      recordingQuerySubmit,
+      recordingQuerySpinner,
+      recordingQueryStatus,
+      recordingQueryError,
+      recordingQueryAnswer,
+      recordingQueryAvailability,
+      recordingQueryEstimate,
+      recordingQueryPath
+    },
+    jiminy,
+    getState: state.getRecordingState
+  })
+
+  function refreshContextGraphStatus(options) {
+    return callIfAvailable(apis.graphApi, 'refreshContextGraphStatus', options)
   }
 
-  if (!settingsApi) {
+  function updatePruneButtonState() {
+    callIfAvailable(apis.graphApi, 'updatePruneButtonState')
+  }
+
+  apis.settingsApi = runBootstrapSettings({
+    window,
+    elements: {
+      contextFolderChooseButtons,
+      contextFolderErrors,
+      contextFolderStatuses,
+      llmProviderSelects,
+      llmProviderErrors,
+      llmKeyInputs,
+      llmKeyErrors,
+      llmKeyStatuses,
+      alwaysRecordWhenActiveInputs,
+      alwaysRecordWhenActiveErrors,
+      alwaysRecordWhenActiveStatuses,
+      hotkeysErrors,
+      hotkeysStatuses
+    },
+    jiminy,
+    defaults: {
+      capture: DEFAULT_CAPTURE_HOTKEY,
+      clipboard: DEFAULT_CLIPBOARD_HOTKEY,
+      recording: DEFAULT_RECORDING_HOTKEY
+    },
+    getState: state.getSettingsState,
+    setContextFolderValue: state.setContextFolderValue,
+    setLlmProviderValue: state.setLlmProviderValue,
+    setLlmApiKeyPending: state.setLlmApiKeyPending,
+    setLlmApiKeySaved: state.setLlmApiKeySaved,
+    setAlwaysRecordWhenActiveValue: state.setAlwaysRecordWhenActiveValue,
+    setHotkeys: state.setHotkeysFromSettings,
+    setExclusions: state.setExclusionsValue,
+    setMessage,
+    refreshContextGraphStatus,
+    updatePruneButtonState,
+    updateWizardUI: state.updateWizardUI
+  })
+
+  if (!apis.settingsApi) {
     setMessage(contextFolderErrors, 'Settings module unavailable. Restart the app.')
     setMessage(llmProviderErrors, 'Settings module unavailable. Restart the app.')
     setMessage(llmKeyErrors, 'Settings module unavailable. Restart the app.')
     setMessage(hotkeysErrors, 'Settings module unavailable. Restart the app.')
-    if (graphApi && graphApi.updatePruneButtonState) {
-      graphApi.updatePruneButtonState()
-    }
+    updatePruneButtonState()
     return
   }
 
-  if (!settingsApi.isReady) {
+  if (!apis.settingsApi.isReady) {
     return
   }
 
-  if (window.JiminyExclusions && typeof window.JiminyExclusions.createExclusions === 'function') {
-    exclusionsApi = window.JiminyExclusions.createExclusions({
-      elements: {
-        exclusionsLists,
-        addExclusionButtons,
-        exclusionsErrors
-      },
-      jiminy,
-      getState: () => ({
-        currentContextFolderPath,
-        currentExclusions
-      }),
-      setExclusions: (exclusions) => {
-        setExclusionsState(exclusions)
-      },
-      setMessage,
-      refreshContextGraphStatus: (options) => {
-        if (graphApi && graphApi.refreshContextGraphStatus) {
-          return graphApi.refreshContextGraphStatus(options)
-        }
-        return undefined
-      }
-    })
-  }
+  apis.exclusionsApi = runBootstrapExclusions({
+    window,
+    elements: {
+      exclusionsLists,
+      addExclusionButtons,
+      exclusionsErrors
+    },
+    jiminy,
+    getState: state.getExclusionsState,
+    setExclusions: state.setExclusionsState,
+    setMessage,
+    refreshContextGraphStatus
+  })
 
-  if (window.JiminyHotkeys && typeof window.JiminyHotkeys.createHotkeys === 'function') {
-    hotkeysApi = window.JiminyHotkeys.createHotkeys({
-      elements: {
-        hotkeyButtons,
-        captureHotkeyButtons,
-        clipboardHotkeyButtons,
-        recordingHotkeyButtons,
-        hotkeysSaveButtons,
-        hotkeysResetButtons,
-        hotkeysStatuses,
-        hotkeysErrors
-      },
-      jiminy,
-      setMessage,
-      updateWizardUI,
-      getState: () => ({
-        currentCaptureHotkey,
-        currentClipboardHotkey,
-        currentRecordingHotkey
-      }),
-      setHotkeyValue,
-      defaults: {
-        capture: DEFAULT_CAPTURE_HOTKEY,
-        clipboard: DEFAULT_CLIPBOARD_HOTKEY,
-        recording: DEFAULT_RECORDING_HOTKEY
-      }
-    })
-  }
+  apis.hotkeysApi = runBootstrapHotkeys({
+    window,
+    elements: {
+      hotkeyButtons,
+      captureHotkeyButtons,
+      clipboardHotkeyButtons,
+      recordingHotkeyButtons,
+      hotkeysSaveButtons,
+      hotkeysResetButtons,
+      hotkeysStatuses,
+      hotkeysErrors
+    },
+    jiminy,
+    setMessage,
+    updateWizardUI: state.updateWizardUI,
+    getState: state.getHotkeysState,
+    setHotkeyValue: state.setHotkeyValue,
+    defaults: {
+      capture: DEFAULT_CAPTURE_HOTKEY,
+      clipboard: DEFAULT_CLIPBOARD_HOTKEY,
+      recording: DEFAULT_RECORDING_HOTKEY
+    }
+  })
 
-  const initialize = async () => {
-    if (graphApi && graphApi.showLoading) {
-      graphApi.showLoading()
-    }
-    const settingsResult = await settingsApi.loadSettings()
-    isFirstRun = Boolean(settingsResult?.isFirstRun)
-    if (recordingApi && recordingApi.setPermissionStatus) {
-      recordingApi.setPermissionStatus(settingsResult?.screenRecordingPermissionStatus || '')
-    }
-    if (recordingApi && recordingApi.updateRecordingUI) {
-      recordingApi.updateRecordingUI()
-    }
-    if (graphApi && graphApi.refreshContextGraphStatus) {
-      await graphApi.refreshContextGraphStatus()
-    }
-    const defaultSection = isFirstRun ? 'wizard' : 'general'
+  async function initialize() {
+    callIfAvailable(apis.graphApi, 'showLoading')
+    const settingsResult = await apis.settingsApi.loadSettings()
+    state.setIsFirstRun(Boolean(settingsResult?.isFirstRun))
+    callIfAvailable(apis.recordingApi, 'setPermissionStatus', settingsResult?.screenRecordingPermissionStatus || '')
+    callIfAvailable(apis.recordingApi, 'updateRecordingUI')
+    await refreshContextGraphStatus()
+    const defaultSection = state.getIsFirstRun() ? 'wizard' : 'general'
     setActiveSection(defaultSection)
-    updateWizardUI()
+    state.updateWizardUI()
   }
 
   void initialize()

@@ -19,7 +19,8 @@
       recordingQueryError,
       recordingQueryAnswer,
       recordingQueryAvailability,
-      recordingQueryEstimate
+      recordingQueryEstimate,
+      recordingQueryPath
     } = elements
 
     let currentScreenRecordingState = 'disabled'
@@ -123,6 +124,12 @@
       const nextValue = message || ''
       recordingQueryAnswer.textContent = nextValue
       setHidden(recordingQueryAnswer, !nextValue)
+    }
+
+    const setRecordingQueryPath = (pathValue) => {
+      const message = pathValue ? `Saved to ${pathValue}` : ''
+      setText(recordingQueryPath, message)
+      setHidden(recordingQueryPath, !message)
     }
 
     const setRecordingQueryEstimate = (message) => {
@@ -277,6 +284,7 @@
 
       setRecordingQueryError('')
       setRecordingQueryAnswer('')
+      setRecordingQueryPath('')
 
       const question = recordingQueryQuestion ? recordingQueryQuestion.value.trim() : ''
       const fromDate = recordingQueryFrom ? recordingQueryFrom.value : ''
@@ -303,9 +311,15 @@
         const result = await jiminy.runRecordingQuery({ question, fromDate, toDate })
         if (result && result.ok) {
           setRecordingQueryAnswer(result.answerText || '')
+          if (result.queryDir) {
+            setRecordingQueryPath(result.queryDir)
+          }
           setRecordingQueryStatus('')
         } else {
           setRecordingQueryError(result?.error?.message || 'Recording query failed.')
+          if (result?.queryDir) {
+            setRecordingQueryPath(result.queryDir)
+          }
           setRecordingQueryStatus('')
         }
       } catch (error) {
