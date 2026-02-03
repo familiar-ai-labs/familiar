@@ -25,7 +25,7 @@
       wizardStepConnectors = []
     } = elements
 
-    const WIZARD_STEP_COUNT = 5
+    const WIZARD_STEP_COUNT = 3
     let wizardStep = 1
 
     const isWizardStepComplete = (step) => {
@@ -34,12 +34,8 @@
         case 1:
           return Boolean(state.currentContextFolderPath)
         case 2:
-          return Boolean(state.currentContextFolderPath)
-        case 3:
           return Boolean(state.currentLlmProviderName && state.currentLlmApiKey && state.isLlmApiKeySaved)
-        case 4:
-          return Boolean(state.hasCompletedSync || state.isContextGraphSynced)
-        case 5:
+        case 3:
           return Boolean(state.currentCaptureHotkey || state.currentClipboardHotkey || state.currentRecordingHotkey)
         default:
           return false

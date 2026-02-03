@@ -49,7 +49,6 @@ const saveSettings = (settings, options = {}) => {
     const hasLlmProviderName = Object.prototype.hasOwnProperty.call(settings, 'llmProviderName');
     const hasLlmProviderTextModel = Object.prototype.hasOwnProperty.call(settings, 'llmProviderTextModel');
     const hasLlmProviderVisionModel = Object.prototype.hasOwnProperty.call(settings, 'llmProviderVisionModel');
-    const hasExclusions = Object.prototype.hasOwnProperty.call(settings, 'exclusions');
     const hasCaptureHotkey = Object.prototype.hasOwnProperty.call(settings, 'captureHotkey');
     const hasClipboardHotkey = Object.prototype.hasOwnProperty.call(settings, 'clipboardHotkey');
     const hasUpdateLastCheckedAt = Object.prototype.hasOwnProperty.call(settings, 'updateLastCheckedAt');
@@ -86,12 +85,6 @@ const saveSettings = (settings, options = {}) => {
         }
     } else if (Object.keys(existingProvider).length > 0) {
         payload.llm_provider = { ...existingProvider };
-    }
-
-    if (hasExclusions) {
-        payload.exclusions = Array.isArray(settings.exclusions) ? settings.exclusions : [];
-    } else if (Array.isArray(existing.exclusions)) {
-        payload.exclusions = existing.exclusions;
     }
 
     if (hasCaptureHotkey) {

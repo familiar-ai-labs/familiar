@@ -1,10 +1,10 @@
 const path = require('path');
 const { loadSettings } = require('../settings');
-const { JsonContextGraphStore } = require('../context-graph');
 const { runAnalysis } = require('./processor');
 const { showToast } = require('../toast');
 const { InvalidLlmProviderApiKeyError } = require('../modelProviders');
 const { recordEvent } = require('../history');
+const { JIMINY_BEHIND_THE_SCENES_DIR_NAME, JIMINY_ANALYSIS_DIR_NAME } = require('../const');
 
 const shortenPath = (fullPath, maxComponents = 2) => {
     const parts = fullPath.split(path.sep).filter(Boolean);
@@ -30,7 +30,6 @@ const isLlmMockEnabled = () => process.env.JIMINY_LLM_MOCK === '1';
 const createAnalysisHandler =
     ({
         loadSettingsImpl = loadSettings,
-        createStore = ({ contextFolderPath } = {}) => new JsonContextGraphStore({ contextFolderPath }),
         runAnalysisImpl = runAnalysis,
     } = {}) =>
     async (event) => {
@@ -102,10 +101,7 @@ const createAnalysisHandler =
             return { skipped: true, reason: 'missing_api_key' };
         }
 
-        const store = createStore({ contextFolderPath });
-        const contextGraph = store.load();
-
-        if (!contextFolderPath && !contextGraph?.rootPath) {
+        if (!contextFolderPath) {
             console.warn('Skipping analysis due to missing context folder path', { resultMdPath });
             showToast({
                 title: 'Context folder required',
@@ -125,6 +121,13 @@ const createAnalysisHandler =
             return { skipped: true, reason: 'missing_context_folder' };
         }
 
+        const analysisOutputDir = path.join(
+            contextFolderPath,
+            JIMINY_BEHIND_THE_SCENES_DIR_NAME,
+            JIMINY_ANALYSIS_DIR_NAME
+        );
+        console.log('Analysis output set to jiminy folder', { resultMdPath, outputDir: analysisOutputDir });
+
         console.log('Starting analysis for result markdown', { resultMdPath, provider, model });
         recordEvent({
             contextFolderPath,
@@ -141,11 +144,11 @@ const createAnalysisHandler =
         try {
             result = await runAnalysisImpl({
                 resultMdPath,
-                contextGraph,
                 contextFolderPath,
                 provider,
                 apiKey,
                 model,
+                outputDir: analysisOutputDir,
             });
         } catch (error) {
             if (error instanceof InvalidLlmProviderApiKeyError) {

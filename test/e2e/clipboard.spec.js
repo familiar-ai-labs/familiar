@@ -3,7 +3,11 @@ const os = require('node:os');
 const path = require('node:path');
 const { test, expect } = require('playwright/test');
 const { _electron: electron } = require('playwright');
-const { CAPTURES_DIR_NAME, JIMINY_BEHIND_THE_SCENES_DIR_NAME, GENERAL_ANALYSIS_DIR_NAME } = require('../../src/const');
+const {
+    CAPTURES_DIR_NAME,
+    JIMINY_BEHIND_THE_SCENES_DIR_NAME,
+    JIMINY_ANALYSIS_DIR_NAME,
+} = require('../../src/const');
 
 test.describe('clipboard capture flow', () => {
     test('empty clipboard shows warning notification', async () => {
@@ -190,7 +194,11 @@ test.describe('clipboard capture flow', () => {
             });
 
             // Wait for analysis to complete by checking for the analysis file
-            const analysisDir = path.join(contextPath, GENERAL_ANALYSIS_DIR_NAME);
+            const analysisDir = path.join(
+                contextPath,
+                JIMINY_BEHIND_THE_SCENES_DIR_NAME,
+                JIMINY_ANALYSIS_DIR_NAME
+            );
             await expect
                 .poll(
                     () => {

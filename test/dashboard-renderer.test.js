@@ -131,7 +131,6 @@ const createJiminy = (overrides = {}) => ({
     contextFolderPath: '',
     llmProviderName: 'gemini',
     llmProviderApiKey: '',
-    exclusions: [],
     alwaysRecordWhenActive: false,
     screenRecordingPermissionStatus: 'granted'
   }),
@@ -140,9 +139,6 @@ const createJiminy = (overrides = {}) => ({
   getScreenRecordingStatus: async () => ({ ok: true, state: 'armed', isRecording: false }),
   startScreenRecording: async () => ({ ok: true, state: 'recording', isRecording: true }),
   stopScreenRecording: async () => ({ ok: true, state: 'armed', isRecording: false }),
-  getContextGraphStatus: async () => ({ syncedNodes: 0, totalNodes: 0, maxNodesExceeded: false }),
-  syncContextGraph: async () => ({ ok: true, warnings: [], errors: [] }),
-  pruneContextGraph: async () => ({ ok: true, deleted: false }),
   checkForUpdates: async () => ({ ok: true, updateInfo: null }),
   ...overrides
 })
@@ -151,7 +147,6 @@ const createElements = () => {
   const elements = {
     'advanced-toggle-btn': new TestElement(),
     'advanced-options': new TestElement(),
-    'add-exclusion': new TestElement(),
     'capture-hotkey': new TestElement(),
     'clipboard-hotkey': new TestElement(),
     'recording-hotkey': new TestElement(),
@@ -172,23 +167,12 @@ const createElements = () => {
     'recording-permission': new TestElement(),
     'llm-provider': new TestElement(),
     'llm-provider-error': new TestElement(),
-    'context-graph-sync': new TestElement(),
-    'context-graph-status': new TestElement(),
-    'context-graph-progress': new TestElement(),
-    'context-graph-warning': new TestElement(),
-    'context-graph-error': new TestElement(),
-    'context-graph-prune': new TestElement(),
-    'context-graph-prune-status': new TestElement(),
-    'context-graph-stats': new TestElement(),
-    'context-graph-ignored-count': new TestElement(),
     'updates-check': new TestElement(),
     'updates-status': new TestElement(),
     'updates-error': new TestElement(),
     'updates-progress': new TestElement(),
     'updates-progress-bar': new TestElement(),
     'updates-progress-label': new TestElement(),
-    'exclusions-list': new TestElement(),
-    'exclusions-error': new TestElement(),
     'hotkeys-save': new TestElement(),
     'hotkeys-reset': new TestElement(),
     'hotkeys-status': new TestElement(),
@@ -222,21 +206,9 @@ const createElements = () => {
   elements['always-record-when-active-error'].dataset.settingError = 'always-record-when-active-error'
   elements['always-record-when-active-status'].dataset.settingStatus = 'always-record-when-active-status'
 
-  elements['context-graph-sync'].dataset.action = 'context-graph-sync'
-  elements['context-graph-status'].dataset.settingStatus = 'context-graph-status'
-  elements['context-graph-progress'].dataset.settingStatus = 'context-graph-progress'
-  elements['context-graph-warning'].dataset.settingStatus = 'context-graph-warning'
-  elements['context-graph-error'].dataset.settingError = 'context-graph-error'
-  elements['context-graph-prune'].dataset.action = 'context-graph-prune'
-  elements['context-graph-prune-status'].dataset.settingStatus = 'context-graph-prune-status'
-  elements['context-graph-stats'].dataset.settingStatus = 'context-graph-stats'
   elements['updates-check'].dataset.action = 'updates-check'
   elements['updates-status'].dataset.settingStatus = 'updates-status'
   elements['updates-error'].dataset.settingError = 'updates-error'
-
-  elements['exclusions-list'].dataset.settingList = 'exclusions'
-  elements['add-exclusion'].dataset.action = 'add-exclusion'
-  elements['exclusions-error'].dataset.settingError = 'exclusions-error'
 
   elements['capture-hotkey'].dataset.hotkeyRole = 'capture'
   elements['capture-hotkey'].classList.add('hotkey-recorder')
@@ -259,99 +231,13 @@ const createElements = () => {
   return elements
 }
 
-test('refreshes context graph status when context path changes', async () => {
-  const statusCalls = []
-  const saveCalls = []
-  const jiminy = {
-    getSettings: async () => ({
-      contextFolderPath: '',
-      llmProviderName: 'gemini',
-      llmProviderApiKey: '',
-      exclusions: []
-    }),
-    pickContextFolder: async () => ({ canceled: false, path: '/tmp/new-context' }),
-    saveSettings: async (payload) => {
-      saveCalls.push(payload)
-      return { ok: true }
-    },
-    getContextGraphStatus: async (payload) => {
-      statusCalls.push(payload)
-      return { syncedNodes: 0, totalNodes: 2, maxNodesExceeded: false }
-    },
-    syncContextGraph: async () => ({ ok: true, warnings: [], errors: [] })
-  }
-
-  const elements = createElements()
-  const document = new TestDocument(elements)
-  const priorDocument = global.document
-  const priorWindow = global.window
-  global.document = document
-  global.window = { jiminy }
-
-  try {
-    const rendererPath = path.join(__dirname, '..', 'src', 'dashboard', 'renderer.js')
-    const resolvedRendererPath = require.resolve(rendererPath)
-    delete require.cache[resolvedRendererPath]
-    require(resolvedRendererPath)
-
-    document.trigger('DOMContentLoaded')
-    await flushPromises()
-    assert.equal(statusCalls.length, 1)
-    assert.equal(statusCalls[0].contextFolderPath, '')
-
-    await elements['context-folder-choose'].click()
-    await flushPromises()
-    assert.equal(saveCalls.length, 1)
-    assert.equal(saveCalls[0].contextFolderPath, '/tmp/new-context')
-    assert.equal(elements['context-folder-status'].textContent, 'Saved.')
-    assert.equal(statusCalls.length, 2)
-    assert.equal(statusCalls[1].contextFolderPath, '/tmp/new-context')
-  } finally {
-    global.document = priorDocument
-    global.window = priorWindow
-  }
-})
-
-test('context graph status shows ignored file count', async () => {
-  const jiminy = createJiminy({
-    getContextGraphStatus: async () => ({
-      syncedNodes: 2,
-      outOfSyncNodes: 1,
-      newNodes: 0,
-      totalNodes: 3,
-      ignoredFiles: 4,
-      maxNodesExceeded: false
-    })
-  })
-
-  const elements = createElements()
-  const document = new TestDocument(elements)
-  const priorDocument = global.document
-  const priorWindow = global.window
-  global.document = document
-  global.window = { jiminy }
-
-  try {
-    loadRenderer()
-    document.trigger('DOMContentLoaded')
-    await flushPromises()
-
-    assert.equal(elements['context-graph-ignored-count'].textContent, '4')
-    assert.match(elements['context-graph-stats'].textContent, /Ignored: 4/)
-  } finally {
-    global.document = priorDocument
-    global.window = priorWindow
-  }
-})
-
 test('llm api key saves on change when provider is set', async () => {
   const saveCalls = []
   const jiminy = createJiminy({
     getSettings: async () => ({
       contextFolderPath: '',
       llmProviderName: 'gemini',
-      llmProviderApiKey: '',
-      exclusions: []
+      llmProviderApiKey: ''
     }),
     saveSettings: async (payload) => {
       saveCalls.push(payload)
@@ -394,7 +280,6 @@ test('always record toggle saves on change', async () => {
       contextFolderPath: '',
       llmProviderName: 'gemini',
       llmProviderApiKey: '',
-      exclusions: [],
       alwaysRecordWhenActive: false
     }),
     saveSettings: async (payload) => {
@@ -437,7 +322,6 @@ test('recording action button starts recording when inactive', async () => {
       contextFolderPath: '/tmp/context',
       llmProviderName: 'gemini',
       llmProviderApiKey: '',
-      exclusions: [],
       alwaysRecordWhenActive: true,
       screenRecordingPermissionStatus: 'granted'
     }),
@@ -544,257 +428,19 @@ test('hotkey recording surfaces resume errors', async () => {
   }
 })
 
-test('add exclusion surfaces missing context folder errors', async () => {
-  const jiminy = createJiminy({
-    pickExclusion: async () => ({ canceled: true })
-  })
-
-  const elements = createElements()
-  const document = new TestDocument(elements)
-  const priorDocument = global.document
-  const priorWindow = global.window
-  global.document = document
-  global.window = { jiminy }
-
-  try {
-    loadRenderer()
-    document.trigger('DOMContentLoaded')
-    await flushPromises()
-
-    await elements['add-exclusion'].click()
-    await flushPromises()
-
-    assert.equal(
-      elements['exclusions-error'].textContent,
-      'Select a context folder before adding exclusions.'
-    )
-  } finally {
-    global.document = priorDocument
-    global.window = priorWindow
-  }
-})
-
-test('add exclusion surfaces missing picker errors', async () => {
-  const jiminy = createJiminy()
-
-  const elements = createElements()
-  elements['context-folder-path'].value = '/tmp/context'
-  const document = new TestDocument(elements)
-  const priorDocument = global.document
-  const priorWindow = global.window
-  global.document = document
-  global.window = { jiminy }
-
-  try {
-    loadRenderer()
-    document.trigger('DOMContentLoaded')
-    await flushPromises()
-
-    await elements['add-exclusion'].click()
-    await flushPromises()
-
-    assert.equal(
-      elements['exclusions-error'].textContent,
-      'Exclusion picker unavailable. Restart the app.'
-    )
-  } finally {
-    global.document = priorDocument
-    global.window = priorWindow
-  }
-})
-
-test('add exclusion surfaces picker errors', async () => {
-  const jiminy = createJiminy({
-    getSettings: async () => ({
-      contextFolderPath: '/tmp/context',
-      llmProviderName: 'gemini',
-      llmProviderApiKey: '',
-      exclusions: []
-    }),
-    pickExclusion: async () => ({ canceled: true, error: 'boom' })
-  })
-
-  const elements = createElements()
-  const document = new TestDocument(elements)
-  const priorDocument = global.document
-  const priorWindow = global.window
-  global.document = document
-  global.window = { jiminy }
-
-  try {
-    loadRenderer()
-    document.trigger('DOMContentLoaded')
-    await flushPromises()
-
-    await elements['add-exclusion'].click()
-    await flushPromises()
-
-    assert.equal(elements['exclusions-error'].textContent, 'boom')
-  } finally {
-    global.document = priorDocument
-    global.window = priorWindow
-  }
-})
-
-test('exclusion save failures surface to the user', async () => {
-  const jiminy = createJiminy({
-    getSettings: async () => ({
-      contextFolderPath: '/tmp/context',
-      llmProviderName: 'gemini',
-      llmProviderApiKey: '',
-      exclusions: []
-    }),
-    pickExclusion: async () => ({ canceled: false, path: 'foo/bar' }),
-    saveSettings: async () => {
-      throw new Error('save failed')
-    }
-  })
-
-  const elements = createElements()
-  const document = new TestDocument(elements)
-  const priorDocument = global.document
-  const priorWindow = global.window
-  global.document = document
-  global.window = { jiminy }
-
-  try {
-    loadRenderer()
-    document.trigger('DOMContentLoaded')
-    await flushPromises()
-
-    await elements['add-exclusion'].click()
-    await flushPromises()
-
-    assert.equal(elements['exclusions-error'].textContent, 'Failed to save exclusions.')
-  } finally {
-    global.document = priorDocument
-    global.window = priorWindow
-  }
-})
-
-test('prune button clears context graph data', async () => {
-  const statusCalls = []
-  const pruneCalls = []
-  const jiminy = {
-    getSettings: async () => ({
-      contextFolderPath: '/tmp/context',
-      llmProviderName: 'gemini',
-      llmProviderApiKey: '',
-      exclusions: []
-    }),
-    pickContextFolder: async () => ({ canceled: true }),
-    saveSettings: async () => ({ ok: true }),
-    getContextGraphStatus: async (payload) => {
-      statusCalls.push(payload)
-      return { syncedNodes: 1, totalNodes: 1, maxNodesExceeded: false }
-    },
-    syncContextGraph: async () => ({ ok: true, warnings: [], errors: [] }),
-    pruneContextGraph: async () => {
-      pruneCalls.push(true)
-      return { ok: true, deleted: true }
-    }
-  }
-
-  const elements = createElements()
-  const document = new TestDocument(elements)
-  const priorDocument = global.document
-  const priorWindow = global.window
-  global.document = document
-  global.window = { jiminy }
-
-  try {
-    const rendererPath = path.join(__dirname, '..', 'src', 'dashboard', 'renderer.js')
-    const resolvedRendererPath = require.resolve(rendererPath)
-    delete require.cache[resolvedRendererPath]
-    require(resolvedRendererPath)
-
-    document.trigger('DOMContentLoaded')
-    await flushPromises()
-
-    assert.equal(elements['context-graph-prune'].disabled, false)
-    assert.equal(statusCalls.length, 1)
-
-    await elements['context-graph-prune'].click()
-    await flushPromises()
-
-    assert.equal(pruneCalls.length, 1)
-    assert.equal(elements['context-graph-prune-status'].textContent, 'Pruned.')
-    assert.equal(statusCalls.length, 2)
-  } finally {
-    global.document = priorDocument
-    global.window = priorWindow
-  }
-})
-
-test('prune button reports nothing to prune when graph is missing', async () => {
-  const statusCalls = []
-  const pruneCalls = []
-  const jiminy = {
-    getSettings: async () => ({
-      contextFolderPath: '/tmp/context',
-      llmProviderName: 'gemini',
-      llmProviderApiKey: '',
-      exclusions: []
-    }),
-    pickContextFolder: async () => ({ canceled: true }),
-    saveSettings: async () => ({ ok: true }),
-    getContextGraphStatus: async (payload) => {
-      statusCalls.push(payload)
-      return { syncedNodes: 0, totalNodes: 0, maxNodesExceeded: false }
-    },
-    syncContextGraph: async () => ({ ok: true, warnings: [], errors: [] }),
-    pruneContextGraph: async () => {
-      pruneCalls.push(true)
-      return { ok: true, deleted: false }
-    }
-  }
-
-  const elements = createElements()
-  const document = new TestDocument(elements)
-  const priorDocument = global.document
-  const priorWindow = global.window
-  global.document = document
-  global.window = { jiminy }
-
-  try {
-    const rendererPath = path.join(__dirname, '..', 'src', 'dashboard', 'renderer.js')
-    const resolvedRendererPath = require.resolve(rendererPath)
-    delete require.cache[resolvedRendererPath]
-    require(resolvedRendererPath)
-
-    document.trigger('DOMContentLoaded')
-    await flushPromises()
-
-    assert.equal(elements['context-graph-prune'].disabled, false)
-    assert.equal(statusCalls.length, 1)
-
-    await elements['context-graph-prune'].click()
-    await flushPromises()
-
-    assert.equal(pruneCalls.length, 1)
-    assert.equal(elements['context-graph-prune-status'].textContent, 'Nothing to prune.')
-    assert.equal(statusCalls.length, 2)
-  } finally {
-    global.document = priorDocument
-    global.window = priorWindow
-  }
-})
-
 test('auto-saves LLM provider selection', async () => {
   const saveCalls = []
   const jiminy = {
     getSettings: async () => ({
       contextFolderPath: '',
       llmProviderName: 'gemini',
-      llmProviderApiKey: '',
-      exclusions: []
+      llmProviderApiKey: ''
     }),
     pickContextFolder: async () => ({ canceled: true }),
     saveSettings: async (payload) => {
       saveCalls.push(payload)
       return { ok: true }
-    },
-    getContextGraphStatus: async () => ({ syncedNodes: 0, totalNodes: 0, maxNodesExceeded: false })
+    }
   }
 
   const elements = createElements()

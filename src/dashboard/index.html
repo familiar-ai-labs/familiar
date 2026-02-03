@@ -48,23 +48,6 @@
             </button>
             <button
               class="sidebar-item"
-              data-section-target="graph"
-              data-active="false"
-              role="tab"
-              aria-controls="section-graph"
-              aria-selected="false"
-              type="button"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                <circle cx="6" cy="12" r="2" />
-                <circle cx="18" cy="6" r="2" />
-                <circle cx="18" cy="18" r="2" />
-                <path d="M7.8 11.1 16.1 7.1M7.8 12.9 16.1 16.9" />
-              </svg>
-              Graph
-            </button>
-            <button
-              class="sidebar-item"
               data-section-target="recording"
               data-active="false"
               role="tab"
@@ -77,21 +60,6 @@
                 <path d="M16 9.5 21 7v10l-5-2.5" />
               </svg>
               Recording
-            </button>
-            <button
-              class="sidebar-item"
-              data-section-target="exclusions"
-              data-active="false"
-              role="tab"
-              aria-controls="section-exclusions"
-              aria-selected="false"
-              type="button"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                <path d="M12 3l7 4v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7l7-4Z" />
-                <path d="M9.5 12.5 12 15l4-4" />
-              </svg>
-              Exclusions
             </button>
             <button
               class="sidebar-item"
@@ -311,94 +279,6 @@
               </section>
             </section>
 
-            <section id="section-graph" data-section-pane="graph" role="tabpanel" aria-label="Context graph" class="space-y-6 hidden">
-              <section class="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 shadow-sm space-y-4">
-                <div class="flex items-start justify-between">
-                  <div class="space-y-1">
-                    <h4 class="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Sync Status</h4>
-                    <div class="flex items-baseline gap-2">
-                      <span id="context-graph-percent" class="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">0%</span>
-                      <span class="text-xs font-medium text-zinc-500 dark:text-zinc-400">synced</span>
-                    </div>
-                  </div>
-                  <div id="context-graph-status-pill" class="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-900/40">
-                    <span id="context-graph-status-dot" class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                    <span id="context-graph-status-label" class="text-[10px] font-medium text-emerald-700 dark:text-emerald-400">Ready</span>
-                  </div>
-                </div>
-
-                <div class="space-y-2">
-                  <div class="h-2 w-full bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden flex">
-                    <div id="context-graph-bar-synced" class="h-full bg-emerald-500"></div>
-                    <div id="context-graph-bar-pending" class="h-full bg-amber-400 bg-stripe"></div>
-                    <div id="context-graph-bar-new" class="h-full bg-blue-500"></div>
-                  </div>
-                  <div class="flex flex-wrap justify-between items-center gap-2 text-[10px] text-zinc-500 dark:text-zinc-400 font-medium">
-                    <span class="flex items-center gap-1">
-                      <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                      <span id="context-graph-synced-count">0</span> Synced
-                    </span>
-                    <span class="flex items-center gap-1">
-                      <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
-                      <span id="context-graph-pending-count">0</span> Pending
-                    </span>
-                    <span class="flex items-center gap-1">
-                      <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                      <span id="context-graph-new-count">0</span> New
-                    </span>
-                    <span class="flex items-center gap-1">
-                      <span class="w-1.5 h-1.5 rounded-full bg-zinc-400"></span>
-                      <span id="context-graph-ignored-count">0</span> Ignored
-                    </span>
-                  </div>
-                </div>
-
-                <div class="flex flex-wrap items-center gap-2">
-                  <button id="context-graph-sync" data-action="context-graph-sync" type="button" class="px-3 py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 border border-indigo-600 hover:border-indigo-700 rounded-lg text-white focus:outline-none transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">Sync now</button>
-                  <span id="context-graph-status" data-setting-status="context-graph-status" class="text-xs text-emerald-600 dark:text-emerald-400 hidden" aria-live="polite"></span>
-                </div>
-
-                <p id="context-graph-warning" data-setting-status="context-graph-warning" class="text-xs text-amber-600 dark:text-amber-400 hidden" aria-live="polite"></p>
-                <p id="context-graph-progress" data-setting-status="context-graph-progress" class="text-xs text-zinc-500 dark:text-zinc-400" aria-live="polite"></p>
-                <p id="context-graph-error" data-setting-error="context-graph-error" class="text-xs text-red-600 dark:text-red-400 hidden" role="alert" aria-live="polite"></p>
-              </section>
-
-              <section class="space-y-3">
-                <div class="flex items-center justify-between px-1">
-                  <h4 class="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Manage Data</h4>
-                </div>
-                <div class="group flex items-center justify-between p-3 rounded-lg border border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-red-200 dark:hover:border-red-900/40 hover:bg-red-50/30 dark:hover:bg-red-900/10 transition-all">
-                  <div class="flex flex-col">
-                    <span class="text-xs font-medium text-zinc-700 dark:text-zinc-300 group-hover:text-red-700 dark:group-hover:text-red-400 transition-colors">Prune current path</span>
-                    <span class="text-[10px] text-zinc-400 group-hover:text-red-600/70 transition-colors">Discard unsaved nodes</span>
-                  </div>
-                  <button id="context-graph-prune" data-action="context-graph-prune" type="button" class="w-8 h-8 rounded flex items-center justify-center text-zinc-400 group-hover:text-red-600 group-hover:bg-red-100 dark:group-hover:bg-red-900/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-4 h-4" aria-hidden="true">
-                      <path d="M3 6h18" />
-                      <path d="M8 6V4h8v2" />
-                      <path d="M6 6l1 14h10l1-14" />
-                      <path d="M10 10v6" />
-                      <path d="M14 10v6" />
-                    </svg>
-                  </button>
-                </div>
-                <span id="context-graph-prune-status" data-setting-status="context-graph-prune-status" class="text-xs text-emerald-600 dark:text-emerald-400 hidden" aria-live="polite"></span>
-              </section>
-            </section>
-
-            <!-- Exclusions -->
-            <section id="section-exclusions" data-section-pane="exclusions" role="tabpanel" aria-label="Excluded paths" class="space-y-4 hidden">
-              <div class="flex items-center justify-between">
-                <div>
-                  <h3 class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Excluded Paths</h3>
-                  <p class="text-xs text-zinc-500 dark:text-zinc-400">Skipped during sync and capture.</p>
-                </div>
-                <button id="add-exclusion" data-action="add-exclusion" type="button" class="px-3 py-2 text-xs font-semibold bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">Add exclusion</button>
-              </div>
-              <ul id="exclusions-list" data-setting-list="exclusions" class="space-y-2 empty:hidden"></ul>
-              <p id="exclusions-error" data-setting-error="exclusions-error" class="text-xs text-red-600 dark:text-red-400 hidden" role="alert" aria-live="polite"></p>
-            </section>
-
             <!-- Updates -->
             <section id="section-updates" data-section-pane="updates" role="tabpanel" aria-label="Updates" class="space-y-4 hidden">
               <div class="flex flex-wrap items-center gap-2">
@@ -477,7 +357,7 @@
             <div class="flex-none px-6 py-4 border-b border-zinc-100 dark:border-zinc-800/50 flex justify-between items-center">
               <div>
                 <h2 class="text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Setup Wizard</h2>
-                <p class="text-xs text-zinc-500 dark:text-zinc-400">Guided setup in five steps.</p>
+                <p class="text-xs text-zinc-500 dark:text-zinc-400">Guided setup in three steps.</p>
               </div>
               <span id="wizard-complete-status" class="text-xs font-medium text-emerald-600 dark:text-emerald-400 hidden">Setup complete</span>
             </div>
@@ -493,28 +373,14 @@
                 </div>
                 <div class="flex flex-col items-center gap-1.5 relative z-10" data-wizard-step-indicator="2">
                   <div class="w-7 h-7 rounded-full border border-zinc-200 dark:border-zinc-700 text-xs font-semibold text-zinc-500 flex items-center justify-center" data-wizard-step-circle="2">2</div>
-                  <span class="text-xs font-medium text-zinc-500" data-wizard-step-label="2">Exclusions</span>
+                  <span class="text-xs font-medium text-zinc-500" data-wizard-step-label="2">Intelligence</span>
                 </div>
                 <div class="flex-1 h-px bg-zinc-200 dark:bg-zinc-800 mx-2 relative">
                   <div class="absolute inset-y-0 left-0 bg-indigo-600 w-0 transition-all" data-wizard-step-connector="2"></div>
                 </div>
                 <div class="flex flex-col items-center gap-1.5 relative z-10" data-wizard-step-indicator="3">
                   <div class="w-7 h-7 rounded-full border border-zinc-200 dark:border-zinc-700 text-xs font-semibold text-zinc-500 flex items-center justify-center" data-wizard-step-circle="3">3</div>
-                  <span class="text-xs font-medium text-zinc-500" data-wizard-step-label="3">Intelligence</span>
-                </div>
-                <div class="flex-1 h-px bg-zinc-200 dark:bg-zinc-800 mx-2 relative">
-                  <div class="absolute inset-y-0 left-0 bg-indigo-600 w-0 transition-all" data-wizard-step-connector="3"></div>
-                </div>
-                <div class="flex flex-col items-center gap-1.5 relative z-10" data-wizard-step-indicator="4">
-                  <div class="w-7 h-7 rounded-full border border-zinc-200 dark:border-zinc-700 text-xs font-semibold text-zinc-500 flex items-center justify-center" data-wizard-step-circle="4">4</div>
-                  <span class="text-xs font-medium text-zinc-500" data-wizard-step-label="4">Sync</span>
-                </div>
-                <div class="flex-1 h-px bg-zinc-200 dark:bg-zinc-800 mx-2 relative">
-                  <div class="absolute inset-y-0 left-0 bg-indigo-600 w-0 transition-all" data-wizard-step-connector="4"></div>
-                </div>
-                <div class="flex flex-col items-center gap-1.5 relative z-10" data-wizard-step-indicator="5">
-                  <div class="w-7 h-7 rounded-full border border-zinc-200 dark:border-zinc-700 text-xs font-semibold text-zinc-500 flex items-center justify-center" data-wizard-step-circle="5">5</div>
-                  <span class="text-xs font-medium text-zinc-500" data-wizard-step-label="5">Hotkeys</span>
+                  <span class="text-xs font-medium text-zinc-500" data-wizard-step-label="3">Hotkeys</span>
                 </div>
               </div>
             </div>
@@ -552,19 +418,6 @@
 
               <div data-wizard-step="2" class="max-w-[360px] mx-auto space-y-5 hidden">
                 <div class="text-center space-y-1">
-                  <h3 class="text-sm font-medium text-zinc-900 dark:text-zinc-100">Exclude paths you do not want tracked</h3>
-                  <p class="text-xs text-zinc-500 dark:text-zinc-400">Add folders or files to skip during sync and capture.</p>
-                </div>
-                <div class="flex items-center justify-between">
-                  <label class="section-label">Exclusions</label>
-                  <button id="wizard-add-exclusion" data-action="add-exclusion" type="button" class="px-3 py-2 text-xs font-semibold bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">Add exclusion</button>
-                </div>
-                <ul id="wizard-exclusions-list" data-setting-list="exclusions" class="space-y-2 empty:hidden"></ul>
-                <p id="wizard-exclusions-error" data-setting-error="exclusions-error" class="text-xs text-red-600 dark:text-red-400 hidden" role="alert" aria-live="polite"></p>
-              </div>
-
-              <div data-wizard-step="3" class="max-w-[360px] mx-auto space-y-5 hidden">
-                <div class="text-center space-y-1">
                   <h3 class="text-sm font-medium text-zinc-900 dark:text-zinc-100">Configure Intelligence</h3>
                   <p class="text-xs text-zinc-500 dark:text-zinc-400">Select your model provider and store your API key.</p>
                 </div>
@@ -599,24 +452,7 @@
                 </section>
               </div>
 
-              <div data-wizard-step="4" class="max-w-[360px] mx-auto space-y-5 hidden">
-                <div class="text-center space-y-1">
-                  <h3 class="text-sm font-medium text-zinc-900 dark:text-zinc-100">Sync your context graph</h3>
-                  <p class="text-xs text-zinc-500 dark:text-zinc-400">Build the knowledge graph from your selected folder.</p>
-                </div>
-                <div class="space-y-3">
-                  <p id="wizard-context-graph-stats" data-setting-status="context-graph-stats" class="text-xs text-zinc-500 dark:text-zinc-400" aria-live="polite"></p>
-                  <div class="flex items-center gap-2">
-                    <button id="wizard-context-graph-sync" data-action="context-graph-sync" type="button" class="px-3 py-2 text-xs font-semibold bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">Sync now</button>
-                    <span id="wizard-context-graph-status" data-setting-status="context-graph-status" class="text-xs text-emerald-600 dark:text-emerald-400 hidden" aria-live="polite"></span>
-                  </div>
-                  <p id="wizard-context-graph-progress" data-setting-status="context-graph-progress" class="text-xs text-zinc-500 dark:text-zinc-400" aria-live="polite"></p>
-                  <p id="wizard-context-graph-warning" data-setting-status="context-graph-warning" class="text-xs text-amber-600 dark:text-amber-400 hidden" aria-live="polite"></p>
-                  <p id="wizard-context-graph-error" data-setting-error="context-graph-error" class="text-xs text-red-600 dark:text-red-400 hidden" role="alert" aria-live="polite"></p>
-                </div>
-              </div>
-
-              <div data-wizard-step="5" class="max-w-[360px] mx-auto space-y-5 hidden">
+              <div data-wizard-step="3" class="max-w-[360px] mx-auto space-y-5 hidden">
                 <div class="text-center space-y-1">
                   <h3 class="text-sm font-medium text-zinc-900 dark:text-zinc-100">Review hotkeys</h3>
                   <p class="text-xs text-zinc-500 dark:text-zinc-400">Confirm shortcuts for the tools you will use most.</p>
@@ -677,22 +513,18 @@
     </div>
 
     <script src="./wizard.js"></script>
-    <script src="./exclusions.js"></script>
     <script src="./hotkeys.js"></script>
     <script src="./history.js"></script>
     <script src="./updates.js"></script>
     <script src="./recording.js"></script>
     <script src="./settings.js"></script>
-    <script src="./graph.js"></script>
     <script src="./module-loader.js"></script>
     <script src="./state.js"></script>
     <script src="./bootstrap/wizard.js"></script>
-    <script src="./bootstrap/graph.js"></script>
     <script src="./bootstrap/history.js"></script>
     <script src="./bootstrap/updates.js"></script>
     <script src="./bootstrap/recording.js"></script>
     <script src="./bootstrap/settings.js"></script>
-    <script src="./bootstrap/exclusions.js"></script>
     <script src="./bootstrap/hotkeys.js"></script>
     <script src="./renderer.js"></script>
   </body>

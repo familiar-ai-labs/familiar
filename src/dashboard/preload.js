@@ -6,7 +6,6 @@ contextBridge.exposeInMainWorld('jiminy', {
   nodeVersion: process.versions.node,
   getSettings: () => ipcRenderer.invoke('settings:get'),
   pickContextFolder: () => ipcRenderer.invoke('settings:pickContextFolder'),
-  pickExclusion: (contextFolderPath) => ipcRenderer.invoke('settings:pickExclusion', contextFolderPath),
   saveSettings: (payload) => {
     const data = typeof payload === 'string' ? { contextFolderPath: payload } : payload
     return ipcRenderer.invoke('settings:save', data)
@@ -14,9 +13,6 @@ contextBridge.exposeInMainWorld('jiminy', {
   reregisterHotkeys: () => ipcRenderer.invoke('hotkeys:reregister'),
   suspendHotkeys: () => ipcRenderer.invoke('hotkeys:suspend'),
   resumeHotkeys: () => ipcRenderer.invoke('hotkeys:resume'),
-  getContextGraphStatus: (payload) => ipcRenderer.invoke('contextGraph:status', payload),
-  syncContextGraph: () => ipcRenderer.invoke('contextGraph:sync'),
-  pruneContextGraph: () => ipcRenderer.invoke('contextGraph:prune'),
   getHistoryFlows: (options) => ipcRenderer.invoke('history:listFlows', options),
   getHistoryEvents: (flowId) => ipcRenderer.invoke('history:listEvents', flowId),
   exportHistoryFlow: (flowId) => ipcRenderer.invoke('history:exportFlow', flowId),
@@ -37,10 +33,5 @@ contextBridge.exposeInMainWorld('jiminy', {
     const listener = (_event, payload) => handler(payload)
     ipcRenderer.on('updates:downloaded', listener)
     return () => ipcRenderer.removeListener('updates:downloaded', listener)
-  },
-  onContextGraphProgress: (handler) => {
-    const listener = (_event, payload) => handler(payload)
-    ipcRenderer.on('contextGraph:progress', listener)
-    return () => ipcRenderer.removeListener('contextGraph:progress', listener)
   }
 })

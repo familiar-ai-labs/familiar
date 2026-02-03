@@ -15,8 +15,6 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
     }
     if (typeof require === 'function') {
       return {
-        ...require('./bootstrap/exclusions'),
-        ...require('./bootstrap/graph'),
         ...require('./bootstrap/history'),
         ...require('./bootstrap/hotkeys'),
         ...require('./bootstrap/recording'),
@@ -35,8 +33,6 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
   const loadDashboardModules = moduleLoader?.loadDashboardModules
   const createDashboardState = stateModule?.createDashboardState
   const {
-    bootstrapExclusions,
-    bootstrapGraph,
     bootstrapHistory,
     bootstrapHotkeys,
     bootstrapRecording,
@@ -117,25 +113,6 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
   const recordingQueryEstimate = document.getElementById('recording-query-estimate')
   const recordingQueryPath = document.getElementById('recording-query-path')
 
-  const syncButtons = selectAll('[data-action="context-graph-sync"]')
-  const syncStatuses = selectAll('[data-setting-status="context-graph-status"]')
-  const syncStats = selectAll('[data-setting-status="context-graph-stats"]')
-  const syncProgress = selectAll('[data-setting-status="context-graph-progress"]')
-  const syncWarnings = selectAll('[data-setting-status="context-graph-warning"]')
-  const syncErrors = selectAll('[data-setting-error="context-graph-error"]')
-  const pruneButtons = selectAll('[data-action="context-graph-prune"]')
-  const pruneStatuses = selectAll('[data-setting-status="context-graph-prune-status"]')
-  const graphStatusPill = document.getElementById('context-graph-status-pill')
-  const graphStatusDot = document.getElementById('context-graph-status-dot')
-  const graphStatusLabel = document.getElementById('context-graph-status-label')
-  const graphPercent = document.getElementById('context-graph-percent')
-  const graphBarSynced = document.getElementById('context-graph-bar-synced')
-  const graphBarPending = document.getElementById('context-graph-bar-pending')
-  const graphBarNew = document.getElementById('context-graph-bar-new')
-  const graphSyncedCount = document.getElementById('context-graph-synced-count')
-  const graphPendingCount = document.getElementById('context-graph-pending-count')
-  const graphNewCount = document.getElementById('context-graph-new-count')
-  const graphIgnoredCount = document.getElementById('context-graph-ignored-count')
   const updateButtons = selectAll('[data-action="updates-check"]')
   const updateStatuses = selectAll('[data-setting-status="updates-status"]')
   const updateErrors = selectAll('[data-setting-error="updates-error"]')
@@ -143,9 +120,6 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
   const updateProgressBar = document.getElementById('updates-progress-bar')
   const updateProgressLabel = document.getElementById('updates-progress-label')
 
-  const exclusionsLists = selectAll('[data-setting-list="exclusions"]')
-  const addExclusionButtons = selectAll('[data-action="add-exclusion"]')
-  const exclusionsErrors = selectAll('[data-setting-error="exclusions-error"]')
 
   const hotkeyButtons = selectAll('.hotkey-recorder')
   function isCaptureHotkey(button) {
@@ -179,13 +153,11 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
 
   const apis = {
     wizardApi: null,
-    exclusionsApi: null,
     hotkeysApi: null,
     historyApi: null,
     updatesApi: null,
     settingsApi: null,
-    recordingApi: null,
-    graphApi: null
+    recordingApi: null
   }
 
   const state = createDashboardState({
@@ -211,14 +183,6 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
     general: {
       title: 'General Settings',
       subtitle: 'Core app configuration and provider setup.'
-    },
-    graph: {
-      title: 'Context Graph',
-      subtitle: 'Monitor sync health and graph status.'
-    },
-    exclusions: {
-      title: 'Exclusions',
-      subtitle: 'Paths skipped during sync and capture.'
     },
     hotkeys: {
       title: 'Hotkeys',
@@ -282,7 +246,6 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
       state.updateWizardUI()
     }
     callIfAvailable(apis.historyApi, 'handleSectionChange', nextSection)
-    callIfAvailable(apis.graphApi, 'handleSectionChange', nextSection)
     callIfAvailable(apis.recordingApi, 'handleSectionChange', nextSection)
 
     console.log('Settings section changed', { section: nextSection })
@@ -293,12 +256,10 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
   }
 
   const runBootstrapWizard = typeof bootstrapWizard === 'function' ? bootstrapWizard : () => null
-  const runBootstrapGraph = typeof bootstrapGraph === 'function' ? bootstrapGraph : () => null
   const runBootstrapHistory = typeof bootstrapHistory === 'function' ? bootstrapHistory : () => null
   const runBootstrapUpdates = typeof bootstrapUpdates === 'function' ? bootstrapUpdates : () => null
   const runBootstrapRecording = typeof bootstrapRecording === 'function' ? bootstrapRecording : () => null
   const runBootstrapSettings = typeof bootstrapSettings === 'function' ? bootstrapSettings : () => null
-  const runBootstrapExclusions = typeof bootstrapExclusions === 'function' ? bootstrapExclusions : () => null
   const runBootstrapHotkeys = typeof bootstrapHotkeys === 'function' ? bootstrapHotkeys : () => null
 
   apis.wizardApi = runBootstrapWizard({
@@ -343,36 +304,6 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
       element.classList.toggle('hidden', !value)
     }
   }
-
-  apis.graphApi = runBootstrapGraph({
-    window,
-    elements: {
-      syncButtons,
-      syncStatuses,
-      syncStats,
-      syncProgress,
-      syncWarnings,
-      syncErrors,
-      pruneButtons,
-      pruneStatuses,
-      statusPill: graphStatusPill,
-      statusDot: graphStatusDot,
-      statusLabel: graphStatusLabel,
-      percentLabel: graphPercent,
-      barSynced: graphBarSynced,
-      barPending: graphBarPending,
-      barNew: graphBarNew,
-      syncedCount: graphSyncedCount,
-      pendingCount: graphPendingCount,
-      newCount: graphNewCount,
-      ignoredCount: graphIgnoredCount
-    },
-    jiminy,
-    getState: state.getGraphState,
-    setGraphState: state.setGraphState,
-    setMessage,
-    updateWizardUI: state.updateWizardUI
-  })
 
   apis.historyApi = runBootstrapHistory({
     window,
@@ -423,14 +354,6 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
     getState: state.getRecordingState
   })
 
-  function refreshContextGraphStatus(options) {
-    return callIfAvailable(apis.graphApi, 'refreshContextGraphStatus', options)
-  }
-
-  function updatePruneButtonState() {
-    callIfAvailable(apis.graphApi, 'updatePruneButtonState')
-  }
-
   apis.settingsApi = runBootstrapSettings({
     window,
     elements: {
@@ -461,10 +384,7 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
     setLlmApiKeySaved: state.setLlmApiKeySaved,
     setAlwaysRecordWhenActiveValue: state.setAlwaysRecordWhenActiveValue,
     setHotkeys: state.setHotkeysFromSettings,
-    setExclusions: state.setExclusionsValue,
     setMessage,
-    refreshContextGraphStatus,
-    updatePruneButtonState,
     updateWizardUI: state.updateWizardUI
   })
 
@@ -473,27 +393,12 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
     setMessage(llmProviderErrors, 'Settings module unavailable. Restart the app.')
     setMessage(llmKeyErrors, 'Settings module unavailable. Restart the app.')
     setMessage(hotkeysErrors, 'Settings module unavailable. Restart the app.')
-    updatePruneButtonState()
     return
   }
 
   if (!apis.settingsApi.isReady) {
     return
   }
-
-  apis.exclusionsApi = runBootstrapExclusions({
-    window,
-    elements: {
-      exclusionsLists,
-      addExclusionButtons,
-      exclusionsErrors
-    },
-    jiminy,
-    getState: state.getExclusionsState,
-    setExclusions: state.setExclusionsState,
-    setMessage,
-    refreshContextGraphStatus
-  })
 
   apis.hotkeysApi = runBootstrapHotkeys({
     window,
@@ -520,12 +425,10 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
   })
 
   async function initialize() {
-    callIfAvailable(apis.graphApi, 'showLoading')
     const settingsResult = await apis.settingsApi.loadSettings()
     state.setIsFirstRun(Boolean(settingsResult?.isFirstRun))
     callIfAvailable(apis.recordingApi, 'setPermissionStatus', settingsResult?.screenRecordingPermissionStatus || '')
     callIfAvailable(apis.recordingApi, 'updateRecordingUI')
-    await refreshContextGraphStatus()
     const defaultSection = state.getIsFirstRun() ? 'wizard' : 'general'
     setActiveSection(defaultSection)
     state.updateWizardUI()

@@ -1,13 +1,11 @@
 (function registerModuleLoader(global) {
   const MODULE_SPECS = [
     { globalKey: 'JiminyWizard', modulePath: './wizard.js', factory: 'createWizard' },
-    { globalKey: 'JiminyExclusions', modulePath: './exclusions.js', factory: 'createExclusions' },
     { globalKey: 'JiminyHotkeys', modulePath: './hotkeys.js', factory: 'createHotkeys' },
     { globalKey: 'JiminyHistory', modulePath: './history.js', factory: 'createHistory' },
     { globalKey: 'JiminyUpdates', modulePath: './updates.js', factory: 'createUpdates' },
     { globalKey: 'JiminySettings', modulePath: './settings.js', factory: 'createSettings' },
-    { globalKey: 'JiminyRecording', modulePath: './recording.js', factory: 'createRecording' },
-    { globalKey: 'JiminyGraph', modulePath: './graph.js', factory: 'createGraph' }
+    { globalKey: 'JiminyRecording', modulePath: './recording.js', factory: 'createRecording' }
   ]
 
   function assignModule(targetWindow, moduleExports) {

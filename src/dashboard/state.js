@@ -19,9 +19,6 @@
       currentCaptureHotkey: defaults.capture || '',
       currentClipboardHotkey: defaults.clipboard || '',
       currentRecordingHotkey: defaults.recording || '',
-      currentExclusions: [],
-      isContextGraphSynced: false,
-      hasCompletedSync: false,
       isFirstRun: false
     }
 
@@ -50,18 +47,6 @@
       }
     }
 
-    function setExclusionsState(exclusions) {
-      state.currentExclusions = Array.isArray(exclusions) ? [...exclusions] : []
-    }
-
-    function setExclusionsValue(exclusions) {
-      if (apis.exclusionsApi && typeof apis.exclusionsApi.setExclusions === 'function') {
-        apis.exclusionsApi.setExclusions(exclusions)
-        return
-      }
-      setExclusionsState(exclusions)
-    }
-
     function setInputValues(targets, value) {
       for (const element of targets) {
         if (element.value !== value) {
@@ -72,14 +57,9 @@
 
     function setContextFolderValue(value) {
       const nextValue = value || ''
-      if (state.currentContextFolderPath !== nextValue) {
-        state.hasCompletedSync = false
-        state.isContextGraphSynced = false
-      }
       state.currentContextFolderPath = nextValue
       setInputValues(contextFolderInputs, state.currentContextFolderPath)
       callIfAvailable(apis.recordingApi, 'updateRecordingUI')
-      callIfAvailable(apis.graphApi, 'updatePruneButtonState')
       updateWizardUI()
     }
 
@@ -131,16 +111,6 @@
       updateWizardUI()
     }
 
-    function setGraphState(updates = {}) {
-      if ('isContextGraphSynced' in updates) {
-        state.isContextGraphSynced = updates.isContextGraphSynced
-      }
-      if ('hasCompletedSync' in updates && updates.hasCompletedSync !== undefined) {
-        state.hasCompletedSync = updates.hasCompletedSync
-      }
-      updateWizardUI()
-    }
-
     function setIsFirstRun(value) {
       state.isFirstRun = Boolean(value)
     }
@@ -155,20 +125,9 @@
         currentLlmProviderName: state.currentLlmProviderName,
         currentLlmApiKey: state.currentLlmApiKey,
         isLlmApiKeySaved: state.isLlmApiKeySaved,
-        hasCompletedSync: state.hasCompletedSync,
-        isContextGraphSynced: state.isContextGraphSynced,
         currentCaptureHotkey: state.currentCaptureHotkey,
         currentClipboardHotkey: state.currentClipboardHotkey,
         currentRecordingHotkey: state.currentRecordingHotkey
-      }
-    }
-
-    function getGraphState() {
-      return {
-        currentContextFolderPath: state.currentContextFolderPath,
-        currentExclusions: state.currentExclusions,
-        isContextGraphSynced: state.isContextGraphSynced,
-        hasCompletedSync: state.hasCompletedSync
       }
     }
 
@@ -187,15 +146,7 @@
         currentLlmProviderName: state.currentLlmProviderName,
         currentLlmApiKey: state.currentLlmApiKey,
         pendingLlmApiKey: state.pendingLlmApiKey,
-        currentExclusions: state.currentExclusions,
         currentAlwaysRecordWhenActive: state.currentAlwaysRecordWhenActive
-      }
-    }
-
-    function getExclusionsState() {
-      return {
-        currentContextFolderPath: state.currentContextFolderPath,
-        currentExclusions: state.currentExclusions
       }
     }
 
@@ -210,22 +161,17 @@
     return {
       updateWizardUI,
       setHotkeyValue,
-      setExclusionsState,
-      setExclusionsValue,
       setContextFolderValue,
       setLlmProviderValue,
       setLlmApiKeyPending,
       setLlmApiKeySaved,
       setAlwaysRecordWhenActiveValue,
       setHotkeysFromSettings,
-      setGraphState,
       setIsFirstRun,
       getIsFirstRun,
       getWizardState,
-      getGraphState,
       getRecordingState,
       getSettingsState,
-      getExclusionsState,
       getHotkeysState
     }
   }

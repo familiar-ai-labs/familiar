@@ -1,6 +1,5 @@
 const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const fs = require('node:fs');
-const path = require('node:path');
 const { loadSettings, resolveSettingsPath, saveSettings, validateContextFolderPath } = require('../settings');
 const { DEFAULT_CAPTURE_HOTKEY, DEFAULT_CLIPBOARD_HOTKEY, DEFAULT_RECORDING_HOTKEY } = require('../hotkeys');
 const { getScreenRecordingPermissionStatus } = require('../screen-recording/permissions');
@@ -15,7 +14,6 @@ function registerSettingsHandlers(options = {}) {
     ipcMain.handle('settings:get', handleGetSettings);
     ipcMain.handle('settings:save', handleSaveSettings);
     ipcMain.handle('settings:pickContextFolder', handlePickContextFolder);
-    ipcMain.handle('settings:pickExclusion', handlePickExclusion);
     console.log('Settings IPC handlers registered');
 }
 
@@ -27,7 +25,6 @@ function handleGetSettings() {
         const contextFolderPath = settings.contextFolderPath || '';
         const llmProviderName = settings?.llm_provider?.provider || '';
         const llmProviderApiKey = settings?.llm_provider?.api_key || '';
-        const exclusions = Array.isArray(settings.exclusions) ? settings.exclusions : [];
         const captureHotkey = typeof settings.captureHotkey === 'string' ? settings.captureHotkey : DEFAULT_CAPTURE_HOTKEY;
         const clipboardHotkey = typeof settings.clipboardHotkey === 'string' ? settings.clipboardHotkey : DEFAULT_CLIPBOARD_HOTKEY;
         const recordingHotkey = typeof settings.recordingHotkey === 'string' ? settings.recordingHotkey : DEFAULT_RECORDING_HOTKEY;
@@ -51,7 +48,6 @@ function handleGetSettings() {
             validationMessage,
             llmProviderName,
             llmProviderApiKey,
-            exclusions,
             captureHotkey,
             clipboardHotkey,
             recordingHotkey,
@@ -66,7 +62,6 @@ function handleGetSettings() {
             validationMessage: 'Failed to load settings.',
             llmProviderName: '',
             llmProviderApiKey: '',
-            exclusions: [],
             captureHotkey: DEFAULT_CAPTURE_HOTKEY,
             clipboardHotkey: DEFAULT_CLIPBOARD_HOTKEY,
             recordingHotkey: DEFAULT_RECORDING_HOTKEY,
@@ -81,7 +76,6 @@ function handleSaveSettings(_event, payload) {
     const hasContextFolderPath = Object.prototype.hasOwnProperty.call(payload || {}, 'contextFolderPath');
     const hasLlmProviderApiKey = Object.prototype.hasOwnProperty.call(payload || {}, 'llmProviderApiKey');
     const hasLlmProviderName = Object.prototype.hasOwnProperty.call(payload || {}, 'llmProviderName');
-    const hasExclusions = Object.prototype.hasOwnProperty.call(payload || {}, 'exclusions');
     const hasCaptureHotkey = Object.prototype.hasOwnProperty.call(payload || {}, 'captureHotkey');
     const hasClipboardHotkey = Object.prototype.hasOwnProperty.call(payload || {}, 'clipboardHotkey');
     const hasAlwaysRecordWhenActive = Object.prototype.hasOwnProperty.call(payload || {}, 'alwaysRecordWhenActive');
@@ -92,7 +86,6 @@ function handleSaveSettings(_event, payload) {
         !hasContextFolderPath &&
         !hasLlmProviderApiKey &&
         !hasLlmProviderName &&
-        !hasExclusions &&
         !hasCaptureHotkey &&
         !hasClipboardHotkey &&
         !hasAlwaysRecordWhenActive &&
@@ -126,10 +119,6 @@ function handleSaveSettings(_event, payload) {
         settingsPayload.llmProviderName = typeof payload.llmProviderName === 'string'
             ? payload.llmProviderName
             : '';
-    }
-
-    if (hasExclusions) {
-        settingsPayload.exclusions = Array.isArray(payload.exclusions) ? payload.exclusions : [];
     }
 
     if (hasCaptureHotkey) {
@@ -228,57 +217,6 @@ async function handlePickContextFolder(event) {
 
     console.log('Context folder selected', { path: result.filePaths[0] });
     return { canceled: false, path: result.filePaths[0] };
-}
-
-async function handlePickExclusion(event, contextFolderPath) {
-    const parentWindow = BrowserWindow.fromWebContents(event.sender);
-    const defaultPath = contextFolderPath || undefined;
-
-    const openDialogOptions = {
-        title: 'Select File or Folder to Exclude',
-        defaultPath,
-        properties: ['openFile', 'openDirectory'],
-    };
-
-    console.log('Opening exclusion picker', { defaultPath });
-    if (parentWindow) {
-        parentWindow.show();
-        parentWindow.focus();
-    }
-    app.focus({ steal: true });
-
-    let result;
-    try {
-        result = parentWindow
-            ? await dialog.showOpenDialog(parentWindow, openDialogOptions)
-            : await dialog.showOpenDialog(openDialogOptions);
-    } catch (error) {
-        console.error('Failed to open exclusion picker', error);
-        return { canceled: true, error: 'Failed to open picker.' };
-    }
-
-    if (result.canceled || result.filePaths.length === 0) {
-        console.log('Exclusion picker canceled');
-        return { canceled: true };
-    }
-
-    const selectedPath = result.filePaths[0];
-
-    if (contextFolderPath) {
-        const resolvedContext = path.resolve(contextFolderPath);
-        const resolvedSelected = path.resolve(selectedPath);
-        if (!resolvedSelected.startsWith(resolvedContext + path.sep) && resolvedSelected !== resolvedContext) {
-            console.warn('Selected exclusion is outside context folder', { selectedPath, contextFolderPath });
-            return { canceled: true, error: 'Selected path must be inside the context folder.' };
-        }
-
-        const relativePath = path.relative(resolvedContext, resolvedSelected);
-        console.log('Exclusion selected', { absolutePath: selectedPath, relativePath });
-        return { canceled: false, path: relativePath };
-    }
-
-    console.log('Exclusion selected (no context folder)', { path: selectedPath });
-    return { canceled: false, path: selectedPath };
 }
 
 module.exports = {

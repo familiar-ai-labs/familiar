@@ -20,14 +20,7 @@
       ? options.setAlwaysRecordWhenActiveValue
       : () => {}
     const setHotkeys = typeof options.setHotkeys === 'function' ? options.setHotkeys : () => {}
-    const setExclusions = typeof options.setExclusions === 'function' ? options.setExclusions : () => {}
     const setMessage = typeof options.setMessage === 'function' ? options.setMessage : () => {}
-    const refreshContextGraphStatus = typeof options.refreshContextGraphStatus === 'function'
-      ? options.refreshContextGraphStatus
-      : async () => {}
-    const updatePruneButtonState = typeof options.updatePruneButtonState === 'function'
-      ? options.updatePruneButtonState
-      : () => {}
     const updateWizardUI = typeof options.updateWizardUI === 'function' ? options.updateWizardUI : () => {}
 
     const {
@@ -191,7 +184,6 @@
           clipboard: result.clipboardHotkey || DEFAULT_CLIPBOARD_HOTKEY,
           recording: result.recordingHotkey || DEFAULT_RECORDING_HOTKEY
         })
-        setExclusions(result.exclusions)
         setMessage(contextFolderErrors, result.validationMessage || '')
         setMessage(contextFolderStatuses, '')
         setMessage(llmProviderErrors, '')
@@ -201,7 +193,6 @@
         setMessage(alwaysRecordWhenActiveStatuses, '')
         setMessage(hotkeysErrors, '')
         setMessage(hotkeysStatuses, '')
-        updatePruneButtonState()
         return result
       } catch (error) {
         console.error('Failed to load settings', error)
@@ -220,7 +211,6 @@
       setMessage(llmKeyErrors, message)
       setMessage(alwaysRecordWhenActiveErrors, message)
       setMessage(hotkeysErrors, message)
-      updatePruneButtonState()
       return {
         isReady,
         loadSettings
@@ -239,8 +229,6 @@
               setMessage(contextFolderStatuses, '')
               const saved = await saveContextFolderPath(result.path)
               if (saved) {
-                const { currentExclusions } = getState()
-                await refreshContextGraphStatus({ contextFolderPath: result.path, exclusions: currentExclusions })
               }
             } else if (result && result.error) {
               setMessage(contextFolderStatuses, '')
