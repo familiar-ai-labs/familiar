@@ -53,7 +53,7 @@
         "zip"
       ],
       "hardenedRuntime": true,
-      "timestamp": true,
+      "timestamp": false,
       "gatekeeperAssess": false,
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist",
