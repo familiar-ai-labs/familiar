@@ -16,7 +16,6 @@
       pendingLlmApiKey: '',
       currentAlwaysRecordWhenActive: false,
       isLlmApiKeySaved: false,
-      currentCaptureHotkey: defaults.capture || '',
       currentClipboardHotkey: defaults.clipboard || '',
       currentRecordingHotkey: defaults.recording || '',
       isFirstRun: false
@@ -36,9 +35,6 @@
     function setHotkeyValue(role, value) {
       const nextValue = value || ''
       switch (role) {
-        case 'capture':
-          state.currentCaptureHotkey = nextValue
-          return
         case 'recording':
           state.currentRecordingHotkey = nextValue
           return
@@ -106,7 +102,6 @@
         apis.hotkeysApi.setHotkeys(hotkeys)
         return
       }
-      setHotkeyValue('capture', hotkeys.capture)
       setHotkeyValue('clipboard', hotkeys.clipboard)
       setHotkeyValue('recording', hotkeys.recording)
       updateWizardUI()
@@ -126,7 +121,6 @@
         currentLlmProviderName: state.currentLlmProviderName,
         currentLlmApiKey: state.currentLlmApiKey,
         isLlmApiKeySaved: state.isLlmApiKeySaved,
-        currentCaptureHotkey: state.currentCaptureHotkey,
         currentClipboardHotkey: state.currentClipboardHotkey,
         currentRecordingHotkey: state.currentRecordingHotkey
       }
@@ -153,7 +147,6 @@
 
     function getHotkeysState() {
       return {
-        currentCaptureHotkey: state.currentCaptureHotkey,
         currentClipboardHotkey: state.currentClipboardHotkey,
         currentRecordingHotkey: state.currentRecordingHotkey
       }

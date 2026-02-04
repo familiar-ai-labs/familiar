@@ -2,14 +2,11 @@ const { app, BrowserWindow, Tray, dialog, nativeImage, ipcMain } = require('elec
 const path = require('node:path');
 
 const { registerIpcHandlers } = require('./ipc');
-const { registerCaptureHandlers, startCaptureFlow, closeOverlayWindow } = require('./screenshot/capture');
 const { captureClipboard } = require('./clipboard');
 const {
-    registerCaptureHotkey,
     registerClipboardHotkey,
     registerRecordingHotkey,
     unregisterGlobalHotkeys,
-    DEFAULT_CAPTURE_HOTKEY,
     DEFAULT_CLIPBOARD_HOTKEY,
     DEFAULT_RECORDING_HOTKEY,
 } = require('./hotkeys');
@@ -168,32 +165,12 @@ function quitApp() {
 
 function registerHotkeysFromSettings() {
     const settings = loadSettings();
-    const { captureAccelerator, clipboardAccelerator, recordingAccelerator } = resolveHotkeyAccelerators(settings, {
-        DEFAULT_CAPTURE_HOTKEY,
+    const { clipboardAccelerator, recordingAccelerator } = resolveHotkeyAccelerators(settings, {
         DEFAULT_CLIPBOARD_HOTKEY,
         DEFAULT_RECORDING_HOTKEY,
     });
 
     unregisterGlobalHotkeys();
-
-    const captureResult = registerCaptureHotkey({
-        onCapture: () => {
-            void startCaptureFlow();
-        },
-        accelerator: captureAccelerator,
-    });
-    if (!captureResult.ok) {
-        console.warn('Capture hotkey inactive', {
-            reason: captureResult.reason,
-            accelerator: captureResult.accelerator,
-        });
-        showToast({
-            title: 'Capture hotkey inactive',
-            body: 'The capture shortcut could not be registered. Open Settings to update it.',
-            type: 'warning',
-            size: 'large'
-        });
-    }
 
     const clipboardResult = registerClipboardHotkey({
         onClipboard: () => {
@@ -282,10 +259,8 @@ function registerHotkeysFromSettings() {
     }
 
     return {
-        captureResult,
         clipboardResult,
         recordingResult,
-        captureAccelerator,
         clipboardAccelerator,
         recordingAccelerator
     };
@@ -304,9 +279,6 @@ function createTray() {
     trayBusyIndicator = registerTrayBusyIndicator({ tray, baseIcon: trayIcon });
 
     trayHandlers = {
-        onCapture: () => {
-            void startCaptureFlow();
-        },
         onClipboard: () => {
             void captureClipboard();
         },
@@ -319,7 +291,6 @@ function createTray() {
     trayMenuController = createTrayMenuController({
         tray,
         trayHandlers,
-        DEFAULT_CAPTURE_HOTKEY,
         DEFAULT_CLIPBOARD_HOTKEY,
         DEFAULT_RECORDING_HOTKEY,
     });
@@ -332,7 +303,6 @@ function createTray() {
 
 // Register all IPC handlers
 registerIpcHandlers({ onSettingsSaved: updateScreenRecordingFromSettings });
-registerCaptureHandlers();
 registerExtractionHandlers();
 registerAnalysisHandlers();
 
@@ -342,15 +312,13 @@ ipcMain.handle('hotkeys:reregister', () => {
     const result = registerHotkeysFromSettings();
     if (trayMenuController) {
         trayMenuController.updateTrayMenu({
-            captureAccelerator: result.captureAccelerator,
             clipboardAccelerator: result.clipboardAccelerator,
         });
     } else {
         console.warn('Tray menu update skipped: controller not ready');
     }
     return {
-        ok: result.captureResult.ok && result.clipboardResult.ok && result.recordingResult.ok,
-        captureHotkey: result.captureResult,
+        ok: result.clipboardResult.ok && result.recordingResult.ok,
         clipboardHotkey: result.clipboardResult,
         recordingHotkey: result.recordingResult,
     };
@@ -369,15 +337,13 @@ ipcMain.handle('hotkeys:resume', () => {
     const result = registerHotkeysFromSettings();
     if (trayMenuController) {
         trayMenuController.updateTrayMenu({
-            captureAccelerator: result.captureAccelerator,
             clipboardAccelerator: result.clipboardAccelerator,
         });
     } else {
         console.warn('Tray menu update skipped: controller not ready');
     }
     return {
-        ok: result.captureResult.ok && result.clipboardResult.ok && result.recordingResult.ok,
-        captureHotkey: result.captureResult,
+        ok: result.clipboardResult.ok && result.recordingResult.ok,
         clipboardHotkey: result.clipboardResult,
         recordingHotkey: result.recordingResult,
     };
@@ -486,7 +452,6 @@ app.on('before-quit', (event) => {
         screenRecordingController.dispose();
     }
     unregisterGlobalHotkeys();
-    closeOverlayWindow();
 });
 
 process.on('uncaughtException', (error) => {

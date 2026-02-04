@@ -9,12 +9,8 @@ const getElectronMenu = () => {
 
 function resolveHotkeyAccelerators(
     settings = {},
-    { DEFAULT_CAPTURE_HOTKEY, DEFAULT_CLIPBOARD_HOTKEY, DEFAULT_RECORDING_HOTKEY } = {}
+    { DEFAULT_CLIPBOARD_HOTKEY, DEFAULT_RECORDING_HOTKEY } = {}
 ) {
-    const captureAccelerator =
-        typeof settings.captureHotkey === 'string' && settings.captureHotkey
-            ? settings.captureHotkey
-            : DEFAULT_CAPTURE_HOTKEY;
     const clipboardAccelerator =
         typeof settings.clipboardHotkey === 'string' && settings.clipboardHotkey
             ? settings.clipboardHotkey
@@ -24,7 +20,7 @@ function resolveHotkeyAccelerators(
             ? settings.recordingHotkey
             : DEFAULT_RECORDING_HOTKEY;
 
-    return { captureAccelerator, clipboardAccelerator, recordingAccelerator };
+    return { clipboardAccelerator, recordingAccelerator };
 }
 
 function resolveHistoryItems(settings = {}, { getRecentFlowsFn = getRecentFlows } = {}) {
@@ -40,19 +36,16 @@ function resolveHistoryItems(settings = {}, { getRecentFlowsFn = getRecentFlows 
 function buildTrayMenuPayload(
     settings = {},
     {
-        DEFAULT_CAPTURE_HOTKEY,
         DEFAULT_CLIPBOARD_HOTKEY,
         DEFAULT_RECORDING_HOTKEY,
         getRecentFlowsFn = getRecentFlows,
     } = {}
 ) {
-    const { captureAccelerator, clipboardAccelerator, recordingAccelerator } = resolveHotkeyAccelerators(settings, {
-        DEFAULT_CAPTURE_HOTKEY,
+    const { clipboardAccelerator, recordingAccelerator } = resolveHotkeyAccelerators(settings, {
         DEFAULT_CLIPBOARD_HOTKEY,
         DEFAULT_RECORDING_HOTKEY
     });
     return {
-        captureAccelerator,
         clipboardAccelerator,
         recordingAccelerator,
         historyItems: resolveHistoryItems(settings, { getRecentFlowsFn }),
@@ -62,7 +55,6 @@ function buildTrayMenuPayload(
 function createTrayMenuController({
     tray,
     trayHandlers,
-    DEFAULT_CAPTURE_HOTKEY,
     DEFAULT_CLIPBOARD_HOTKEY,
     DEFAULT_RECORDING_HOTKEY,
     loadSettingsFn = loadSettings,
@@ -72,7 +64,7 @@ function createTrayMenuController({
     platform = process.platform,
     logger = console,
 } = {}) {
-    function updateTrayMenu({ captureAccelerator, clipboardAccelerator, historyItems } = {}) {
+    function updateTrayMenu({ clipboardAccelerator, historyItems } = {}) {
         if (!menu) {
             logger.warn('Tray menu update skipped: menu unavailable');
             return;
@@ -94,7 +86,6 @@ function createTrayMenuController({
         const trayMenu = menu.buildFromTemplate(
             buildTrayMenuTemplateFn({
                 ...trayHandlers,
-                captureAccelerator: showHotkeys ? captureAccelerator : undefined,
                 clipboardAccelerator: showHotkeys ? clipboardAccelerator : undefined,
                 historyItems: resolvedHistoryItems,
             })
@@ -102,7 +93,6 @@ function createTrayMenuController({
 
         tray.setContextMenu(trayMenu);
         logger.log('Tray menu updated', {
-            captureAccelerator: Boolean(showHotkeys && captureAccelerator),
             clipboardAccelerator: Boolean(showHotkeys && clipboardAccelerator),
         });
     }
@@ -111,7 +101,6 @@ function createTrayMenuController({
         const settings = loadSettingsFn();
         updateTrayMenu(
             buildTrayMenuPayload(settings, {
-                DEFAULT_CAPTURE_HOTKEY,
                 DEFAULT_CLIPBOARD_HOTKEY,
                 DEFAULT_RECORDING_HOTKEY,
                 getRecentFlowsFn,

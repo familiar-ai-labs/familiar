@@ -122,16 +122,12 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
 
 
   const hotkeyButtons = selectAll('.hotkey-recorder')
-  function isCaptureHotkey(button) {
-    return button.dataset.hotkeyRole === 'capture'
-  }
   function isClipboardHotkey(button) {
     return button.dataset.hotkeyRole === 'clipboard'
   }
   function isRecordingHotkey(button) {
     return button.dataset.hotkeyRole === 'recording'
   }
-  const captureHotkeyButtons = hotkeyButtons.filter(isCaptureHotkey)
   const clipboardHotkeyButtons = hotkeyButtons.filter(isClipboardHotkey)
   const recordingHotkeyButtons = hotkeyButtons.filter(isRecordingHotkey)
   const hotkeysSaveButtons = selectAll('[data-action="hotkeys-save"]')
@@ -147,7 +143,6 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
   const historyEmpty = document.getElementById('history-empty')
   const historyError = document.getElementById('history-error')
 
-  const DEFAULT_CAPTURE_HOTKEY = 'CommandOrControl+Shift+J'
   const DEFAULT_CLIPBOARD_HOTKEY = 'CommandOrControl+J'
   const DEFAULT_RECORDING_HOTKEY = 'CommandOrControl+R'
 
@@ -162,7 +157,6 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
 
   const state = createDashboardState({
     defaults: {
-      capture: DEFAULT_CAPTURE_HOTKEY,
       clipboard: DEFAULT_CLIPBOARD_HOTKEY,
       recording: DEFAULT_RECORDING_HOTKEY
     },
@@ -190,7 +184,7 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
     },
     history: {
       title: 'History',
-      subtitle: 'Recent captures and analysis flows.'
+      subtitle: 'Recent activity and analysis flows.'
     },
     updates: {
       title: 'Updates',
@@ -373,7 +367,6 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
     },
     jiminy,
     defaults: {
-      capture: DEFAULT_CAPTURE_HOTKEY,
       clipboard: DEFAULT_CLIPBOARD_HOTKEY,
       recording: DEFAULT_RECORDING_HOTKEY
     },
@@ -404,7 +397,6 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
     window,
     elements: {
       hotkeyButtons,
-      captureHotkeyButtons,
       clipboardHotkeyButtons,
       recordingHotkeyButtons,
       hotkeysSaveButtons,
@@ -418,7 +410,6 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
     getState: state.getHotkeysState,
     setHotkeyValue: state.setHotkeyValue,
     defaults: {
-      capture: DEFAULT_CAPTURE_HOTKEY,
       clipboard: DEFAULT_CLIPBOARD_HOTKEY,
       recording: DEFAULT_RECORDING_HOTKEY
     }

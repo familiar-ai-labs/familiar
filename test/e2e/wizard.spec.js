@@ -30,10 +30,10 @@ const launchElectron = (options = {}) => {
 }
 
 const advanceWizardToHotkeys = async (window, nextButton) => {
-  const hotkeysCapture = window.locator('#wizard-capture-hotkey')
+  const hotkeysRecording = window.locator('#wizard-recording-hotkey')
 
   for (let attempts = 0; attempts < 3; attempts += 1) {
-    if (await hotkeysCapture.isVisible()) {
+    if (await hotkeysRecording.isVisible()) {
       return
     }
 
@@ -41,7 +41,7 @@ const advanceWizardToHotkeys = async (window, nextButton) => {
     await nextButton.click()
   }
 
-  await expect(hotkeysCapture).toBeVisible()
+  await expect(hotkeysRecording).toBeVisible()
 }
 
 test('wizard happy flow completes setup and routes to General', async () => {
@@ -200,7 +200,7 @@ test('wizard resets to first step after Done', async () => {
 
     await window.getByRole('tab', { name: 'Wizard' }).click()
     await expect(window.locator('[data-wizard-step=\"1\"]')).toBeVisible()
-    await expect(window.locator('#wizard-capture-hotkey')).toBeHidden()
+    await expect(window.locator('#wizard-recording-hotkey')).toBeHidden()
   } finally {
     await (await electronApp).close()
   }

@@ -3,7 +3,7 @@ const path = require('node:path');
 const os = require('node:os');
 
 const { SETTINGS_DIR_NAME, SETTINGS_FILE_NAME } = require('./const');
-const { DEFAULT_CAPTURE_HOTKEY, DEFAULT_CLIPBOARD_HOTKEY, DEFAULT_RECORDING_HOTKEY } = require('./hotkeys');
+const { DEFAULT_CLIPBOARD_HOTKEY, DEFAULT_RECORDING_HOTKEY } = require('./hotkeys');
 
 const resolveSettingsDir = (settingsDir) =>
     settingsDir || process.env.JIMINY_SETTINGS_DIR || path.join(os.homedir(), SETTINGS_DIR_NAME);
@@ -49,7 +49,6 @@ const saveSettings = (settings, options = {}) => {
     const hasLlmProviderName = Object.prototype.hasOwnProperty.call(settings, 'llmProviderName');
     const hasLlmProviderTextModel = Object.prototype.hasOwnProperty.call(settings, 'llmProviderTextModel');
     const hasLlmProviderVisionModel = Object.prototype.hasOwnProperty.call(settings, 'llmProviderVisionModel');
-    const hasCaptureHotkey = Object.prototype.hasOwnProperty.call(settings, 'captureHotkey');
     const hasClipboardHotkey = Object.prototype.hasOwnProperty.call(settings, 'clipboardHotkey');
     const hasUpdateLastCheckedAt = Object.prototype.hasOwnProperty.call(settings, 'updateLastCheckedAt');
     const hasRecordingHotkey = Object.prototype.hasOwnProperty.call(settings, 'recordingHotkey');
@@ -85,13 +84,6 @@ const saveSettings = (settings, options = {}) => {
         }
     } else if (Object.keys(existingProvider).length > 0) {
         payload.llm_provider = { ...existingProvider };
-    }
-
-    if (hasCaptureHotkey) {
-        payload.captureHotkey =
-            typeof settings.captureHotkey === 'string' ? settings.captureHotkey : DEFAULT_CAPTURE_HOTKEY;
-    } else if (typeof existing.captureHotkey === 'string') {
-        payload.captureHotkey = existing.captureHotkey;
     }
 
     if (hasClipboardHotkey) {

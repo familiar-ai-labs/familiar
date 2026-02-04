@@ -38,7 +38,7 @@
         case 3:
           return true
         case 4:
-          return Boolean(state.currentCaptureHotkey || state.currentClipboardHotkey || state.currentRecordingHotkey)
+          return Boolean(state.currentClipboardHotkey || state.currentRecordingHotkey)
         default:
           return false
       }

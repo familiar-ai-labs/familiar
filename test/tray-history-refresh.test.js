@@ -23,8 +23,8 @@ test('tray refreshes history items on click', async () => {
   const controller = createTrayMenuController({
     tray: trayInstance,
     trayHandlers: {},
-    DEFAULT_CAPTURE_HOTKEY: 'Cmd+Shift+P',
     DEFAULT_CLIPBOARD_HOTKEY: 'Cmd+Shift+C',
+    DEFAULT_RECORDING_HOTKEY: 'Cmd+Shift+R',
     loadSettingsFn: () => ({ contextFolderPath: '/tmp' }),
     getRecentFlowsFn: () => {
       const result = historyResponses[Math.min(historyIndex, historyResponses.length - 1)]

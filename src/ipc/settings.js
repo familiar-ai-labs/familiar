@@ -1,7 +1,7 @@
 const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const fs = require('node:fs');
 const { loadSettings, resolveSettingsPath, saveSettings, validateContextFolderPath } = require('../settings');
-const { DEFAULT_CAPTURE_HOTKEY, DEFAULT_CLIPBOARD_HOTKEY, DEFAULT_RECORDING_HOTKEY } = require('../hotkeys');
+const { DEFAULT_CLIPBOARD_HOTKEY, DEFAULT_RECORDING_HOTKEY } = require('../hotkeys');
 const { getScreenRecordingPermissionStatus } = require('../screen-recording/permissions');
 
 let onSettingsSaved = null;
@@ -25,7 +25,6 @@ function handleGetSettings() {
         const contextFolderPath = settings.contextFolderPath || '';
         const llmProviderName = settings?.llm_provider?.provider || '';
         const llmProviderApiKey = settings?.llm_provider?.api_key || '';
-        const captureHotkey = typeof settings.captureHotkey === 'string' ? settings.captureHotkey : DEFAULT_CAPTURE_HOTKEY;
         const clipboardHotkey = typeof settings.clipboardHotkey === 'string' ? settings.clipboardHotkey : DEFAULT_CLIPBOARD_HOTKEY;
         const recordingHotkey = typeof settings.recordingHotkey === 'string' ? settings.recordingHotkey : DEFAULT_RECORDING_HOTKEY;
         const alwaysRecordWhenActive = settings.alwaysRecordWhenActive === true;
@@ -48,7 +47,6 @@ function handleGetSettings() {
             validationMessage,
             llmProviderName,
             llmProviderApiKey,
-            captureHotkey,
             clipboardHotkey,
             recordingHotkey,
             alwaysRecordWhenActive,
@@ -62,7 +60,6 @@ function handleGetSettings() {
             validationMessage: 'Failed to load settings.',
             llmProviderName: '',
             llmProviderApiKey: '',
-            captureHotkey: DEFAULT_CAPTURE_HOTKEY,
             clipboardHotkey: DEFAULT_CLIPBOARD_HOTKEY,
             recordingHotkey: DEFAULT_RECORDING_HOTKEY,
             alwaysRecordWhenActive: false,
@@ -76,7 +73,6 @@ function handleSaveSettings(_event, payload) {
     const hasContextFolderPath = Object.prototype.hasOwnProperty.call(payload || {}, 'contextFolderPath');
     const hasLlmProviderApiKey = Object.prototype.hasOwnProperty.call(payload || {}, 'llmProviderApiKey');
     const hasLlmProviderName = Object.prototype.hasOwnProperty.call(payload || {}, 'llmProviderName');
-    const hasCaptureHotkey = Object.prototype.hasOwnProperty.call(payload || {}, 'captureHotkey');
     const hasClipboardHotkey = Object.prototype.hasOwnProperty.call(payload || {}, 'clipboardHotkey');
     const hasAlwaysRecordWhenActive = Object.prototype.hasOwnProperty.call(payload || {}, 'alwaysRecordWhenActive');
     const hasRecordingHotkey = Object.prototype.hasOwnProperty.call(payload || {}, 'recordingHotkey');
@@ -86,7 +82,6 @@ function handleSaveSettings(_event, payload) {
         !hasContextFolderPath &&
         !hasLlmProviderApiKey &&
         !hasLlmProviderName &&
-        !hasCaptureHotkey &&
         !hasClipboardHotkey &&
         !hasAlwaysRecordWhenActive &&
         !hasRecordingHotkey
@@ -119,12 +114,6 @@ function handleSaveSettings(_event, payload) {
         settingsPayload.llmProviderName = typeof payload.llmProviderName === 'string'
             ? payload.llmProviderName
             : '';
-    }
-
-    if (hasCaptureHotkey) {
-        settingsPayload.captureHotkey = typeof payload.captureHotkey === 'string'
-            ? payload.captureHotkey
-            : DEFAULT_CAPTURE_HOTKEY;
     }
 
     if (hasClipboardHotkey) {
@@ -164,7 +153,7 @@ function handleSaveSettings(_event, payload) {
                 console.error('Failed to notify settings update', error);
             }
         }
-        return { ok: true, hotkeysChanged: hasCaptureHotkey || hasClipboardHotkey || hasRecordingHotkey };
+        return { ok: true, hotkeysChanged: hasClipboardHotkey || hasRecordingHotkey };
     } catch (error) {
         console.error('Failed to save settings', error);
         return { ok: false, message: 'Failed to save settings.' };

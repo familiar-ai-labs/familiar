@@ -12,21 +12,14 @@ function formatHistoryLabel (flow, index) {
 }
 
 function buildTrayMenuTemplate ({
-  onCapture,
   onClipboard,
   onOpenSettings,
   onAbout,
   onRestart,
   onQuit,
-  captureAccelerator,
   clipboardAccelerator,
   historyItems
 }) {
-  const captureItem = { label: 'Capture Selection', click: onCapture }
-  if (typeof captureAccelerator === 'string' && captureAccelerator) {
-    captureItem.accelerator = captureAccelerator
-  }
-
   const clipboardItem = { label: 'Capture Clipboard', click: onClipboard }
   if (typeof clipboardAccelerator === 'string' && clipboardAccelerator) {
     clipboardItem.accelerator = clipboardAccelerator
@@ -43,7 +36,6 @@ function buildTrayMenuTemplate ({
 
   return [
     ...items,
-    captureItem,
     clipboardItem,
     { label: 'Dashboard', click: onOpenSettings },
     { label: 'About', click: onAbout },

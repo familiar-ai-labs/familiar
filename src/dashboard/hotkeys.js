@@ -10,7 +10,6 @@
 
     const {
       hotkeyButtons = [],
-      captureHotkeyButtons = [],
       clipboardHotkeyButtons = [],
       recordingHotkeyButtons = [],
       hotkeysSaveButtons = [],
@@ -19,7 +18,6 @@
       hotkeysErrors = []
     } = elements
 
-    const DEFAULT_CAPTURE_HOTKEY = defaults.capture || ''
     const DEFAULT_CLIPBOARD_HOTKEY = defaults.clipboard || ''
     const DEFAULT_RECORDING_HOTKEY = defaults.recording || ''
 
@@ -149,9 +147,7 @@
 
     const updateHotkeyDisplay = (role, accelerator) => {
       let buttons = clipboardHotkeyButtons
-      if (role === 'capture') {
-        buttons = captureHotkeyButtons
-      } else if (role === 'recording') {
+      if (role === 'recording') {
         buttons = recordingHotkeyButtons
       }
       const value = accelerator || ''
@@ -164,9 +160,6 @@
     }
 
     const setHotkeys = (payload = {}) => {
-      if (Object.prototype.hasOwnProperty.call(payload, 'capture')) {
-        updateHotkeyDisplay('capture', payload.capture)
-      }
       if (Object.prototype.hasOwnProperty.call(payload, 'clipboard')) {
         updateHotkeyDisplay('clipboard', payload.clipboard)
       }
@@ -198,7 +191,7 @@
     const stopRecording = async (button) => {
       if (!button) return true
       button.classList.remove('ring-2', 'ring-indigo-500', 'bg-indigo-50', 'dark:bg-indigo-900/30')
-      const role = button.dataset.hotkeyRole || 'capture'
+      const role = button.dataset.hotkeyRole || 'clipboard'
       updateHotkeyDisplay(role, button.dataset.hotkey)
 
       const wasRecording = recordingElement === button
@@ -267,30 +260,27 @@
           setMessage(hotkeysErrors, '')
 
           const state = getState()
-          const captureHotkey = state.currentCaptureHotkey
           const clipboardHotkey = state.currentClipboardHotkey
           const recordingHotkey = state.currentRecordingHotkey
 
-          if (!captureHotkey && !clipboardHotkey && !recordingHotkey) {
+          if (!clipboardHotkey && !recordingHotkey) {
             setMessage(hotkeysStatuses, '')
             setMessage(hotkeysErrors, 'At least one hotkey is required.')
             return
           }
 
           try {
-            const result = await jiminy.saveSettings({ captureHotkey, clipboardHotkey, recordingHotkey })
+            const result = await jiminy.saveSettings({ clipboardHotkey, recordingHotkey })
             if (result && result.ok) {
               if (jiminy.reregisterHotkeys) {
                 const reregisterResult = await jiminy.reregisterHotkeys()
                 if (reregisterResult && reregisterResult.ok) {
                   setMessage(hotkeysStatuses, 'Saved and applied.')
                 } else {
-                  const captureError = reregisterResult?.captureHotkey?.ok === false
                   const clipboardError = reregisterResult?.clipboardHotkey?.ok === false
                   const recordingError = reregisterResult?.recordingHotkey?.ok === false
-                  if (captureError || clipboardError || recordingError) {
+                  if (clipboardError || recordingError) {
                     const errorParts = []
-                    if (captureError) errorParts.push('capture')
                     if (clipboardError) errorParts.push('clipboard')
                     if (recordingError) errorParts.push('recording')
                     setMessage(hotkeysStatuses, 'Saved.')
@@ -318,7 +308,6 @@
     if (hotkeysResetButtons.length > 0) {
       hotkeysResetButtons.forEach((button) => {
         button.addEventListener('click', () => {
-          updateHotkeyDisplay('capture', DEFAULT_CAPTURE_HOTKEY)
           updateHotkeyDisplay('clipboard', DEFAULT_CLIPBOARD_HOTKEY)
           updateHotkeyDisplay('recording', DEFAULT_RECORDING_HOTKEY)
           setMessage(hotkeysStatuses, '')

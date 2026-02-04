@@ -72,14 +72,13 @@ test('validateContextFolderPath rejects file path', () => {
   assert.equal(result.message, 'Selected path is not a directory.')
 })
 
-test('saveSettings persists captureHotkey, clipboardHotkey, and recordingHotkey', () => {
+test('saveSettings persists clipboardHotkey and recordingHotkey', () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-'))
   const settingsDir = path.join(tempRoot, 'settings')
 
-  saveSettings({ captureHotkey: 'Alt+S', clipboardHotkey: 'Alt+C', recordingHotkey: 'Alt+R' }, { settingsDir })
+  saveSettings({ clipboardHotkey: 'Alt+C', recordingHotkey: 'Alt+R' }, { settingsDir })
 
   const loaded = loadSettings({ settingsDir })
-  assert.equal(loaded.captureHotkey, 'Alt+S')
   assert.equal(loaded.clipboardHotkey, 'Alt+C')
   assert.equal(loaded.recordingHotkey, 'Alt+R')
 })
@@ -89,13 +88,13 @@ test('saveSettings persists control/option hotkey combinations', () => {
   const settingsDir = path.join(tempRoot, 'settings')
 
   saveSettings(
-    { captureHotkey: 'CommandOrControl+Alt+J', clipboardHotkey: 'CommandOrControl+Alt+Shift+K' },
+    { clipboardHotkey: 'CommandOrControl+Alt+Shift+K', recordingHotkey: 'CommandOrControl+Alt+Shift+R' },
     { settingsDir }
   )
 
   const loaded = loadSettings({ settingsDir })
-  assert.equal(loaded.captureHotkey, 'CommandOrControl+Alt+J')
   assert.equal(loaded.clipboardHotkey, 'CommandOrControl+Alt+Shift+K')
+  assert.equal(loaded.recordingHotkey, 'CommandOrControl+Alt+Shift+R')
 })
 
 test('saveSettings preserves hotkeys when updating other settings', () => {
@@ -104,11 +103,10 @@ test('saveSettings preserves hotkeys when updating other settings', () => {
   const contextDir = path.join(tempRoot, 'context')
   fs.mkdirSync(contextDir)
 
-  saveSettings({ captureHotkey: 'Alt+S', clipboardHotkey: 'Alt+C', recordingHotkey: 'Alt+R' }, { settingsDir })
+  saveSettings({ clipboardHotkey: 'Alt+C', recordingHotkey: 'Alt+R' }, { settingsDir })
   saveSettings({ contextFolderPath: contextDir }, { settingsDir })
 
   const loaded = loadSettings({ settingsDir })
-  assert.equal(loaded.captureHotkey, 'Alt+S')
   assert.equal(loaded.clipboardHotkey, 'Alt+C')
   assert.equal(loaded.recordingHotkey, 'Alt+R')
   assert.equal(loaded.contextFolderPath, contextDir)
@@ -121,10 +119,10 @@ test('saveSettings preserves other settings when updating hotkeys', () => {
   fs.mkdirSync(contextDir)
 
   saveSettings({ contextFolderPath: contextDir, llmProviderApiKey: 'key123', llmProviderName: 'openai' }, { settingsDir })
-  saveSettings({ captureHotkey: 'CommandOrControl+Alt+X' }, { settingsDir })
+  saveSettings({ recordingHotkey: 'CommandOrControl+Alt+X' }, { settingsDir })
 
   const loaded = loadSettings({ settingsDir })
-  assert.equal(loaded.captureHotkey, 'CommandOrControl+Alt+X')
+  assert.equal(loaded.recordingHotkey, 'CommandOrControl+Alt+X')
   assert.equal(loaded.contextFolderPath, contextDir)
   assert.equal(loaded.llm_provider?.api_key, 'key123')
   assert.equal(loaded.llm_provider?.provider, 'openai')

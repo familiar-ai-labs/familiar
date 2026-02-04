@@ -39,7 +39,6 @@
       hotkeysStatuses = []
     } = elements
 
-    const DEFAULT_CAPTURE_HOTKEY = defaults.capture || 'CommandOrControl+Shift+J'
     const DEFAULT_CLIPBOARD_HOTKEY = defaults.clipboard || 'CommandOrControl+J'
     const DEFAULT_RECORDING_HOTKEY = defaults.recording || 'CommandOrControl+R'
 
@@ -180,7 +179,6 @@
         setLlmApiKeySaved(result.llmProviderApiKey || '')
         setAlwaysRecordWhenActiveValue(result.alwaysRecordWhenActive === true)
         setHotkeys({
-          capture: result.captureHotkey || DEFAULT_CAPTURE_HOTKEY,
           clipboard: result.clipboardHotkey || DEFAULT_CLIPBOARD_HOTKEY,
           recording: result.recordingHotkey || DEFAULT_RECORDING_HOTKEY
         })

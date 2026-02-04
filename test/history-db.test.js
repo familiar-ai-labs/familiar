@@ -21,10 +21,10 @@ test('recordEvent creates flow and event rows', async () => {
 
   const result = recordEvent({
     contextFolderPath,
-    trigger: 'capture_selection',
+    trigger: 'capture_clipboard',
     step: 'capture',
     status: 'success',
-    summary: 'Captured screenshot',
+    summary: 'Captured clipboard',
     metadata: { source: 'test' }
   })
 
@@ -51,7 +51,7 @@ test('recordEvent updates flow status to partial after failure', async () => {
 
   const first = recordEvent({
     contextFolderPath,
-    trigger: 'capture_selection',
+    trigger: 'capture_clipboard',
     step: 'extraction',
     status: 'success',
     summary: 'Extraction complete'
