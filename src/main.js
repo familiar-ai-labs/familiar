@@ -16,6 +16,7 @@ const {
 const { registerExtractionHandlers } = require('./extraction');
 const { registerAnalysisHandlers } = require('./analysis');
 const { showWindow } = require('./utils/window');
+const { ensureHomebrewPath } = require('./utils/path');
 const { loadSettings } = require('./settings');
 const { initLogging } = require('./logger');
 const { showToast } = require('./toast');
@@ -42,6 +43,7 @@ const isE2E = process.env.JIMINY_E2E === '1';
 const isCI = process.env.CI === 'true' || process.env.CI === '1';
 
 initLogging();
+ensureHomebrewPath({ logger: console });
 
 const updateScreenRecordingFromSettings = () => {
     if (!screenRecordingController) {
