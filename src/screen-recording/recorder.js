@@ -13,7 +13,7 @@ const CAPTURE_CONFIG = Object.freeze({
   audio: false
 });
 
-const DEFAULT_SEGMENT_LENGTH_MS = 10 * 60 * 1000;
+const DEFAULT_SEGMENT_LENGTH_MS = 2 * 60 * 1000;
 const START_TIMEOUT_MS = 10000;
 const STOP_TIMEOUT_MS = 10000;
 
@@ -22,10 +22,28 @@ function ensureEven(value) {
   return rounded % 2 === 0 ? rounded : rounded - 1;
 }
 
+function resolveSegmentLengthMs(options, logger) {
+  if (Number.isFinite(options.segmentLengthMs) && options.segmentLengthMs > 0) {
+    return options.segmentLengthMs;
+  }
+
+  const isE2E = process.env.JIMINY_E2E === '1';
+  const overrideValue = process.env.JIMINY_E2E_SEGMENT_LENGTH_MS;
+  if (isE2E && overrideValue) {
+    const parsed = Number.parseInt(overrideValue, 10);
+    if (Number.isFinite(parsed) && parsed > 0) {
+      logger.log('Recording segment length override enabled', { segmentLengthMs: parsed });
+      return parsed;
+    }
+    logger.warn('Ignoring invalid recording segment length override', { value: overrideValue });
+  }
+
+  return DEFAULT_SEGMENT_LENGTH_MS;
+}
+
 function createRecorder(options = {}) {
   const logger = options.logger || console;
-  const segmentLengthMs =
-    typeof options.segmentLengthMs === 'number' ? options.segmentLengthMs : DEFAULT_SEGMENT_LENGTH_MS;
+  const segmentLengthMs = resolveSegmentLengthMs(options, logger);
 
   let recordingWindow = null;
   let windowReadyPromise = null;
@@ -35,6 +53,7 @@ function createRecorder(options = {}) {
   let currentSegment = null;
   let segmentTimer = null;
   let stopInProgress = null;
+  let startInProgress = null;
 
   function ensureWindow() {
     if (recordingWindow) {
@@ -194,45 +213,70 @@ function createRecorder(options = {}) {
     if (!sessionStore) {
       return;
     }
+    if (startInProgress) {
+      await startInProgress;
+      return;
+    }
 
-    const window = await ensureWindowReady();
-    const { sourceId, captureWidth, captureHeight } = await resolveCaptureSource();
+    startInProgress = (async function () {
+      const window = await ensureWindowReady();
+      const { sourceId, captureWidth, captureHeight } = await resolveCaptureSource();
 
-    const nextSegment = sessionStore.nextSegmentFile();
-    const filePath = path.join(sessionStore.sessionDir, nextSegment.fileName);
+      const nextSegment = sessionStore.nextSegmentFile();
+      const filePath = path.join(sessionStore.sessionDir, nextSegment.fileName);
 
-    currentSegment = {
-      index: nextSegment.index,
-      fileName: nextSegment.fileName,
-      filePath,
-      startedAt: new Date().toISOString()
-    };
+      currentSegment = {
+        index: nextSegment.index,
+        fileName: nextSegment.fileName,
+        filePath,
+        startedAt: new Date().toISOString()
+      };
 
-    const requestId = randomUUID();
-    const payload = {
-      requestId,
-      sourceId,
-      captureWidth,
-      captureHeight,
-      fps: CAPTURE_CONFIG.fps,
-      filePath
-    };
+      const requestId = randomUUID();
+      const payload = {
+        requestId,
+        sourceId,
+        captureWidth,
+        captureHeight,
+        fps: CAPTURE_CONFIG.fps,
+        filePath
+      };
+
+      try {
+        window.webContents.send('screen-recording:start', payload);
+        await waitForStatus(requestId, START_TIMEOUT_MS, ['started']);
+        logger.log('Screen recording segment started', {
+          index: currentSegment.index,
+          fileName: currentSegment.fileName
+        });
+      } catch (error) {
+        currentSegment = null;
+        throw error;
+      }
+    })();
 
     try {
-      window.webContents.send('screen-recording:start', payload);
-      await waitForStatus(requestId, START_TIMEOUT_MS, ['started']);
-      logger.log('Screen recording segment started', {
-        index: currentSegment.index,
-        fileName: currentSegment.fileName
-      });
-    } catch (error) {
-      currentSegment = null;
-      throw error;
+      await startInProgress;
+    } finally {
+      startInProgress = null;
     }
   }
 
   async function stopSegment(reason) {
-    if (!sessionStore || !currentSegment) {
+    if (!sessionStore) {
+      return;
+    }
+
+    if (!currentSegment && startInProgress) {
+      logger.log('Screen recording stop waiting for segment start');
+      try {
+        await startInProgress;
+      } catch (error) {
+        logger.error('Screen recording segment start failed before stop', error);
+      }
+    }
+
+    if (!currentSegment) {
       return;
     }
 

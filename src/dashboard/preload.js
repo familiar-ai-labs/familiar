@@ -21,6 +21,7 @@ contextBridge.exposeInMainWorld('jiminy', {
   getScreenRecordingStatus: () => ipcRenderer.invoke('screenRecording:getStatus'),
   startScreenRecording: () => ipcRenderer.invoke('screenRecording:start'),
   stopScreenRecording: () => ipcRenderer.invoke('screenRecording:stop'),
+  simulateRecordingIdle: (payload) => ipcRenderer.invoke('screenRecording:simulateIdle', payload),
   runRecordingQuery: (payload) => ipcRenderer.invoke('recordingQuery:run', payload),
   getRecordingQueryAvailability: () => ipcRenderer.invoke('recordingQuery:availability'),
   getRecordingQueryEstimate: (payload) => ipcRenderer.invoke('recordingQuery:estimate', payload),

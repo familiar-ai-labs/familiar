@@ -31,6 +31,7 @@ E2E helpers:
 
 -   `JIMINY_E2E=1` opens the Settings window on launch and bypasses native dialogs.
 -   `JIMINY_E2E_CONTEXT_PATH` supplies the folder picker result.
+-   `JIMINY_E2E_SEGMENT_LENGTH_MS` overrides screen recording segment length for E2E (milliseconds).
 -   `JIMINY_SETTINGS_DIR` overrides the settings storage directory.
 -   `JIMINY_LLM_MOCK=1` replaces LLM calls with a mock summarizer/extractor.
 -   `JIMINY_LLM_MOCK_TEXT` sets the mock summary text (default: `gibberish`).

@@ -146,6 +146,14 @@ function createScreenRecordingController(options = {}) {
     void stopRecording('idle');
   }
 
+  function simulateIdle(idleSeconds = idleThresholdSeconds + 1) {
+    const nextIdleSeconds = Number.isFinite(idleSeconds) && idleSeconds >= 0
+      ? idleSeconds
+      : idleThresholdSeconds + 1
+    logger.log('Screen recording idle simulation', { idleSeconds: nextIdleSeconds })
+    handleIdle({ idleSeconds: nextIdleSeconds })
+  }
+
   function handleLock() {
     manualPaused = false;
     if (state === STATES.RECORDING || state === STATES.IDLE_GRACE) {
@@ -253,6 +261,7 @@ function createScreenRecordingController(options = {}) {
     shutdown,
     manualStart,
     manualStop,
+    simulateIdle,
     updateSettings,
     getState
   };

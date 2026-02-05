@@ -63,6 +63,19 @@ const attemptRecordingShutdown = (reason) => {
         });
 };
 
+const handleRecordingError = ({ message }) => {
+    if (!message) {
+        return;
+    }
+    console.warn('Screen recording issue', { message });
+    showToast({
+        title: 'Screen recording issue',
+        body: message,
+        type: 'warning',
+        size: 'large'
+    });
+};
+
 if (process.platform === 'linux' && (isE2E || isCI)) {
     console.log('Applying Linux CI/E2E Electron flags');
     app.disableHardwareAcceleration();
@@ -378,6 +391,18 @@ ipcMain.handle('screenRecording:stop', async () => {
     return { ...result, state: state.state, isRecording };
 });
 
+ipcMain.handle('screenRecording:simulateIdle', (_event, payload = {}) => {
+    if (!isE2E) {
+        return { ok: false, message: 'Idle simulation is only available in E2E mode.' };
+    }
+    if (!screenRecordingController || typeof screenRecordingController.simulateIdle !== 'function') {
+        return { ok: false, message: 'Recording controller unavailable.' };
+    }
+    const idleSeconds = typeof payload.idleSeconds === 'number' ? payload.idleSeconds : undefined;
+    screenRecordingController.simulateIdle(idleSeconds);
+    return { ok: true };
+});
+
 app.whenReady().then(() => {
     if (process.platform !== 'darwin' && !isE2E) {
         console.error('Jiminy desktop app is macOS-only right now.');
@@ -395,17 +420,7 @@ app.whenReady().then(() => {
         registerHotkeysFromSettings();
         screenRecordingController = createScreenRecordingController({
             logger: console,
-            onError: ({ message }) => {
-                if (!message) {
-                    return;
-                }
-                showToast({
-                    title: 'Screen recording issue',
-                    body: message,
-                    type: 'warning',
-                    size: 'large'
-                });
-            }
+            onError: handleRecordingError
         });
         screenRecordingController.start();
         updateScreenRecordingFromSettings();
