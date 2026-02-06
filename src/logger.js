@@ -3,7 +3,7 @@ const path = require('node:path')
 const util = require('node:util')
 const { resolveSettingsDir } = require('./settings')
 
-const MAX_LOG_SIZE_BYTES = 10 * 1024
+const MAX_LOG_SIZE_BYTES = 1024 * 1024
 const LOG_FILENAME = 'jiminy.log'
 const LOG_BACKUP_FILENAME = 'jiminy.log.1'
 
