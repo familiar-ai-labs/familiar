@@ -2,8 +2,8 @@ const { withHttpRetry, HttpRetryableError } = require('../utils/retry')
 const { ExhaustedLlmProviderError, InvalidLlmProviderApiKeyError } = require('./errors')
 
 const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models'
-const DEFAULT_GEMINI_TEXT_MODEL = 'gemini-2.0-flash-lite'
-const DEFAULT_GEMINI_VISION_MODEL = 'gemini-2.5-flash'
+const DEFAULT_GEMINI_TEXT_MODEL = 'gemini-2.5-flash-lite'
+const DEFAULT_GEMINI_VISION_MODEL = 'gemini-2.5-flash-lite'
 
 const extractTextFromPayload = (payload) => {
     const candidates = payload?.candidates
