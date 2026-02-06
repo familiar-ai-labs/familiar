@@ -240,5 +240,5 @@ test('stills markdown worker requests default batch size limit', async () => {
   await worker.runOnce()
   worker.stop()
 
-  assert.equal(seenLimit, 10)
+  assert.equal(seenLimit, 20)
 })
