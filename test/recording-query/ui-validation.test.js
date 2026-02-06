@@ -127,3 +127,69 @@ test('recording query UI shows query folder path', async () => {
 
   global.window = originalWindow
 })
+
+test('recording UI opens the recordings folder from the path button', async () => {
+  const originalWindow = global.window
+  global.window = {}
+  const { createRecording } = require('../../src/dashboard/recording')
+
+  const recordingPath = makeElement()
+  const recordingOpenFolderButton = makeElement()
+  let openCalls = 0
+
+  const api = createRecording({
+    elements: {
+      recordingPath,
+      recordingOpenFolderButton
+    },
+    jiminy: {
+      openRecordingFolder: async () => {
+        openCalls += 1
+        return { ok: true }
+      }
+    },
+    getState: () => ({
+      currentContextFolderPath: '/tmp',
+      currentAlwaysRecordWhenActive: false,
+      currentLlmProviderName: 'gemini',
+      currentLlmApiKey: 'key'
+    })
+  })
+
+  api.updateRecordingUI()
+  assert.equal(recordingPath.textContent, '/tmp/jiminy/recordings')
+  assert.equal(recordingOpenFolderButton.disabled, false)
+  assert.equal(recordingOpenFolderButton.hidden, false)
+
+  await recordingOpenFolderButton.handlers.click()
+
+  assert.equal(openCalls, 1)
+
+  global.window = originalWindow
+})
+
+test('recording UI hides folder button without context path', () => {
+  const originalWindow = global.window
+  global.window = {}
+  const { createRecording } = require('../../src/dashboard/recording')
+
+  const recordingOpenFolderButton = makeElement()
+
+  const api = createRecording({
+    elements: { recordingOpenFolderButton },
+    jiminy: { openRecordingFolder: async () => ({ ok: true }) },
+    getState: () => ({
+      currentContextFolderPath: '',
+      currentAlwaysRecordWhenActive: false,
+      currentLlmProviderName: 'gemini',
+      currentLlmApiKey: 'key'
+    })
+  })
+
+  api.updateRecordingUI()
+
+  assert.equal(recordingOpenFolderButton.disabled, true)
+  assert.equal(recordingOpenFolderButton.hidden, true)
+
+  global.window = originalWindow
+})

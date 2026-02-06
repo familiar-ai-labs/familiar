@@ -113,7 +113,7 @@
             <section id="section-general" data-section-pane="general" role="tabpanel" aria-label="General settings" class="space-y-6">
               <section class="space-y-2">
                 <div class="flex items-center justify-between">
-                  <label for="context-folder-path" class="section-label">Primary Context</label>
+                  <label for="context-folder-path" class="section-label">Context Folder</label>
                   <span id="context-folder-status" data-setting-status="context-folder-status" class="text-xs text-emerald-600 dark:text-emerald-400 hidden" aria-live="polite"></span>
                 </div>
                 <div class="input-ring flex items-center gap-2 px-3 py-2.5 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg">
@@ -196,9 +196,16 @@
               </section>
 
               <section id="recording-details" class="space-y-3 hidden">
-                <p class="text-xs text-zinc-500 dark:text-zinc-400">
-                  Saved to <span id="recording-path" class="font-mono text-zinc-700 dark:text-zinc-200"></span>
-                </p>
+                <div class="flex flex-wrap items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+                  <p class="text-xs text-zinc-500 dark:text-zinc-400">
+                    Saved to <span id="recording-path" class="font-mono text-zinc-700 dark:text-zinc-200"></span>
+                  </p>
+                  <button
+                    id="recording-open-folder"
+                    type="button"
+                    class="px-3 py-1.5 text-xs font-medium bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-md text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed hidden"
+                  >Open in Finder</button>
+                </div>
                 <div class="flex items-center justify-between gap-3">
                   <p class="text-xs text-zinc-600 dark:text-zinc-300">
                     Status: <span id="recording-status" class="text-zinc-900 dark:text-zinc-100 font-medium">Not recording</span>
@@ -367,12 +374,12 @@
             <div class="flex-1 min-h-0 overflow-y-auto px-6 py-6 scrollbar-slim">
               <div data-wizard-step="1" class="max-w-[360px] mx-auto space-y-5">
                 <div class="text-center space-y-1">
-                  <h3 class="text-sm font-medium text-zinc-900 dark:text-zinc-100">Choose your primary context folder</h3>
-                  <p class="text-xs text-zinc-500 dark:text-zinc-400">Jiminy will store captures and summaries inside this folder.</p>
+                  <h3 class="text-sm font-medium text-zinc-900 dark:text-zinc-100">Choose your context folder</h3>
+                  <p class="text-xs text-zinc-500 dark:text-zinc-400">Jiminy will store captures inside this folder.</p>
                 </div>
                 <section class="space-y-2">
                   <div class="flex items-center justify-between">
-                    <label for="wizard-context-folder-path" class="section-label">Primary Context</label>
+                    <label for="wizard-context-folder-path" class="section-label">Context Folder</label>
                     <span id="wizard-context-folder-status" data-setting-status="context-folder-status" class="text-xs text-emerald-600 dark:text-emerald-400 hidden" aria-live="polite"></span>
                   </div>
                   <div class="input-ring flex items-center gap-2 px-3 py-2.5 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg">

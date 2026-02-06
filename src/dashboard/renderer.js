@@ -103,6 +103,7 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
   const alwaysRecordWhenActiveStatuses = selectAll('[data-setting-status="always-record-when-active-status"]')
   const recordingDetails = document.getElementById('recording-details')
   const recordingPath = document.getElementById('recording-path')
+  const recordingOpenFolderButton = document.getElementById('recording-open-folder')
   const recordingStatus = document.getElementById('recording-status')
   const recordingActionButton = document.getElementById('recording-action')
   const recordingPermission = document.getElementById('recording-permission')
@@ -332,6 +333,7 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
     elements: {
       recordingDetails,
       recordingPath,
+      recordingOpenFolderButton,
       recordingStatus,
       recordingActionButton,
       recordingPermission,

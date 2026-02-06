@@ -7,6 +7,7 @@
     const {
       recordingDetails,
       recordingPath,
+      recordingOpenFolderButton,
       recordingStatus,
       recordingActionButton,
       recordingPermission,
@@ -35,22 +36,32 @@
     const isRecordingActive = () =>
       currentScreenRecordingState === 'recording' || currentScreenRecordingState === 'idleGrace'
 
+    const buildRecordingsPath = (contextFolderPath) =>
+      contextFolderPath ? `${contextFolderPath}/jiminy/recordings` : ''
+
     const updateRecordingUI = () => {
       const state = getState()
       const currentContextFolderPath = state.currentContextFolderPath || ''
       const currentAlwaysRecordWhenActive = Boolean(state.currentAlwaysRecordWhenActive)
       const providerKey = `${state.currentLlmProviderName || ''}:${state.currentLlmApiKey || ''}`
+      const recordingsPath = buildRecordingsPath(currentContextFolderPath)
 
       if (recordingDetails) {
         recordingDetails.classList.toggle('hidden', !currentAlwaysRecordWhenActive)
       }
 
       if (recordingPath) {
-        if (currentContextFolderPath) {
-          recordingPath.textContent = `${currentContextFolderPath}/jiminy/recordings`
+        if (recordingsPath) {
+          recordingPath.textContent = recordingsPath
         } else {
           recordingPath.textContent = 'Set a context folder to enable recordings.'
         }
+      }
+
+      if (recordingOpenFolderButton) {
+        const canOpenFolder = Boolean(recordingsPath)
+        recordingOpenFolderButton.disabled = !canOpenFolder
+        recordingOpenFolderButton.classList.toggle('hidden', !canOpenFolder)
       }
 
       if (recordingStatus) {
@@ -393,6 +404,27 @@
           await refreshRecordingStatus()
         } catch (error) {
           console.error('Failed to toggle recording', error)
+        }
+      })
+    }
+
+    if (recordingOpenFolderButton) {
+      recordingOpenFolderButton.addEventListener('click', async () => {
+        if (!jiminy.openRecordingFolder) {
+          return
+        }
+        const state = getState()
+        const recordingsPath = buildRecordingsPath(state.currentContextFolderPath || '')
+        if (!recordingsPath) {
+          return
+        }
+        try {
+          const result = await jiminy.openRecordingFolder()
+          if (!result || result.ok !== true) {
+            console.error('Failed to open recordings folder', result?.message || result)
+          }
+        } catch (error) {
+          console.error('Failed to open recordings folder', error)
         }
       })
     }
