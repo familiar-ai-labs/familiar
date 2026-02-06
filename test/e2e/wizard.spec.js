@@ -7,6 +7,7 @@ const { _electron: electron } = require('playwright')
 const launchElectron = (options = {}) => {
   const appRoot = path.join(__dirname, '../..')
   const settingsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-e2e-'))
+  const skillHomeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-skill-home-e2e-'))
   const launchArgs = ['.']
   if (process.platform === 'linux' || process.env.CI) {
     launchArgs.push('--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage')
@@ -23,6 +24,7 @@ const launchElectron = (options = {}) => {
         JIMINY_E2E: '1',
         JIMINY_E2E_CONTEXT_PATH: options.contextPath,
         JIMINY_SETTINGS_DIR: settingsDir,
+        HOME: skillHomeDir,
         ...options.env
       }
     })
@@ -31,10 +33,23 @@ const launchElectron = (options = {}) => {
 
 const advanceWizardToHotkeys = async (window, nextButton) => {
   const hotkeysRecording = window.locator('#wizard-recording-hotkey')
+  const skillInstallButton = window.locator('#wizard-skill-install')
+  const skillStatus = window.locator('#wizard-skill-status')
+  const codexHarness = window.locator('input[name="wizard-skill-harness"][value="codex"]')
 
-  for (let attempts = 0; attempts < 3; attempts += 1) {
+  for (let attempts = 0; attempts < 4; attempts += 1) {
     if (await hotkeysRecording.isVisible()) {
       return
+    }
+
+    if (await skillInstallButton.isVisible()) {
+      await codexHarness.check()
+      await expect(skillInstallButton).toBeEnabled()
+      await skillInstallButton.click()
+      await expect(skillStatus).toContainText('Installed')
+      await expect(nextButton).toBeEnabled()
+      await nextButton.click()
+      continue
     }
 
     await expect(nextButton).toBeEnabled()

@@ -19,7 +19,8 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
         ...require('./bootstrap/recording'),
         ...require('./bootstrap/settings'),
         ...require('./bootstrap/updates'),
-        ...require('./bootstrap/wizard')
+        ...require('./bootstrap/wizard'),
+        ...require('./bootstrap/wizard-skill')
       }
     }
     return {}
@@ -36,7 +37,8 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
     bootstrapRecording,
     bootstrapSettings,
     bootstrapUpdates,
-    bootstrapWizard
+    bootstrapWizard,
+    bootstrapWizardSkill
   } = bootstrap
 
   if (typeof createDashboardState !== 'function') {
@@ -80,6 +82,11 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
   const wizardStepPanels = selectAll('[data-wizard-step]')
   const wizardStepIndicators = selectAll('[data-wizard-step-indicator]')
   const wizardStepConnectors = selectAll('[data-wizard-step-connector]')
+  const skillHarnessInputs = selectAll('[data-skill-harness]')
+  const wizardSkillInstallButton = document.getElementById('wizard-skill-install')
+  const wizardSkillStatus = document.getElementById('wizard-skill-status')
+  const wizardSkillError = document.getElementById('wizard-skill-error')
+  const wizardSkillPath = document.getElementById('wizard-skill-path')
 
   const contextFolderInputs = selectAll('[data-setting="context-folder-path"]')
   const contextFolderChooseButtons = selectAll('[data-action="context-folder-choose"]')
@@ -143,6 +150,7 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
 
   const apis = {
     wizardApi: null,
+    wizardSkillApi: null,
     hotkeysApi: null,
     updatesApi: null,
     settingsApi: null,
@@ -239,6 +247,7 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
   }
 
   const runBootstrapWizard = typeof bootstrapWizard === 'function' ? bootstrapWizard : () => null
+  const runBootstrapWizardSkill = typeof bootstrapWizardSkill === 'function' ? bootstrapWizardSkill : () => null
   const runBootstrapUpdates = typeof bootstrapUpdates === 'function' ? bootstrapUpdates : () => null
   const runBootstrapRecording = typeof bootstrapRecording === 'function' ? bootstrapRecording : () => null
   const runBootstrapSettings = typeof bootstrapSettings === 'function' ? bootstrapSettings : () => null
@@ -286,6 +295,23 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
       element.classList.toggle('hidden', !value)
     }
   }
+
+  apis.wizardSkillApi = runBootstrapWizardSkill({
+    window,
+    elements: {
+      skillHarnessInputs,
+      skillInstallButton: wizardSkillInstallButton,
+      skillInstallStatus: wizardSkillStatus,
+      skillInstallError: wizardSkillError,
+      skillInstallPath: wizardSkillPath
+    },
+    jiminy,
+    getState: state.getWizardState,
+    setSkillHarness: state.setSkillHarness,
+    setSkillInstalled: state.setSkillInstalled,
+    setMessage,
+    updateWizardUI: state.updateWizardUI
+  })
 
   apis.updatesApi = runBootstrapUpdates({
     window,

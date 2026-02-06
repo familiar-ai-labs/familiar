@@ -10,6 +10,8 @@ contextBridge.exposeInMainWorld('jiminy', {
     const data = typeof payload === 'string' ? { contextFolderPath: payload } : payload
     return ipcRenderer.invoke('settings:save', data)
   },
+  installSkill: (payload) => ipcRenderer.invoke('skills:install', payload),
+  getSkillInstallStatus: (payload) => ipcRenderer.invoke('skills:status', payload),
   reregisterHotkeys: () => ipcRenderer.invoke('hotkeys:reregister'),
   suspendHotkeys: () => ipcRenderer.invoke('hotkeys:suspend'),
   resumeHotkeys: () => ipcRenderer.invoke('hotkeys:resume'),

@@ -16,6 +16,8 @@
       pendingLlmApiKey: '',
       currentAlwaysRecordWhenActive: false,
       isLlmApiKeySaved: false,
+      currentSkillHarness: '',
+      isSkillInstalled: false,
       currentClipboardHotkey: defaults.clipboard || '',
       currentRecordingHotkey: defaults.recording || '',
       isFirstRun: false
@@ -97,6 +99,16 @@
       updateWizardUI()
     }
 
+    function setSkillHarness(value) {
+      state.currentSkillHarness = value || ''
+      updateWizardUI()
+    }
+
+    function setSkillInstalled(value) {
+      state.isSkillInstalled = Boolean(value)
+      updateWizardUI()
+    }
+
     function setHotkeysFromSettings(hotkeys) {
       if (apis.hotkeysApi && typeof apis.hotkeysApi.setHotkeys === 'function') {
         apis.hotkeysApi.setHotkeys(hotkeys)
@@ -121,6 +133,8 @@
         currentLlmProviderName: state.currentLlmProviderName,
         currentLlmApiKey: state.currentLlmApiKey,
         isLlmApiKeySaved: state.isLlmApiKeySaved,
+        currentSkillHarness: state.currentSkillHarness,
+        isSkillInstalled: state.isSkillInstalled,
         currentClipboardHotkey: state.currentClipboardHotkey,
         currentRecordingHotkey: state.currentRecordingHotkey
       }
@@ -160,6 +174,8 @@
       setLlmApiKeyPending,
       setLlmApiKeySaved,
       setAlwaysRecordWhenActiveValue,
+      setSkillHarness,
+      setSkillInstalled,
       setHotkeysFromSettings,
       setIsFirstRun,
       getIsFirstRun,

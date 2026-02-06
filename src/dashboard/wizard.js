@@ -25,7 +25,7 @@
       wizardStepConnectors = []
     } = elements
 
-    const WIZARD_STEP_COUNT = 4
+    const WIZARD_STEP_COUNT = 5
     let wizardStep = 1
 
     const isWizardStepComplete = (step) => {
@@ -38,6 +38,8 @@
         case 3:
           return true
         case 4:
+          return Boolean(state.isSkillInstalled)
+        case 5:
           return Boolean(state.currentClipboardHotkey || state.currentRecordingHotkey)
         default:
           return false

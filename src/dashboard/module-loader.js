@@ -1,6 +1,7 @@
 (function registerModuleLoader(global) {
   const MODULE_SPECS = [
     { globalKey: 'JiminyWizard', modulePath: './wizard.js', factory: 'createWizard' },
+    { globalKey: 'JiminyWizardSkill', modulePath: './wizard-skill.js', factory: 'createWizardSkill' },
     { globalKey: 'JiminyHotkeys', modulePath: './hotkeys.js', factory: 'createHotkeys' },
     { globalKey: 'JiminyUpdates', modulePath: './updates.js', factory: 'createUpdates' },
     { globalKey: 'JiminySettings', modulePath: './settings.js', factory: 'createSettings' },
