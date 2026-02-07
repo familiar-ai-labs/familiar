@@ -87,11 +87,22 @@ const createStillsQueue = ({ contextFolderPath, logger = console } = {}) => {
 
   const updateDoneStmt = db.prepare(`
     UPDATE stills_queue
-    SET status = ?, markdown_path = ?, provider = ?, model = ?, updated_at = ?
+    SET status = ?,
+        markdown_path = ?,
+        provider = ?,
+        model = ?,
+        last_error = NULL,
+        updated_at = ?
     WHERE id = ?
   `)
 
   const updateFailedStmt = db.prepare(`
+    UPDATE stills_queue
+    SET status = ?, last_error = ?, updated_at = ?
+    WHERE id = ?
+  `)
+
+  const updatePendingWithErrorStmt = db.prepare(`
     UPDATE stills_queue
     SET status = ?, last_error = ?, updated_at = ?
     WHERE id = ?
@@ -182,6 +193,16 @@ const createStillsQueue = ({ contextFolderPath, logger = console } = {}) => {
     return info.changes
   }
 
+  const markPending = ({ id, error } = {}) => {
+    if (!id) {
+      throw new Error('id is required to requeue a still.')
+    }
+    const now = new Date().toISOString()
+    const message = error ? String(error) : null
+    const info = updatePendingWithErrorStmt.run(STATUS.PENDING, message, now, id)
+    return info.changes
+  }
+
   const requeueStaleProcessing = ({ olderThanMs } = {}) => {
     const resolvedOlderThanMs = Number.isFinite(olderThanMs) && olderThanMs > 0
       ? Math.floor(olderThanMs)
@@ -212,6 +233,7 @@ const createStillsQueue = ({ contextFolderPath, logger = console } = {}) => {
     markProcessing,
     markDone,
     markFailed,
+    markPending,
     requeueStaleProcessing,
     close
   }

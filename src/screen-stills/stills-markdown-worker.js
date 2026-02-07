@@ -29,6 +29,60 @@ const DEFAULT_REQUEUE_STALE_PROCESSING_AFTER_MS = 60 * 60 * 1000
 
 const isLlmMockEnabled = () => process.env.JIMINY_LLM_MOCK === '1'
 
+const defaultIsOnlineImpl = async () => {
+  // Only meaningful when running inside Electron. In plain Node.js, `require('electron')`
+  // typically resolves to a binary path string (no `net` API available).
+  try {
+    // eslint-disable-next-line global-require
+    const electron = require('electron')
+    if (electron && typeof electron === 'object' && electron.net && typeof electron.net.isOnline === 'function') {
+      return Boolean(electron.net.isOnline())
+    }
+  } catch (_) {
+    // Ignore; fall through.
+  }
+  return true
+}
+
+const isRetryableNetworkError = (error) => {
+  const code = error?.cause?.code || error?.code
+  const undiciCode = error?.cause?.code || error?.cause?.name || error?.code
+
+  const retryableCodes = new Set([
+    'ENOTFOUND',
+    'EAI_AGAIN',
+    'ECONNRESET',
+    'ECONNREFUSED',
+    'ETIMEDOUT',
+    'EHOSTUNREACH',
+    'ENETUNREACH',
+    // undici
+    'UND_ERR_CONNECT_TIMEOUT',
+    'UND_ERR_HEADERS_TIMEOUT',
+    'UND_ERR_BODY_TIMEOUT',
+    'UND_ERR_SOCKET'
+  ])
+  if (retryableCodes.has(code) || retryableCodes.has(undiciCode)) {
+    return true
+  }
+
+  const message = String(error?.message || error || '').toLowerCase()
+  if (!message) {
+    return false
+  }
+
+  return (
+    message.includes('fetch failed') ||
+    message.includes('network') ||
+    message.includes('getaddrinfo') ||
+    message.includes('socket hang up') ||
+    message.includes('timed out') ||
+    message.includes('econnreset') ||
+    message.includes('enotfound') ||
+    message.includes('eai_again')
+  )
+}
+
 const buildBatchPrompt = (basePrompt, imageIds) => {
   const idsLine = imageIds.map((id) => `- ${id}`).join('\n')
   return [
@@ -154,6 +208,7 @@ const createStillsMarkdownWorker = ({
   pollIntervalMs = DEFAULT_POLL_INTERVAL_MS,
   maxBatchesPerTick = DEFAULT_MAX_BATCHES_PER_TICK,
   requeueProcessingAfterMs = DEFAULT_REQUEUE_STALE_PROCESSING_AFTER_MS,
+  isOnlineImpl = defaultIsOnlineImpl,
   runImmediately = true,
   loadSettingsImpl = loadSettings,
   createQueueImpl = createStillsQueue,
@@ -263,9 +318,18 @@ const createStillsMarkdownWorker = ({
       }
     } catch (error) {
       logger.error('Stills markdown batch failed', { error, batchIndex })
+      const retryable = isRetryableNetworkError(error)
       for (const row of batch) {
         try {
-          queueStore.markFailed({ id: row.id, error: error?.message || error })
+          if (retryable && typeof queueStore.markPending === 'function') {
+            queueStore.markPending({ id: row.id, error: error?.message || error })
+            logger.warn('Requeued still for markdown retry (network error)', {
+              id: row.id,
+              batchIndex
+            })
+          } else {
+            queueStore.markFailed({ id: row.id, error: error?.message || error })
+          }
         } catch (markError) {
           logger.error('Failed to mark still as failed', { id: row.id, error: markError })
         }
@@ -300,6 +364,17 @@ const createStillsMarkdownWorker = ({
       if (!apiKey && !isLlmMockEnabled()) {
         logger.warn('Stills markdown worker paused: missing LLM API key.')
         return
+      }
+
+      try {
+        const online = await isOnlineImpl()
+        if (online === false) {
+          logger.log('Stills markdown worker paused: offline.')
+          return
+        }
+      } catch (error) {
+        // If the online check fails, continue; network failures are handled by retries.
+        logger.warn('Stills markdown worker online check failed; continuing', { error })
       }
 
       const batches = []

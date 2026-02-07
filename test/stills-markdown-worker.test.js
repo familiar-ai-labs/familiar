@@ -51,6 +51,7 @@ test('stills markdown worker does nothing on empty queue', async () => {
     logger: { log: () => {}, warn: () => {}, error: () => {} },
     pollIntervalMs: 0,
     runImmediately: false,
+    isOnlineImpl: async () => true,
     loadSettingsImpl: () => ({
       llm_provider: { provider: 'openai', api_key: 'key', vision_model: 'gpt-4o-mini' }
     }),
@@ -67,6 +68,46 @@ test('stills markdown worker does nothing on empty queue', async () => {
   await worker.runOnce()
   worker.stop()
 
+  assert.equal(calls.extract, 0)
+  assert.equal(calls.processing, 0)
+})
+
+test('stills markdown worker pauses when offline', async () => {
+  const calls = { extract: 0, processing: 0, get: 0 }
+  const queue = {
+    requeueStaleProcessing: () => 0,
+    getPendingBatch: () => {
+      calls.get += 1
+      return [{ id: 1, image_path: '/tmp/a.webp' }]
+    },
+    markProcessing: () => { calls.processing += 1 },
+    markDone: () => {},
+    markFailed: () => {},
+    close: () => {}
+  }
+
+  const worker = createStillsMarkdownWorker({
+    logger: { log: () => {}, warn: () => {}, error: () => {} },
+    pollIntervalMs: 0,
+    runImmediately: false,
+    isOnlineImpl: async () => false,
+    loadSettingsImpl: () => ({
+      llm_provider: { provider: 'openai', api_key: 'key', vision_model: 'gpt-4o-mini' }
+    }),
+    createQueueImpl: () => queue,
+    extractBatchMarkdownImpl: async () => {
+      calls.extract += 1
+      return new Map()
+    },
+    readImageAsBase64Impl: async () => 'ZmFrZQ==',
+    inferMimeTypeImpl: () => 'image/webp'
+  })
+
+  worker.start({ contextFolderPath: '/tmp' })
+  await worker.runOnce()
+  worker.stop()
+
+  assert.equal(calls.get, 0)
   assert.equal(calls.extract, 0)
   assert.equal(calls.processing, 0)
 })
@@ -94,6 +135,7 @@ test('stills markdown worker requeues stale processing rows before fetching', as
     logger: { log: () => {}, warn: () => {}, error: () => {} },
     pollIntervalMs: 0,
     runImmediately: false,
+    isOnlineImpl: async () => true,
     loadSettingsImpl: () => ({
       llm_provider: { provider: 'openai', api_key: 'key', vision_model: 'gpt-4o-mini' }
     }),
@@ -136,6 +178,7 @@ test('stills markdown worker processes a batch and writes outputs', async () => 
     logger: { log: () => {}, warn: () => {}, error: () => {} },
     pollIntervalMs: 0,
     runImmediately: false,
+    isOnlineImpl: async () => true,
     loadSettingsImpl: () => ({
       llm_provider: { provider: 'openai', api_key: 'key', vision_model: 'gpt-4o-mini' }
     }),
@@ -190,6 +233,7 @@ test('stills markdown worker processes multiple batches per tick', async () => {
     pollIntervalMs: 0,
     runImmediately: false,
     maxBatchesPerTick: 3,
+    isOnlineImpl: async () => true,
     loadSettingsImpl: () => ({
       llm_provider: { provider: 'openai', api_key: 'key', vision_model: 'gpt-4o-mini' }
     }),
@@ -237,6 +281,7 @@ test('stills markdown worker marks failed when response is missing an id', async
     logger: { log: () => {}, warn: () => {}, error: () => {} },
     pollIntervalMs: 0,
     runImmediately: false,
+    isOnlineImpl: async () => true,
     loadSettingsImpl: () => ({
       llm_provider: { provider: 'openai', api_key: 'key', vision_model: 'gpt-4o-mini' }
     }),
@@ -254,6 +299,56 @@ test('stills markdown worker marks failed when response is missing an id', async
   worker.stop()
 
   assert.deepEqual(failed, [2])
+})
+
+test('stills markdown worker requeues on network errors instead of failing', async () => {
+  const requeued = []
+  const failed = []
+  let batchCalls = 0
+
+  const batch = [
+    { id: 1, image_path: '/tmp/a.webp' },
+    { id: 2, image_path: '/tmp/b.webp' }
+  ]
+
+  const queue = {
+    requeueStaleProcessing: () => 0,
+    getPendingBatch: () => {
+      batchCalls += 1
+      return batchCalls === 1 ? batch : []
+    },
+    markProcessing: () => {},
+    markDone: () => {},
+    markFailed: ({ id }) => failed.push(id),
+    markPending: ({ id }) => requeued.push(id),
+    close: () => {}
+  }
+
+  const worker = createStillsMarkdownWorker({
+    logger: { log: () => {}, warn: () => {}, error: () => {} },
+    pollIntervalMs: 0,
+    runImmediately: false,
+    isOnlineImpl: async () => true,
+    loadSettingsImpl: () => ({
+      llm_provider: { provider: 'openai', api_key: 'key', vision_model: 'gpt-4o-mini' }
+    }),
+    createQueueImpl: () => queue,
+    extractBatchMarkdownImpl: async () => {
+      const err = new Error('fetch failed')
+      err.code = 'ENOTFOUND'
+      throw err
+    },
+    writeMarkdownFileImpl: async ({ imagePath }) => `${imagePath}.md`,
+    readImageAsBase64Impl: async () => 'ZmFrZQ==',
+    inferMimeTypeImpl: () => 'image/webp'
+  })
+
+  worker.start({ contextFolderPath: '/tmp' })
+  await worker.runOnce()
+  worker.stop()
+
+  assert.equal(failed.length, 0)
+  assert.equal(requeued.length, 2)
 })
 
 test('stills markdown worker requests default batch size limit', async () => {

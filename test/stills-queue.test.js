@@ -106,3 +106,31 @@ test('stills queue requeues stale processing rows on startup', () => {
 
   restartedQueue.close()
 })
+
+test('stills queue markPending requeues work without discarding it', () => {
+  const contextFolderPath = makeTempContext()
+  const queue = createStillsQueue({ contextFolderPath, logger: { log: () => {} } })
+
+  const imagePath = path.join(contextFolderPath, 'jiminy', 'stills', 'session-4', 'frame.webp')
+  const capturedAt = new Date().toISOString()
+
+  queue.enqueueCapture({
+    imagePath,
+    sessionId: 'session-4',
+    capturedAt
+  })
+
+  const batch = queue.getPendingBatch(10)
+  assert.equal(batch.length, 1)
+
+  queue.markProcessing([batch[0].id])
+
+  const requeued = queue.markPending({ id: batch[0].id, error: 'offline' })
+  assert.equal(requeued, 1)
+
+  const ready = queue.getPendingBatch(10)
+  assert.equal(ready.length, 1)
+  assert.equal(ready[0].id, batch[0].id)
+
+  queue.close()
+})
