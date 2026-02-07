@@ -1,6 +1,5 @@
 const { registerSettingsHandlers } = require('./settings');
-const { registerRecordingHandlers } = require('./recording');
-const { registerRecordingQueryHandlers } = require('./recordingQuery');
+const { registerStillsHandlers } = require('./stills');
 const { registerUpdateHandlers } = require('./updates');
 const { registerSkillHandlers } = require('./skills');
 
@@ -9,8 +8,7 @@ const { registerSkillHandlers } = require('./skills');
  */
 function registerIpcHandlers(options = {}) {
     registerSettingsHandlers({ onSettingsSaved: options.onSettingsSaved });
-    registerRecordingHandlers();
-    registerRecordingQueryHandlers();
+    registerStillsHandlers();
     registerUpdateHandlers();
     registerSkillHandlers();
 }
@@ -18,8 +16,7 @@ function registerIpcHandlers(options = {}) {
 module.exports = {
     registerIpcHandlers,
     registerSettingsHandlers,
-    registerRecordingHandlers,
-    registerRecordingQueryHandlers,
+    registerStillsHandlers,
     registerUpdateHandlers,
     registerSkillHandlers,
 };

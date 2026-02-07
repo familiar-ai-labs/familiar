@@ -136,10 +136,10 @@ const createJiminy = (overrides = {}) => ({
   }),
   pickContextFolder: async () => ({ canceled: true }),
   saveSettings: async () => ({ ok: true }),
-  getScreenRecordingStatus: async () => ({ ok: true, state: 'armed', isRecording: false, manualPaused: false }),
-  startScreenRecording: async () => ({ ok: true, state: 'recording', isRecording: true, manualPaused: false }),
-  pauseScreenRecording: async () => ({ ok: true, state: 'armed', isRecording: false, manualPaused: true }),
-  stopScreenRecording: async () => ({ ok: true, state: 'armed', isRecording: false, manualPaused: false }),
+  getScreenStillsStatus: async () => ({ ok: true, state: 'armed', isRecording: false, manualPaused: false }),
+  startScreenStills: async () => ({ ok: true, state: 'recording', isRecording: true, manualPaused: false }),
+  pauseScreenStills: async () => ({ ok: true, state: 'armed', isRecording: false, manualPaused: true }),
+  stopScreenStills: async () => ({ ok: true, state: 'armed', isRecording: false, manualPaused: false }),
   checkForUpdates: async () => ({ ok: true, updateInfo: null }),
   ...overrides
 })
@@ -314,7 +314,7 @@ test('always record toggle saves on change', async () => {
   }
 })
 
-test('recording action button starts recording when inactive', async () => {
+test('stills action button starts capture when inactive', async () => {
   const startCalls = []
   const jiminy = createJiminy({
     getSettings: async () => ({
@@ -324,8 +324,8 @@ test('recording action button starts recording when inactive', async () => {
       alwaysRecordWhenActive: true,
       screenRecordingPermissionStatus: 'granted'
     }),
-    getScreenRecordingStatus: async () => ({ ok: true, state: 'armed', isRecording: false, manualPaused: false }),
-    startScreenRecording: async () => {
+    getScreenStillsStatus: async () => ({ ok: true, state: 'armed', isRecording: false, manualPaused: false }),
+    startScreenStills: async () => {
       startCalls.push(true)
       return { ok: true, state: 'recording', isRecording: true, manualPaused: false }
     }
@@ -356,7 +356,7 @@ test('recording action button starts recording when inactive', async () => {
   }
 })
 
-test('recording action button pauses and resumes when paused', async () => {
+test('stills action button pauses and resumes when paused', async () => {
   const pauseCalls = []
   const startCalls = []
   let status = { ok: true, state: 'recording', isRecording: true, manualPaused: false }
@@ -368,13 +368,13 @@ test('recording action button pauses and resumes when paused', async () => {
       alwaysRecordWhenActive: true,
       screenRecordingPermissionStatus: 'granted'
     }),
-    getScreenRecordingStatus: async () => status,
-    pauseScreenRecording: async () => {
+    getScreenStillsStatus: async () => status,
+    pauseScreenStills: async () => {
       pauseCalls.push(true)
       status = { ok: true, state: 'armed', isRecording: false, manualPaused: true }
       return status
     },
-    startScreenRecording: async () => {
+    startScreenStills: async () => {
       startCalls.push(true)
       status = { ok: true, state: 'recording', isRecording: true, manualPaused: false }
       return status
@@ -396,7 +396,7 @@ test('recording action button pauses and resumes when paused', async () => {
     await elements['recording-nav'].click()
     await flushPromises()
 
-    assert.equal(elements['recording-status'].textContent, 'Recording')
+    assert.equal(elements['recording-status'].textContent, 'Capturing')
     assert.equal(elements['recording-action'].textContent, '10 Minute Pause')
 
     await elements['recording-action'].click()
@@ -410,7 +410,7 @@ test('recording action button pauses and resumes when paused', async () => {
     await flushPromises()
 
     assert.equal(startCalls.length, 1)
-    assert.equal(elements['recording-status'].textContent, 'Recording')
+    assert.equal(elements['recording-status'].textContent, 'Capturing')
     assert.equal(elements['recording-action'].textContent, '10 Minute Pause')
   } finally {
     global.document = priorDocument

@@ -1,5 +1,5 @@
 const { validateContextFolderPath } = require('../settings');
-const { createPresenceMonitor } = require('../screen-recording/presence');
+const { createPresenceMonitor } = require('../screen-capture/presence');
 const { createRecorder } = require('./recorder');
 const { createStillsMarkdownWorker } = require('./stills-markdown-worker');
 

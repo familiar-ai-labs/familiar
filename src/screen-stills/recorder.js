@@ -2,7 +2,7 @@ const { BrowserWindow, desktopCapturer, ipcMain, screen, app } = require('electr
 const { randomUUID } = require('node:crypto');
 const path = require('node:path');
 
-const { isScreenRecordingPermissionGranted } = require('../screen-recording/permissions');
+const { isScreenRecordingPermissionGranted } = require('../screen-capture/permissions');
 const { createSessionStore, recoverIncompleteSessions } = require('./session-store');
 const { createStillsQueue } = require('./stills-queue');
 

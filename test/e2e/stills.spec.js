@@ -52,7 +52,7 @@ const setContextFolder = async (window) => {
 }
 
 const enableRecordingToggle = async (window) => {
-  await window.getByRole('tab', { name: 'Recording' }).click()
+  await window.getByRole('tab', { name: 'Stills' }).click()
   await window.locator('label[for="always-record-when-active"]').click({ force: true })
   await expect(window.locator('#always-record-when-active')).toBeChecked()
   await expect(window.locator('#always-record-when-active-status')).toHaveText('Saved.')
@@ -103,7 +103,7 @@ const waitForCaptureCount = async (manifestPath, minimumCount) => {
 const waitForRecordingStopped = async (window) => {
   await expect
     .poll(async () => {
-      const status = await window.evaluate(() => window.jiminy.getScreenRecordingStatus())
+      const status = await window.evaluate(() => window.jiminy.getScreenStillsStatus())
       return status?.isRecording === true
     })
     .toBeFalsy()
@@ -141,7 +141,7 @@ test('stills save captures to the stills folder', async () => {
     await expect(recordingAction).toBeEnabled()
 
     await recordingAction.click()
-    await expect(window.locator('#recording-status')).toHaveText('Recording')
+    await expect(window.locator('#recording-status')).toHaveText('Capturing')
     await expect(recordingAction).toHaveText('10 Minute Pause')
 
     await new Promise((resolve) => setTimeout(resolve, 1500))
@@ -179,7 +179,7 @@ test('stills start while recording is active', async () => {
     const recordingAction = window.locator('#recording-action')
     await expect(recordingAction).toBeEnabled()
 
-    await expect(window.locator('#recording-status')).toHaveText('Recording')
+    await expect(window.locator('#recording-status')).toHaveText('Capturing')
     await expect(recordingAction).toHaveText('10 Minute Pause')
 
     const stillsRoot = getStillsRoot(contextPath)
@@ -188,7 +188,7 @@ test('stills start while recording is active', async () => {
 
     await expect
       .poll(async () => {
-        const status = await window.evaluate(() => window.jiminy.getScreenRecordingStatus())
+        const status = await window.evaluate(() => window.jiminy.getScreenStillsStatus())
         return status?.isRecording === true
       })
       .toBeTruthy()
@@ -230,7 +230,7 @@ test('stills capture repeatedly based on the interval', async () => {
     await expect(recordingAction).toBeEnabled()
 
     await recordingAction.click()
-    await expect(window.locator('#recording-status')).toHaveText('Recording')
+    await expect(window.locator('#recording-status')).toHaveText('Capturing')
     await expect(recordingAction).toHaveText('10 Minute Pause')
 
     const stillsRoot = getStillsRoot(contextPath)
@@ -270,11 +270,11 @@ test('stills stop and save the manifest when the user goes idle', async () => {
     await expect(recordingAction).toBeEnabled()
 
     await recordingAction.click()
-    await expect(window.locator('#recording-status')).toHaveText('Recording')
+    await expect(window.locator('#recording-status')).toHaveText('Capturing')
 
     await new Promise((resolve) => setTimeout(resolve, 500))
 
-    await window.evaluate(() => window.jiminy.simulateRecordingIdle({ idleSeconds: 9999 }))
+    await window.evaluate(() => window.jiminy.simulateStillsIdle({ idleSeconds: 9999 }))
     await waitForRecordingStopped(window)
 
     const stillsRoot = getStillsRoot(contextPath)
@@ -315,7 +315,7 @@ test('stills resume automatically after the pause window', async () => {
     await expect(recordingAction).toBeEnabled()
 
     await recordingAction.click()
-    await expect(window.locator('#recording-status')).toHaveText('Recording')
+    await expect(window.locator('#recording-status')).toHaveText('Capturing')
 
     await recordingAction.click()
     await expect(window.locator('#recording-status')).toHaveText('Paused')
@@ -326,7 +326,7 @@ test('stills resume automatically after the pause window', async () => {
         const status = await window.locator('#recording-status').textContent()
         return status
       })
-      .toBe('Recording')
+      .toBe('Capturing')
     await expect(recordingAction).toHaveText('10 Minute Pause')
   } finally {
     await electronApp.close()
@@ -354,18 +354,18 @@ test('stills pause and resume with the recording hotkey', async () => {
     await expect(recordingAction).toBeEnabled()
 
     await recordingAction.click()
-    await expect(window.locator('#recording-status')).toHaveText('Recording')
+    await expect(window.locator('#recording-status')).toHaveText('Capturing')
 
-    await window.evaluate(() => window.jiminy.simulateRecordingHotkey())
+    await window.evaluate(() => window.jiminy.simulateStillsHotkey())
     await expect
       .poll(async () => window.locator('#recording-status').textContent())
       .toBe('Paused')
     await expect(recordingAction).toHaveText('Resume')
 
-    await window.evaluate(() => window.jiminy.simulateRecordingHotkey())
+    await window.evaluate(() => window.jiminy.simulateStillsHotkey())
     await expect
       .poll(async () => window.locator('#recording-status').textContent())
-      .toBe('Recording')
+      .toBe('Capturing')
     await expect(recordingAction).toHaveText('10 Minute Pause')
   } finally {
     await electronApp.close()

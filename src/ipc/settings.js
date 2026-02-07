@@ -2,7 +2,7 @@ const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const fs = require('node:fs');
 const { loadSettings, resolveSettingsPath, saveSettings, validateContextFolderPath } = require('../settings');
 const { DEFAULT_CLIPBOARD_HOTKEY, DEFAULT_RECORDING_HOTKEY } = require('../hotkeys');
-const { getScreenRecordingPermissionStatus } = require('../screen-recording/permissions');
+const { getScreenRecordingPermissionStatus } = require('../screen-capture/permissions');
 
 let onSettingsSaved = null;
 

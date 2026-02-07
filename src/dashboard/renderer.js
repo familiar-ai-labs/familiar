@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
     if (typeof require === 'function') {
       return {
         ...require('./bootstrap/hotkeys'),
-        ...require('./bootstrap/recording'),
+        ...require('./bootstrap/stills'),
         ...require('./bootstrap/settings'),
         ...require('./bootstrap/updates'),
         ...require('./bootstrap/wizard'),
@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
   const createDashboardState = stateModule?.createDashboardState
   const {
     bootstrapHotkeys,
-    bootstrapRecording,
+    bootstrapStills,
     bootstrapSettings,
     bootstrapUpdates,
     bootstrapWizard,
@@ -107,17 +107,6 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
   const recordingStatus = document.getElementById('recording-status')
   const recordingActionButton = document.getElementById('recording-action')
   const recordingPermission = document.getElementById('recording-permission')
-  const recordingQueryQuestion = document.getElementById('recording-query-question')
-  const recordingQueryFrom = document.getElementById('recording-query-from')
-  const recordingQueryTo = document.getElementById('recording-query-to')
-  const recordingQuerySubmit = document.getElementById('recording-query-submit')
-  const recordingQuerySpinner = document.getElementById('recording-query-spinner')
-  const recordingQueryStatus = document.getElementById('recording-query-status')
-  const recordingQueryError = document.getElementById('recording-query-error')
-  const recordingQueryAnswer = document.getElementById('recording-query-answer')
-  const recordingQueryAvailability = document.getElementById('recording-query-availability')
-  const recordingQueryEstimate = document.getElementById('recording-query-estimate')
-  const recordingQueryPath = document.getElementById('recording-query-path')
 
   const updateButtons = selectAll('[data-action="updates-check"]')
   const updateStatuses = selectAll('[data-setting-status="updates-status"]')
@@ -190,8 +179,8 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
       subtitle: 'Check for new versions and download when available.'
     },
     recording: {
-      title: 'Recording',
-      subtitle: 'Control always-on screen recording.'
+      title: 'Stills',
+      subtitle: 'Control always-on screen still capture.'
     }
   }
 
@@ -250,7 +239,7 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
   const runBootstrapWizard = typeof bootstrapWizard === 'function' ? bootstrapWizard : () => null
   const runBootstrapWizardSkill = typeof bootstrapWizardSkill === 'function' ? bootstrapWizardSkill : () => null
   const runBootstrapUpdates = typeof bootstrapUpdates === 'function' ? bootstrapUpdates : () => null
-  const runBootstrapRecording = typeof bootstrapRecording === 'function' ? bootstrapRecording : () => null
+  const runBootstrapStills = typeof bootstrapStills === 'function' ? bootstrapStills : () => null
   const runBootstrapSettings = typeof bootstrapSettings === 'function' ? bootstrapSettings : () => null
   const runBootstrapHotkeys = typeof bootstrapHotkeys === 'function' ? bootstrapHotkeys : () => null
 
@@ -328,7 +317,7 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
     setMessage
   })
 
-  apis.recordingApi = runBootstrapRecording({
+  apis.recordingApi = runBootstrapStills({
     window,
     elements: {
       recordingDetails,
@@ -336,18 +325,7 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
       recordingOpenFolderButton,
       recordingStatus,
       recordingActionButton,
-      recordingPermission,
-      recordingQueryQuestion,
-      recordingQueryFrom,
-      recordingQueryTo,
-      recordingQuerySubmit,
-      recordingQuerySpinner,
-      recordingQueryStatus,
-      recordingQueryError,
-      recordingQueryAnswer,
-      recordingQueryAvailability,
-      recordingQueryEstimate,
-      recordingQueryPath
+      recordingPermission
     },
     jiminy,
     getState: state.getRecordingState
@@ -424,7 +402,7 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
     const settingsResult = await apis.settingsApi.loadSettings()
     state.setIsFirstRun(Boolean(settingsResult?.isFirstRun))
     callIfAvailable(apis.recordingApi, 'setPermissionStatus', settingsResult?.screenRecordingPermissionStatus || '')
-    callIfAvailable(apis.recordingApi, 'updateRecordingUI')
+    callIfAvailable(apis.recordingApi, 'updateStillsUI')
     const defaultSection = state.getIsFirstRun() ? 'wizard' : 'general'
     setActiveSection(defaultSection)
     state.updateWizardUI()

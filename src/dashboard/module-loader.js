@@ -5,7 +5,7 @@
     { globalKey: 'JiminyHotkeys', modulePath: './hotkeys.js', factory: 'createHotkeys' },
     { globalKey: 'JiminyUpdates', modulePath: './updates.js', factory: 'createUpdates' },
     { globalKey: 'JiminySettings', modulePath: './settings.js', factory: 'createSettings' },
-    { globalKey: 'JiminyRecording', modulePath: './recording.js', factory: 'createRecording' }
+    { globalKey: 'JiminyStills', modulePath: './stills.js', factory: 'createStills' }
   ]
 
   function assignModule(targetWindow, moduleExports) {

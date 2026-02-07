@@ -16,16 +16,13 @@ contextBridge.exposeInMainWorld('jiminy', {
   suspendHotkeys: () => ipcRenderer.invoke('hotkeys:suspend'),
   resumeHotkeys: () => ipcRenderer.invoke('hotkeys:resume'),
   checkForUpdates: (payload) => ipcRenderer.invoke('updates:check', payload),
-  getScreenRecordingStatus: () => ipcRenderer.invoke('screenRecording:getStatus'),
-  startScreenRecording: () => ipcRenderer.invoke('screenRecording:start'),
-  pauseScreenRecording: () => ipcRenderer.invoke('screenRecording:pause'),
-  stopScreenRecording: () => ipcRenderer.invoke('screenRecording:stop'),
-  simulateRecordingHotkey: () => ipcRenderer.invoke('screenRecording:simulateHotkey'),
-  simulateRecordingIdle: (payload) => ipcRenderer.invoke('screenRecording:simulateIdle', payload),
-  openRecordingFolder: () => ipcRenderer.invoke('recording:openFolder'),
-  runRecordingQuery: (payload) => ipcRenderer.invoke('recordingQuery:run', payload),
-  getRecordingQueryAvailability: () => ipcRenderer.invoke('recordingQuery:availability'),
-  getRecordingQueryEstimate: (payload) => ipcRenderer.invoke('recordingQuery:estimate', payload),
+  getScreenStillsStatus: () => ipcRenderer.invoke('screenStills:getStatus'),
+  startScreenStills: () => ipcRenderer.invoke('screenStills:start'),
+  pauseScreenStills: () => ipcRenderer.invoke('screenStills:pause'),
+  stopScreenStills: () => ipcRenderer.invoke('screenStills:stop'),
+  simulateStillsHotkey: () => ipcRenderer.invoke('screenStills:simulateHotkey'),
+  simulateStillsIdle: (payload) => ipcRenderer.invoke('screenStills:simulateIdle', payload),
+  openStillsFolder: () => ipcRenderer.invoke('stills:openFolder'),
   onUpdateDownloadProgress: (handler) => {
     const listener = (_event, payload) => handler(payload)
     ipcRenderer.on('updates:download-progress', listener)
