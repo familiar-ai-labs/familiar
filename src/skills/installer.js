@@ -10,6 +10,48 @@ const HARNESS_SKILL_DIRS = {
 
 const SKILL_NAME = 'jiminy';
 
+async function copyFileViaReadWrite(sourcePath, destinationPath) {
+    const data = await fs.promises.readFile(sourcePath);
+    await fs.promises.mkdir(path.dirname(destinationPath), { recursive: true });
+    await fs.promises.writeFile(destinationPath, data);
+}
+
+async function copyDirRecursive(sourceDir, destinationDir) {
+    await fs.promises.mkdir(destinationDir, { recursive: true });
+
+    const entries = await fs.promises.readdir(sourceDir, { withFileTypes: true });
+    for (const entry of entries) {
+        const sourcePath = path.join(sourceDir, entry.name);
+        const destinationPath = path.join(destinationDir, entry.name);
+
+        if (entry.isDirectory()) {
+            await copyDirRecursive(sourcePath, destinationPath);
+            continue;
+        }
+
+        if (entry.isFile()) {
+            await copyFileViaReadWrite(sourcePath, destinationPath);
+            continue;
+        }
+
+        if (entry.isSymbolicLink()) {
+            // Keep behavior close to fs.cp(..., { dereference: true }) by copying the target contents.
+            const resolved = await fs.promises.realpath(sourcePath);
+            const stat = await fs.promises.stat(resolved);
+            if (stat.isDirectory()) {
+                await copyDirRecursive(resolved, destinationPath);
+            } else if (stat.isFile()) {
+                await copyFileViaReadWrite(resolved, destinationPath);
+            } else {
+                throw new Error(`Unsupported symlink target type for ${sourcePath}`);
+            }
+            continue;
+        }
+
+        throw new Error(`Unsupported directory entry type for ${sourcePath}`);
+    }
+}
+
 function resolveHarnessSkillPath(harness, options = {}) {
     const baseDir = HARNESS_SKILL_DIRS[harness];
     if (!baseDir) {
@@ -70,7 +112,8 @@ async function installSkill(options = {}) {
     );
     try {
         await fs.promises.rm(tempDestination, { recursive: true, force: true });
-        await fs.promises.cp(sourceDir, tempDestination, { recursive: true, dereference: true });
+        // Avoid fs.promises.cp(): it uses opendir(), which is unreliable for directories inside Electron's app.asar.
+        await copyDirRecursive(sourceDir, tempDestination);
 
         await fs.promises.rm(destination, { recursive: true, force: true });
         await fs.promises.rename(tempDestination, destination);

@@ -118,10 +118,10 @@
       <main class="flex-1 flex flex-col h-full bg-white dark:bg-[#111]">
           <div id="settings-header" class="flex-none px-6 py-4 border-b border-zinc-100 dark:border-zinc-800/50 flex justify-between items-center">
             <div>
-              <h2 id="section-title" class="text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">General Settings</h2>
-              <p id="section-subtitle" class="text-xs text-zinc-500 dark:text-zinc-400">Core app configuration and provider setup.</p>
-            </div>
-          </div>
+	              <h2 id="section-title" class="text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">General Settings</h2>
+	              <p id="section-subtitle" class="text-xs text-zinc-500 dark:text-zinc-400">Core app configuration.</p>
+	            </div>
+	          </div>
 
           <div id="settings-content" class="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-slim">
             <!-- General -->
@@ -151,65 +151,9 @@
                 <p class="text-xs text-zinc-500 dark:text-zinc-400">
                   Choose where Jiminy stores local captures.
                 </p>
-              </section>
+	              </section>
 
-              <hr class="border-zinc-100 dark:border-zinc-800">
-
-              <section class="space-y-2">
-                <label class="section-label">AI Provider</label>
-                <div class="space-y-2">
-                  <select id="llm-provider" data-setting="llm-provider" class="input-ring w-full appearance-none bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg py-2 px-3 text-xs font-medium text-zinc-900 dark:text-zinc-100 focus:outline-none cursor-pointer">
-                    <option value="">Select provider...</option>
-                    <option value="gemini">Gemini</option>
-                    <option value="openai">OpenAI</option>
-                    <option value="anthropic">Anthropic</option>
-                  </select>
-                  <p id="llm-provider-error" data-setting-error="llm-provider-error" class="text-xs text-red-600 dark:text-red-400 hidden" role="alert" aria-live="polite"></p>
-                </div>
-
-                <div class="space-y-2">
-                  <div class="input-ring relative w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg">
-                      <svg viewBox="0 0 24 24" class="absolute left-3 top-2.5 w-3.5 h-3.5 text-zinc-400" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                        <path d="M14.5 10.5a3.5 3.5 0 1 0-7 0 3.5 3.5 0 0 0 7 0Z" />
-                        <path d="M12 14v3m0 0h6m-6 0l2 2m-2-2l2-2" />
-                      </svg>
-                      <input
-                        id="llm-api-key"
-                        data-setting="llm-api-key"
-                        type="password"
-                        placeholder="Not set"
-                        autocomplete="off"
-                        class="w-full bg-transparent text-xs text-zinc-700 dark:text-zinc-300 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none py-2 pl-8 pr-3"
-                      >
-                  </div>
-                  <p id="llm-api-key-error" data-setting-error="llm-api-key-error" class="text-xs text-red-600 dark:text-red-400 hidden" role="alert" aria-live="polite"></p>
-                  <span id="llm-api-key-status" data-setting-status="llm-api-key-status" class="text-xs text-emerald-600 dark:text-emerald-400 hidden" aria-live="polite"></span>
-                </div>
-                <p class="text-xs text-zinc-500 dark:text-zinc-400">
-                  Used to analyze captures, and to extract text from screen stills when "Stills extraction" is set to AI.
-                </p>
-              </section>
-
-              <hr class="border-zinc-100 dark:border-zinc-800">
-
-              <section class="space-y-2">
-                <div class="flex items-center justify-between">
-                  <label class="section-label" for="stills-markdown-extractor">Stills Extraction</label>
-                  <span id="stills-markdown-extractor-status" data-setting-status="stills-markdown-extractor-status" class="text-xs text-emerald-600 dark:text-emerald-400 hidden" aria-live="polite"></span>
-                </div>
-                <div class="space-y-2">
-                  <select id="stills-markdown-extractor" data-setting="stills-markdown-extractor" class="input-ring w-full appearance-none bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg py-2 px-3 text-xs font-medium text-zinc-900 dark:text-zinc-100 focus:outline-none cursor-pointer">
-                    <option value="llm">AI (send stills to provider)</option>
-                    <option value="apple_vision_ocr">Local OCR (Apple Vision)</option>
-                  </select>
-                  <p id="stills-markdown-extractor-error" data-setting-error="stills-markdown-extractor-error" class="text-xs text-red-600 dark:text-red-400 hidden" role="alert" aria-live="polite"></p>
-                </div>
-                <p class="text-xs text-zinc-500 dark:text-zinc-400">
-                  Controls how screen still images are converted to markdown. Local OCR does not require an API key, but can use high CPU during extraction.
-                </p>
-              </section>
-
-            </section>
+	            </section>
 
             <section id="section-privacy" data-section-pane="privacy" role="tabpanel" aria-label="Privacy settings" class="space-y-6 hidden">
               <section class="space-y-2">
@@ -275,7 +219,7 @@
                 <span id="always-record-when-active-status" data-setting-status="always-record-when-active-status" class="text-xs text-emerald-600 dark:text-emerald-400 hidden" aria-live="polite"></span>
               </section>
 
-              <section id="recording-details" class="space-y-3 hidden">
+	              <section id="recording-details" class="space-y-3 hidden">
                 <div class="flex flex-wrap items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
                   <p class="text-xs text-zinc-500 dark:text-zinc-400">
                     Saved to <span id="recording-path" class="font-mono text-zinc-700 dark:text-zinc-200"></span>
@@ -296,9 +240,65 @@
                     class="px-3 py-1.5 text-xs font-medium bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-md text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >Start capture</button>
                 </div>
-                <p id="recording-permission" class="text-xs text-red-600 dark:text-red-400 hidden" role="alert" aria-live="polite"></p>
-              </section>
-            </section>
+	                <p id="recording-permission" class="text-xs text-red-600 dark:text-red-400 hidden" role="alert" aria-live="polite"></p>
+	              </section>
+
+	              <hr class="border-zinc-100 dark:border-zinc-800">
+
+	              <section class="space-y-2">
+	                <div class="flex items-center justify-between">
+	                  <label class="section-label" for="stills-markdown-extractor">Stills Extraction</label>
+	                  <span id="stills-markdown-extractor-status" data-setting-status="stills-markdown-extractor-status" class="text-xs text-emerald-600 dark:text-emerald-400 hidden" aria-live="polite"></span>
+	                </div>
+	                <div class="space-y-2">
+	                  <select id="stills-markdown-extractor" data-setting="stills-markdown-extractor" class="input-ring w-full appearance-none bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg py-2 px-3 text-xs font-medium text-zinc-900 dark:text-zinc-100 focus:outline-none cursor-pointer">
+	                    <option value="llm">AI (send stills to provider)</option>
+	                    <option value="apple_vision_ocr">Local OCR (Apple Vision)</option>
+	                  </select>
+	                  <p id="stills-markdown-extractor-error" data-setting-error="stills-markdown-extractor-error" class="text-xs text-red-600 dark:text-red-400 hidden" role="alert" aria-live="polite"></p>
+	                </div>
+	                <p class="text-xs text-zinc-500 dark:text-zinc-400">
+	                  Controls how screen still images are converted to markdown. Local OCR does not require an API key, but can use high CPU during extraction.
+	                </p>
+	              </section>
+
+	              <hr class="border-zinc-100 dark:border-zinc-800">
+
+	              <section class="space-y-2">
+	                <label class="section-label">AI Provider</label>
+	                <div class="space-y-2">
+	                  <select id="llm-provider" data-setting="llm-provider" class="input-ring w-full appearance-none bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg py-2 px-3 text-xs font-medium text-zinc-900 dark:text-zinc-100 focus:outline-none cursor-pointer">
+	                    <option value="">Select provider...</option>
+	                    <option value="gemini">Gemini</option>
+	                    <option value="openai">OpenAI</option>
+	                    <option value="anthropic">Anthropic</option>
+	                  </select>
+	                  <p id="llm-provider-error" data-setting-error="llm-provider-error" class="text-xs text-red-600 dark:text-red-400 hidden" role="alert" aria-live="polite"></p>
+	                </div>
+
+	                <div class="space-y-2">
+	                  <div class="input-ring relative w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg">
+	                      <svg viewBox="0 0 24 24" class="absolute left-3 top-2.5 w-3.5 h-3.5 text-zinc-400" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+	                        <path d="M14.5 10.5a3.5 3.5 0 1 0-7 0 3.5 3.5 0 0 0 7 0Z" />
+	                        <path d="M12 14v3m0 0h6m-6 0l2 2m-2-2l2-2" />
+	                      </svg>
+	                      <input
+	                        id="llm-api-key"
+	                        data-setting="llm-api-key"
+	                        type="password"
+	                        placeholder="Not set"
+	                        autocomplete="off"
+	                        class="w-full bg-transparent text-xs text-zinc-700 dark:text-zinc-300 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none py-2 pl-8 pr-3"
+	                      >
+	                  </div>
+	                  <p id="llm-api-key-error" data-setting-error="llm-api-key-error" class="text-xs text-red-600 dark:text-red-400 hidden" role="alert" aria-live="polite"></p>
+	                  <span id="llm-api-key-status" data-setting-status="llm-api-key-status" class="text-xs text-emerald-600 dark:text-emerald-400 hidden" aria-live="polite"></span>
+	                </div>
+	                <p class="text-xs text-zinc-500 dark:text-zinc-400">
+	                  Used to analyze captures, and to extract text from screen stills when "Stills extraction" is set to AI.
+	                </p>
+	              </section>
+	            </section>
 
             <!-- Updates -->
             <section id="section-updates" data-section-pane="updates" role="tabpanel" aria-label="Updates" class="space-y-4 hidden">

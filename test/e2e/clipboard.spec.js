@@ -140,7 +140,7 @@ test.describe('clipboard capture flow', () => {
         }
     });
 
-    test('clipboard with content shows analysis complete notification with open location button', async () => {
+	    test('clipboard with content shows analysis complete notification with open location button', async () => {
         const appRoot = path.join(__dirname, '../..');
         const contextPath = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-context-clipboard-'));
         const settingsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-e2e-'));
@@ -162,25 +162,33 @@ test.describe('clipboard capture flow', () => {
             },
         });
 
-        try {
-            const clipboardText = 'This is test clipboard content for analysis.';
+	        try {
+	            const clipboardText = 'This is test clipboard content for analysis.';
 
             // Mock clipboard to have content
             await electronApp.evaluate(({ clipboard }, text) => {
                 clipboard.readText = () => text;
             }, clipboardText);
 
-            const window = await electronApp.firstWindow();
-            await window.waitForLoadState('domcontentloaded');
-            await window.getByRole('tab', { name: 'General' }).click();
+	            const window = await electronApp.firstWindow();
+	            await window.waitForLoadState('domcontentloaded');
+	            await window.getByRole('tab', { name: 'General' }).click();
 
-            // Set context folder and LLM provider
-            await window.locator('#context-folder-choose').click();
-            await expect(window.locator('#context-folder-status')).toHaveText('Saved.');
-            await window.locator('#llm-provider').selectOption('gemini');
-            await window.locator('#llm-api-key').fill('test-key');
-            await window.locator('#llm-api-key').blur();
-            await expect(window.locator('#llm-api-key-status')).toHaveText('Saved.');
+	            // Set context folder (General tab)
+	            await window.locator('#context-folder-choose').click();
+	            await expect(window.locator('#context-folder-status')).toHaveText('Saved.');
+
+	            // Provider + extraction settings live under Screen Stills.
+	            await expect(window.locator('#llm-provider')).toBeHidden();
+	            await window.getByRole('tab', { name: 'Screen Stills' }).click();
+	            await expect(window.locator('#stills-markdown-extractor')).toBeVisible();
+	            await expect(window.locator('#llm-provider')).toBeVisible();
+
+	            // Configure provider
+	            await window.locator('#llm-provider').selectOption('gemini');
+	            await window.locator('#llm-api-key').fill('test-key');
+	            await window.locator('#llm-api-key').blur();
+	            await expect(window.locator('#llm-api-key-status')).toHaveText('Saved.');
 
             // Trigger clipboard capture and wait for the full flow to complete
             // The toast window will be created (compact), then destroyed and recreated (large) for analysis toast

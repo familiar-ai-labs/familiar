@@ -172,7 +172,7 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
     },
     general: {
       title: 'General Settings',
-      subtitle: 'Core app configuration and provider setup.'
+      subtitle: 'Core app configuration.'
     },
     privacy: {
       title: 'Privacy',
@@ -188,7 +188,7 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
     },
     recording: {
       title: 'Screen Stills',
-      subtitle: 'Capture screen stills while you are active.'
+      subtitle: 'Capture screen stills while you are active, and configure extraction.'
     }
   }
 
