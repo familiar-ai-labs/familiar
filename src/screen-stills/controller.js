@@ -5,6 +5,7 @@ const { createStillsMarkdownWorker } = require('./stills-markdown-worker');
 const { createClipboardMirror } = require('../clipboard/mirror');
 
 const DEFAULT_PAUSE_DURATION_MS = 10 * 60 * 1000;
+const DEFAULT_START_RETRY_INTERVAL_MS = 60 * 1000;
 
 const STATES = Object.freeze({
   DISABLED: 'disabled',
@@ -34,6 +35,10 @@ function createScreenStillsController(options = {}) {
     || ((process.versions && process.versions.electron)
       ? createClipboardMirror({ logger })
       : null);
+  const startRetryIntervalMs =
+    Number.isFinite(options.startRetryIntervalMs) && options.startRetryIntervalMs > 0
+      ? options.startRetryIntervalMs
+      : DEFAULT_START_RETRY_INTERVAL_MS;
 
   let state = STATES.DISABLED;
   let settings = { enabled: false, contextFolderPath: '' };
@@ -43,6 +48,9 @@ function createScreenStillsController(options = {}) {
   let manualPaused = false;
   let pauseTimer = null;
   let activeSessionId = null;
+  let lastPresenceState = null;
+  let startRetryTimer = null;
+  let startRetryAttempt = 0;
 
   function setState(nextState, details = {}) {
     if (state === nextState) {
@@ -109,6 +117,83 @@ function createScreenStillsController(options = {}) {
     pauseTimer = null;
   }
 
+  function clearStartRetryTimer() {
+    if (!startRetryTimer) {
+      return;
+    }
+    scheduler.clearTimeout(startRetryTimer);
+    startRetryTimer = null;
+  }
+
+  function resetStartRetry() {
+    clearStartRetryTimer();
+    startRetryAttempt = 0;
+  }
+
+  function shouldRetryStart(error) {
+    const message = error?.message || '';
+    if (typeof message !== 'string') {
+      return true;
+    }
+    // These require user intervention; retrying just spams logs/toasts.
+    if (message.includes('Screen Recording permission is not granted')) {
+      return false;
+    }
+    if (message.includes('Context folder path missing')) {
+      return false;
+    }
+    return true;
+  }
+
+  function scheduleStartRetry(error) {
+    if (startRetryTimer) {
+      return;
+    }
+    if (!settings.enabled || manualPaused) {
+      return;
+    }
+    if (lastPresenceState !== 'active') {
+      return;
+    }
+    if (!canRecord()) {
+      return;
+    }
+    if (!shouldRetryStart(error)) {
+      return;
+    }
+
+    startRetryAttempt += 1;
+    const delayMs = startRetryIntervalMs;
+
+    logger.warn('Recording start failed; scheduling retry', {
+      attempt: startRetryAttempt,
+      delayMs,
+      message: error?.message || 'start-failed'
+    });
+
+    onError({
+      message: error?.message || 'Failed to start recording.',
+      reason: 'start-failed',
+      willRetry: true,
+      retryDelayMs: delayMs,
+      attempt: startRetryAttempt
+    });
+
+    startRetryTimer = scheduler.setTimeout(() => {
+      startRetryTimer = null;
+      if (!settings.enabled || manualPaused) {
+        return;
+      }
+      if (lastPresenceState !== 'active') {
+        return;
+      }
+      void startRecording('retry');
+    }, delayMs);
+    if (startRetryTimer && typeof startRetryTimer.unref === 'function') {
+      startRetryTimer.unref();
+    }
+  }
+
   function schedulePauseResume() {
     clearPauseTimer();
     pauseTimer = scheduler.setTimeout(() => {
@@ -133,11 +218,13 @@ function createScreenStillsController(options = {}) {
     if (state === STATES.RECORDING) {
       return;
     }
+    clearStartRetryTimer();
     pendingStart = false;
     setState(STATES.RECORDING, { source });
     try {
       markdownWorker.start({ contextFolderPath: settings.contextFolderPath });
       const result = await recorder.start({ contextFolderPath: settings.contextFolderPath });
+      resetStartRetry();
       activeSessionId = typeof result?.sessionId === 'string' ? result.sessionId : null;
       if (state !== STATES.RECORDING) {
         logger.log('Clipboard mirror start skipped: recording not active', { state });
@@ -154,12 +241,12 @@ function createScreenStillsController(options = {}) {
       }
     } catch (error) {
       logger.error('Failed to start recording', error);
-      onError({ message: error?.message || 'Failed to start recording.', reason: 'start-failed' });
       if (clipboardMirror && typeof clipboardMirror.stop === 'function') {
         clipboardMirror.stop('start-failed');
       }
       activeSessionId = null;
       setState(settings.enabled ? STATES.ARMED : STATES.DISABLED, { reason: 'start-failed' });
+      scheduleStartRetry(error);
     }
   }
 
@@ -194,6 +281,7 @@ function createScreenStillsController(options = {}) {
   }
 
   function handleActive() {
+    lastPresenceState = 'active';
     if (!settings.enabled || manualPaused) {
       return;
     }
@@ -211,6 +299,7 @@ function createScreenStillsController(options = {}) {
       return;
     }
     const presenceState = presenceMonitor.getState().state;
+    lastPresenceState = presenceState;
     if (presenceState === 'active') {
       logger.log('Recording presence active; syncing state', { reason });
       handleActive();
@@ -218,6 +307,8 @@ function createScreenStillsController(options = {}) {
   }
 
   function handleIdle({ idleSeconds } = {}) {
+    lastPresenceState = 'idle';
+    clearStartRetryTimer();
     if (state !== STATES.RECORDING) {
       return;
     }
@@ -234,12 +325,16 @@ function createScreenStillsController(options = {}) {
   }
 
   function handleLock() {
+    lastPresenceState = 'lock';
+    clearStartRetryTimer();
     if (state === STATES.RECORDING || state === STATES.IDLE_GRACE) {
       void stopRecording('lock');
     }
   }
 
   function handleSuspend() {
+    lastPresenceState = 'suspend';
+    clearStartRetryTimer();
     if (state === STATES.RECORDING || state === STATES.IDLE_GRACE) {
       void stopRecording('suspend');
     }
@@ -252,6 +347,7 @@ function createScreenStillsController(options = {}) {
     };
 
     if (!settings.enabled) {
+      resetStartRetry();
       manualPaused = false;
       clearPauseTimer();
       stopPresence();
@@ -268,6 +364,7 @@ function createScreenStillsController(options = {}) {
     }
 
     if (!canRecord()) {
+      resetStartRetry();
       stopPresence();
       markdownWorker.stop();
       if (clipboardMirror && typeof clipboardMirror.stop === 'function') {
@@ -306,6 +403,7 @@ function createScreenStillsController(options = {}) {
     if (!settings.enabled) {
       return { ok: false, message: 'Recording is disabled.' };
     }
+    resetStartRetry();
     if (manualPaused) {
       schedulePauseResume();
       logger.log('Recording pause extended', { durationMs: pauseDurationMs });
@@ -341,6 +439,7 @@ function createScreenStillsController(options = {}) {
 
   async function shutdown(reason = 'quit') {
     stopPresence();
+    resetStartRetry();
     manualPaused = false;
     clearPauseTimer();
     pendingStart = false;
@@ -357,6 +456,7 @@ function createScreenStillsController(options = {}) {
 
   function dispose() {
     stopPresence();
+    resetStartRetry();
     manualPaused = false;
     clearPauseTimer();
     markdownWorker.stop();

@@ -75,14 +75,23 @@ const attemptScreenCaptureShutdown = (reason) => {
         });
 };
 
-const handleStillsError = ({ message }) => {
+const handleStillsError = ({ message, willRetry, retryDelayMs, attempt } = {}) => {
     if (!message) {
         return;
     }
+
+    // If the controller is automatically retrying, only toast once to avoid spam.
+    if (willRetry === true && Number.isFinite(attempt) && attempt > 1) {
+        console.warn('Recording issue (retrying)', { message, retryDelayMs, attempt });
+        return;
+    }
+
     console.warn('Recording issue', { message });
     showToast({
         title: 'Recording issue',
-        body: message,
+        body: willRetry === true && Number.isFinite(retryDelayMs)
+            ? `${message}\nRetrying in ${Math.round(retryDelayMs / 1000)}s...`
+            : message,
         type: 'warning',
         size: 'large'
     });

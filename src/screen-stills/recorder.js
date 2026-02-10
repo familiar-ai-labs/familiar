@@ -55,6 +55,43 @@ function createRecorder(options = {}) {
   let sourceDetails = null;
   let queueStore = null;
 
+  function isCaptureAlreadyInProgressError(error) {
+    const message = error?.message || '';
+    return typeof message === 'string' && message.includes('Capture already in progress.');
+  }
+
+  function rejectPendingRequests(error) {
+    for (const pending of pendingRequests.values()) {
+      try {
+        pending.reject(error);
+      } catch (_error) {
+        // Ignore secondary failures; we're best-effort draining pending waiters.
+      }
+    }
+    pendingRequests.clear();
+  }
+
+  function destroyCaptureWindow(reason) {
+    if (!captureWindow) {
+      return;
+    }
+
+    logger.warn('Destroying capture window', { reason });
+
+    try {
+      if (!captureWindow.isDestroyed()) {
+        captureWindow.destroy();
+      }
+    } catch (error) {
+      logger.error('Failed to destroy capture window', { error });
+    } finally {
+      captureWindow = null;
+      windowReadyPromise = null;
+      rendererReady = false;
+      rejectPendingRequests(new Error('Recording renderer reset.'));
+    }
+  }
+
   function ensureWindow() {
     if (captureWindow) {
       return;
@@ -129,6 +166,46 @@ function createRecorder(options = {}) {
     }
     await waitForRendererReady();
     return captureWindow;
+  }
+
+  async function tryStopRendererCapture({ timeoutMs } = {}) {
+    if (!captureWindow) {
+      return { ok: true, alreadyStopped: true, reason: 'no-window' };
+    }
+    if (typeof captureWindow.isDestroyed === 'function' && captureWindow.isDestroyed()) {
+      return { ok: true, alreadyStopped: true, reason: 'window-destroyed' };
+    }
+
+    const requestId = randomUUID();
+    try {
+      captureWindow.webContents.send('screen-stills:stop', { requestId });
+      await waitForStatus(requestId, timeoutMs || STOP_TIMEOUT_MS, ['stopped']);
+      return { ok: true, stopped: true };
+    } catch (error) {
+      if (typeof error?.message === 'string' && error.message.includes('No active capture.')) {
+        return { ok: true, alreadyStopped: true };
+      }
+      return { ok: false, error };
+    }
+  }
+
+  async function forceResetRendererCapture(reason) {
+    clearCaptureLoop();
+    captureInProgress = false;
+
+    const stopResult = await tryStopRendererCapture({ timeoutMs: STOP_TIMEOUT_MS });
+    if (stopResult.ok) {
+      logger.log('Renderer capture reset via stop', { reason });
+      return { ok: true, strategy: 'stop' };
+    }
+
+    logger.warn('Renderer capture stop failed; recreating capture window', {
+      reason,
+      error: stopResult.error?.message || String(stopResult.error || 'unknown')
+    });
+    destroyCaptureWindow(`force-reset:${reason}`);
+    ensureWindow();
+    return { ok: true, strategy: 'recreate-window' };
   }
 
   function waitForStatus(requestId, timeoutMs, expectedStatuses = null) {
@@ -259,65 +336,94 @@ function createRecorder(options = {}) {
   }
 
   async function start({ contextFolderPath } = {}) {
-    if (sessionStore) {
-      logger.log('Recording already active; start skipped');
-      return {
-        ok: true,
-        alreadyRecording: true,
-        sessionId: sessionStore.sessionId,
-        sessionDir: sessionStore.sessionDir
-      };
-    }
-    if (!contextFolderPath) {
-      throw new Error('Context folder path missing for recording.');
-    }
-    if (!isScreenRecordingPermissionGranted()) {
-      throw new Error('Screen Recording permission is not granted. Enable Jiminy in System Settings \u2192 Privacy & Security \u2192 Screen Recording.');
+    if (startInProgress) {
+      return startInProgress;
     }
 
-    sourceDetails = await resolveCaptureSource();
-    recoverIncompleteSessions(contextFolderPath, logger);
+    startInProgress = (async function () {
+      if (sessionStore) {
+        logger.log('Recording already active; start skipped');
+        return {
+          ok: true,
+          alreadyRecording: true,
+          sessionId: sessionStore.sessionId,
+          sessionDir: sessionStore.sessionDir
+        };
+      }
+      if (!contextFolderPath) {
+        throw new Error('Context folder path missing for recording.');
+      }
+      if (!isScreenRecordingPermissionGranted()) {
+        throw new Error('Screen Recording permission is not granted. Enable Jiminy in System Settings \u2192 Privacy & Security \u2192 Screen Recording.');
+      }
 
-    const appVersion = typeof app?.getVersion === 'function' ? app.getVersion() : null;
-    sessionStore = createSessionStore({
-      contextFolderPath,
-      intervalSeconds: intervalMs / 1000,
-      scale: CAPTURE_CONFIG.scale,
-      format: CAPTURE_CONFIG.format,
-      sourceDisplay: sourceDetails.sourceDisplay,
-      appVersion,
-      logger
-    });
-    queueStore = createStillsQueue({ contextFolderPath, logger });
+      async function startOnce() {
+        sourceDetails = await resolveCaptureSource();
+        recoverIncompleteSessions(contextFolderPath, logger);
 
-    logger.log('Recording session started', { sessionDir: sessionStore.sessionDir });
+        const appVersion = typeof app?.getVersion === 'function' ? app.getVersion() : null;
+        sessionStore = createSessionStore({
+          contextFolderPath,
+          intervalSeconds: intervalMs / 1000,
+          scale: CAPTURE_CONFIG.scale,
+          format: CAPTURE_CONFIG.format,
+          sourceDisplay: sourceDetails.sourceDisplay,
+          appVersion,
+          logger
+        });
+        queueStore = createStillsQueue({ contextFolderPath, logger });
 
-    const window = await ensureWindowReady();
-    const requestId = randomUUID();
-    window.webContents.send('screen-stills:start', {
-      requestId,
-      sourceId: sourceDetails.sourceId,
-      captureWidth: sourceDetails.captureWidth,
-      captureHeight: sourceDetails.captureHeight,
-      format: CAPTURE_CONFIG.format
-    });
+        logger.log('Recording session started', { sessionDir: sessionStore.sessionDir });
+
+        const window = await ensureWindowReady();
+        const requestId = randomUUID();
+        window.webContents.send('screen-stills:start', {
+          requestId,
+          sourceId: sourceDetails.sourceId,
+          captureWidth: sourceDetails.captureWidth,
+          captureHeight: sourceDetails.captureHeight,
+          format: CAPTURE_CONFIG.format
+        });
+
+        try {
+          await waitForStatus(requestId, START_TIMEOUT_MS, ['started']);
+        } catch (error) {
+          sessionStore.finalize('start_failed');
+          sessionStore = null;
+          if (queueStore) {
+            queueStore.close();
+            queueStore = null;
+          }
+          sourceDetails = null;
+          throw error;
+        }
+
+        await captureNext();
+        scheduleCaptureLoop();
+        return { ok: true, sessionId: sessionStore.sessionId, sessionDir: sessionStore.sessionDir };
+      }
+
+      let didRetry = false;
+      try {
+        return await startOnce();
+      } catch (error) {
+        if (!didRetry && isCaptureAlreadyInProgressError(error)) {
+          didRetry = true;
+          logger.warn('Capture already in progress on start; forcing reset and retrying', {
+            error: error?.message || String(error)
+          });
+          await forceResetRendererCapture('start-capture-already-in-progress');
+          return await startOnce();
+        }
+        throw error;
+      }
+    })();
 
     try {
-      await waitForStatus(requestId, START_TIMEOUT_MS, ['started']);
-    } catch (error) {
-      sessionStore.finalize('start_failed');
-      sessionStore = null;
-      if (queueStore) {
-        queueStore.close();
-        queueStore = null;
-      }
-      sourceDetails = null;
-      throw error;
+      return await startInProgress;
+    } finally {
+      startInProgress = null;
     }
-
-    await captureNext();
-    scheduleCaptureLoop();
-    return { ok: true, sessionId: sessionStore.sessionId, sessionDir: sessionStore.sessionDir };
   }
 
   async function stop({ reason } = {}) {
@@ -326,21 +432,14 @@ function createRecorder(options = {}) {
     }
 
     stopInProgress = (async function () {
-      if (!sessionStore) {
-        return { ok: true, alreadyStopped: true };
-      }
-
       const stopReason = reason || 'stop';
       clearCaptureLoop();
 
-      if (captureWindow) {
-        const requestId = randomUUID();
-        try {
-          captureWindow.webContents.send('screen-stills:stop', { requestId });
-          await waitForStatus(requestId, STOP_TIMEOUT_MS, ['stopped']);
-        } catch (error) {
-          logger.error('Failed to stop recording capture', error);
-        }
+      captureInProgress = false;
+
+      const stopResult = await tryStopRendererCapture({ timeoutMs: STOP_TIMEOUT_MS });
+      if (!stopResult.ok) {
+        logger.error('Failed to stop recording capture', stopResult.error || stopResult);
       }
 
       if (sessionStore) {
@@ -351,6 +450,10 @@ function createRecorder(options = {}) {
         queueStore = null;
       }
       logger.log('Recording session stopped', { reason: stopReason });
+
+      if (!sessionStore && !captureWindow) {
+        return { ok: true, alreadyStopped: true };
+      }
 
       sessionStore = null;
       sourceDetails = null;

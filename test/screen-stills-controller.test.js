@@ -269,3 +269,90 @@ test('stills worker stops when recording pauses manually', async () => {
   assert.equal(calls.stop.length, 1)
   assert.equal(workerCalls.stop, 1)
 })
+
+test('stills controller retries start after an error when presence stays active', async () => {
+  const contextFolderPath = makeTempContext()
+  const presence = createPresenceMonitor()
+  const scheduler = createScheduler()
+  const calls = { start: [], stop: [] }
+  let attempt = 0
+  const recorder = {
+    start: async (payload) => {
+      calls.start.push(payload)
+      attempt += 1
+      if (attempt === 1) {
+        throw new Error('Transient start failure')
+      }
+    },
+    stop: async (payload) => {
+      calls.stop.push(payload)
+    }
+  }
+  const markdownWorker = { start: () => {}, stop: () => {} }
+
+  const controller = createScreenStillsController({
+    presenceMonitor: presence,
+    recorder,
+    markdownWorker,
+    scheduler,
+    startRetryIntervalMs: 1000,
+    logger: silentLogger
+  })
+
+  controller.start()
+  controller.updateSettings({ enabled: true, contextFolderPath })
+
+  presence.emit('active')
+  await flushPromises()
+  assert.equal(calls.start.length, 1)
+  assert.equal(controller.getState().state, 'armed')
+
+  scheduler.advanceBy(999)
+  await flushPromises()
+  assert.equal(calls.start.length, 1)
+
+  scheduler.advanceBy(1)
+  await flushPromises()
+  assert.equal(calls.start.length, 2)
+  assert.equal(controller.getState().state, 'recording')
+})
+
+test('stills controller does not retry start when presence becomes idle before cooldown elapses', async () => {
+  const contextFolderPath = makeTempContext()
+  const presence = createPresenceMonitor()
+  const scheduler = createScheduler()
+  const calls = { start: [], stop: [] }
+  const recorder = {
+    start: async (payload) => {
+      calls.start.push(payload)
+      throw new Error('Transient start failure')
+    },
+    stop: async (payload) => {
+      calls.stop.push(payload)
+    }
+  }
+  const markdownWorker = { start: () => {}, stop: () => {} }
+
+  const controller = createScreenStillsController({
+    presenceMonitor: presence,
+    recorder,
+    markdownWorker,
+    scheduler,
+    startRetryIntervalMs: 1000,
+    logger: silentLogger
+  })
+
+  controller.start()
+  controller.updateSettings({ enabled: true, contextFolderPath })
+
+  presence.emit('active')
+  await flushPromises()
+  assert.equal(calls.start.length, 1)
+
+  presence.emit('idle', { idleSeconds: 120 })
+  await flushPromises()
+
+  scheduler.advanceBy(1000)
+  await flushPromises()
+  assert.equal(calls.start.length, 1)
+})
