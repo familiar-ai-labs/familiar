@@ -14,6 +14,7 @@
       setLlmProviderValue: options.setLlmProviderValue,
       setLlmApiKeyPending: options.setLlmApiKeyPending,
       setLlmApiKeySaved: options.setLlmApiKeySaved,
+      setStillsMarkdownExtractorType: options.setStillsMarkdownExtractorType,
       setAlwaysRecordWhenActiveValue: options.setAlwaysRecordWhenActiveValue,
       setHotkeys: options.setHotkeys,
       setExclusions: options.setExclusions,

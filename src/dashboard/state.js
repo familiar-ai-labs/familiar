@@ -15,7 +15,7 @@
       currentLlmProviderName: '',
       currentLlmApiKey: '',
       pendingLlmApiKey: '',
-      currentStillsMarkdownExtractorType: 'llm',
+      currentStillsMarkdownExtractorType: 'apple_vision_ocr',
       currentAlwaysRecordWhenActive: false,
       isLlmApiKeySaved: false,
       currentSkillHarness: '',
@@ -86,7 +86,7 @@
     }
 
     function setStillsMarkdownExtractorType(value) {
-      const nextValue = value || 'llm'
+      const nextValue = value || 'apple_vision_ocr'
       state.currentStillsMarkdownExtractorType = nextValue
       for (const select of stillsMarkdownExtractorSelects) {
         if (select.value !== state.currentStillsMarkdownExtractorType) {
@@ -94,6 +94,7 @@
         }
       }
       callIfAvailable(apis.recordingApi, 'updateRecordingUI')
+      callIfAvailable(apis.processingEngineApi, 'updateProcessingEngineUI')
       updateWizardUI()
     }
 

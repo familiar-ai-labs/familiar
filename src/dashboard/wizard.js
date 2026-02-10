@@ -157,4 +157,4 @@
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = registry
   }
-})(window)
+})(typeof window !== 'undefined' ? window : global)

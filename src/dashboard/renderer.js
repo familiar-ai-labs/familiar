@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
     if (typeof require === 'function') {
       return {
         ...require('./bootstrap/hotkeys'),
+        ...require('./bootstrap/processing-engine'),
         ...require('./bootstrap/stills'),
         ...require('./bootstrap/settings'),
         ...require('./bootstrap/updates'),
@@ -34,6 +35,7 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
   const createDashboardState = stateModule?.createDashboardState
   const {
     bootstrapHotkeys,
+    bootstrapProcessingEngine,
     bootstrapStills,
     bootstrapSettings,
     bootstrapUpdates,
@@ -144,7 +146,8 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
     hotkeysApi: null,
     updatesApi: null,
     settingsApi: null,
-    recordingApi: null
+    recordingApi: null,
+    processingEngineApi: null
   }
 
   const state = createDashboardState({
@@ -184,7 +187,7 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
     },
     recording: {
       title: 'Recording',
-      subtitle: 'Capture still images while you are active, and configure extraction.'
+      subtitle: 'Choose whether processing runs in the cloud or locally.'
     }
   }
 
@@ -246,6 +249,7 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
   const runBootstrapStills = typeof bootstrapStills === 'function' ? bootstrapStills : () => null
   const runBootstrapSettings = typeof bootstrapSettings === 'function' ? bootstrapSettings : () => null
   const runBootstrapHotkeys = typeof bootstrapHotkeys === 'function' ? bootstrapHotkeys : () => null
+  const runBootstrapProcessingEngine = typeof bootstrapProcessingEngine === 'function' ? bootstrapProcessingEngine : () => null
 
   apis.wizardApi = runBootstrapWizard({
     window,
@@ -333,6 +337,13 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
     },
     jiminy,
     getState: state.getRecordingState
+  })
+
+  apis.processingEngineApi = runBootstrapProcessingEngine({
+    window,
+    elements: {
+      processingEngineRoots: selectAll('[data-processing-engine]')
+    }
   })
 
   apis.settingsApi = runBootstrapSettings({

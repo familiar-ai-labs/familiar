@@ -84,6 +84,14 @@ test('wizard happy flow completes setup and routes to General', async () => {
     await nextButton.click()
     await expect(window.locator('[data-wizard-step="2"]')).toBeVisible()
 
+    // Default mode is Local (no provider/key required).
+    await expect(nextButton).toBeEnabled()
+
+    // Switch to Cloud and configure provider/key to cover the cloud path.
+    const wizardStep2 = window.locator('[data-wizard-step="2"]')
+    await wizardStep2.locator('[data-processing-engine-mode="llm"]').click()
+    await expect(nextButton).toBeDisabled()
+
     await window.locator('#wizard-llm-provider').selectOption('gemini')
     await window.locator('#wizard-llm-api-key').fill('test-key')
     await window.locator('#wizard-llm-api-key').blur()
@@ -102,6 +110,7 @@ test('wizard happy flow completes setup and routes to General', async () => {
     const settingsPath = path.join(settingsDir, 'settings.json')
     const stored = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'))
     expect(stored.contextFolderPath).toBe(path.resolve(contextPath))
+    expect(stored.stills_markdown_extractor.type).toBe('llm')
     expect(stored.stills_markdown_extractor.llm_provider.provider).toBe('gemini')
     expect(stored.stills_markdown_extractor.llm_provider.api_key).toBe('test-key')
     expect(stored.alwaysRecordWhenActive ?? false).toBe(false)
@@ -133,6 +142,8 @@ test('wizard preserves state when navigating back and forth', async () => {
     await nextButton.click()
     await expect(window.locator('[data-wizard-step="2"]')).toBeVisible()
 
+    const wizardStep2 = window.locator('[data-wizard-step="2"]')
+    await wizardStep2.locator('[data-processing-engine-mode="llm"]').click()
     await window.locator('#wizard-llm-provider').selectOption('openai')
     await window.locator('#wizard-llm-api-key').fill('persisted-key')
     await window.locator('#wizard-llm-api-key').blur()
@@ -144,6 +155,7 @@ test('wizard preserves state when navigating back and forth', async () => {
 
     await nextButton.click()
     await expect(window.locator('[data-wizard-step="2"]')).toBeVisible()
+    await expect(window.locator('[data-wizard-step="2"] [data-processing-engine-panel="llm"]')).toBeVisible()
     await expect(window.locator('#wizard-llm-provider')).toHaveValue('openai')
     await expect(window.locator('#wizard-llm-api-key')).toHaveValue('persisted-key')
   } finally {
@@ -170,6 +182,12 @@ test('wizard intelligence step requires provider and saved api key', async () =>
     await nextButton.click()
     await expect(window.locator('[data-wizard-step=\"2\"]')).toBeVisible()
 
+    // Default mode is Local, so step 2 is complete by default.
+    await expect(nextButton).toBeEnabled()
+
+    // Cloud mode should require provider + saved key.
+    const wizardStep2 = window.locator('[data-wizard-step="2"]')
+    await wizardStep2.locator('[data-processing-engine-mode="llm"]').click()
     await expect(nextButton).toBeDisabled()
 
     await window.locator('#wizard-llm-provider').selectOption('gemini')
@@ -202,6 +220,9 @@ test('wizard resets to first step after Done', async () => {
     const nextButton = window.locator('#wizard-next')
 
     await nextButton.click()
+
+    const wizardStep2 = window.locator('[data-wizard-step="2"]')
+    await wizardStep2.locator('[data-processing-engine-mode="llm"]').click()
 
     await window.locator('#wizard-llm-provider').selectOption('gemini')
     await window.locator('#wizard-llm-api-key').fill('test-key')

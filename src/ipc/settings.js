@@ -26,7 +26,17 @@ function handleGetSettings() {
         const contextFolderPath = settings.contextFolderPath || '';
         const llmProviderName = settings?.stills_markdown_extractor?.llm_provider?.provider || '';
         const llmProviderApiKey = settings?.stills_markdown_extractor?.llm_provider?.api_key || '';
-        const stillsMarkdownExtractorType = settings?.stills_markdown_extractor?.type || 'llm';
+        const stillsMarkdownExtractorType = (() => {
+            const type = settings?.stills_markdown_extractor?.type;
+            if (typeof type === 'string' && type.trim()) {
+                return type;
+            }
+            // If the user configured a provider but never set the extractor type, assume cloud.
+            if (llmProviderName || llmProviderApiKey) {
+                return 'llm';
+            }
+            return 'apple_vision_ocr';
+        })();
         const recordingHotkey = typeof settings.recordingHotkey === 'string' ? settings.recordingHotkey : DEFAULT_RECORDING_HOTKEY;
         const alwaysRecordWhenActive = settings.alwaysRecordWhenActive === true;
         const skillInstallerHarness = typeof settings?.skillInstaller?.harness === 'string' ? settings.skillInstaller.harness : '';
@@ -68,7 +78,7 @@ function handleGetSettings() {
             validationMessage: 'Failed to load settings.',
             llmProviderName: '',
             llmProviderApiKey: '',
-            stillsMarkdownExtractorType: 'llm',
+            stillsMarkdownExtractorType: 'apple_vision_ocr',
             recordingHotkey: DEFAULT_RECORDING_HOTKEY,
             alwaysRecordWhenActive: false,
             skillInstaller: { harness: '', installPath: '' },

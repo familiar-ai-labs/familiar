@@ -169,7 +169,7 @@
     }
 
     function handleSectionChange(nextSection) {
-      if (nextSection === 'recording') {
+      if (nextSection === 'general') {
         void refreshStatus().then(updateStillsUI)
         startStatusPoller()
         return

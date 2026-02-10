@@ -5,6 +5,7 @@
     { globalKey: 'JiminyHotkeys', modulePath: './hotkeys.js', factory: 'createHotkeys' },
     { globalKey: 'JiminyUpdates', modulePath: './updates.js', factory: 'createUpdates' },
     { globalKey: 'JiminySettings', modulePath: './settings.js', factory: 'createSettings' },
+    { globalKey: 'JiminyProcessingEngine', modulePath: './processing-engine.js', factory: 'createProcessingEngine' },
     { globalKey: 'JiminyStills', modulePath: './stills.js', factory: 'createStills' }
   ]
 

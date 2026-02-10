@@ -217,7 +217,7 @@
         setContextFolderValue(result.contextFolderPath || '')
         setLlmProviderValue(result.llmProviderName || '')
         setLlmApiKeySaved(result.llmProviderApiKey || '')
-        setStillsMarkdownExtractorType(result.stillsMarkdownExtractorType || 'llm')
+        setStillsMarkdownExtractorType(result.stillsMarkdownExtractorType || 'apple_vision_ocr')
         setAlwaysRecordWhenActiveValue(result.alwaysRecordWhenActive === true)
         setSkillHarness(result?.skillInstaller?.harness || '')
         setHotkeys({
