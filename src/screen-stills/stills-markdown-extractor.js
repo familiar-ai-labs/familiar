@@ -227,7 +227,8 @@ const createAppleVisionOcrExtractor = ({
 
   return {
     type: 'apple_vision_ocr',
-    execution: { maxParallelBatches: 1 },
+    // OCR is CPU-heavy; keep this bounded so we don't spawn too many helper processes at once.
+    execution: { maxParallelBatches: 2 },
     canRun,
     extractBatch
   }
