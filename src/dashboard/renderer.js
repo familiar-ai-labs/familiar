@@ -111,12 +111,12 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
   const alwaysRecordWhenActiveStatuses = selectAll('[data-setting-status="always-record-when-active-status"]')
   const sidebarRecordingDot = document.getElementById('sidebar-recording-dot')
   const sidebarRecordingStatus = document.getElementById('sidebar-recording-status')
+  const sidebarRecordingToggleTrack = document.getElementById('sidebar-recording-toggle-track')
+  const sidebarRecordingActionButton = document.getElementById('sidebar-recording-action')
+  const sidebarRecordingPermission = document.getElementById('sidebar-recording-permission')
   const recordingDetails = document.getElementById('recording-details')
   const recordingPath = document.getElementById('recording-path')
   const recordingOpenFolderButton = document.getElementById('recording-open-folder')
-  const recordingStatus = document.getElementById('recording-status')
-  const recordingActionButton = document.getElementById('recording-action')
-  const recordingPermission = document.getElementById('recording-permission')
 
   const updateButtons = selectAll('[data-action="updates-check"]')
   const updateStatuses = selectAll('[data-setting-status="updates-status"]')
@@ -332,12 +332,12 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
     elements: {
       sidebarRecordingDot,
       sidebarRecordingStatus,
+      sidebarRecordingToggleTrack,
+      sidebarRecordingActionButton,
+      sidebarRecordingPermission,
       recordingDetails,
       recordingPath,
-      recordingOpenFolderButton,
-      recordingStatus,
-      recordingActionButton,
-      recordingPermission
+      recordingOpenFolderButton
     },
     jiminy,
     getState: state.getRecordingState

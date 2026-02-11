@@ -140,11 +140,11 @@ test('stills save captures to the stills folder', async () => {
     await setContextFolder(window)
     await enableRecordingToggle(window)
 
-    const recordingAction = window.locator('#recording-action')
+    const recordingAction = window.locator('#sidebar-recording-action')
     await expect(recordingAction).toBeEnabled()
 
     await recordingAction.click()
-    await expect(window.locator('#recording-status')).toHaveText('Capturing')
+    await expect(window.locator('#sidebar-recording-status')).toHaveText('Recording')
     await expect(recordingAction).toHaveText('Pause (10 min)')
 
     const stillsRoot = getStillsRoot(contextPath)
@@ -152,7 +152,7 @@ test('stills save captures to the stills folder', async () => {
     await waitForCaptureCount(manifestPath, 1)
 
     await recordingAction.click()
-    await expect(window.locator('#recording-status')).toHaveText('Paused')
+    await expect(window.locator('#sidebar-recording-status')).toHaveText('Paused')
     await expect(recordingAction).toHaveText('Resume')
 
     const manifest = readManifest(manifestPath)
@@ -178,10 +178,10 @@ test('stills start while recording is active', async () => {
     await setContextFolder(window)
     await enableRecordingToggle(window)
 
-    const recordingAction = window.locator('#recording-action')
+    const recordingAction = window.locator('#sidebar-recording-action')
     await expect(recordingAction).toBeEnabled()
 
-    await expect(window.locator('#recording-status')).toHaveText('Capturing')
+    await expect(window.locator('#sidebar-recording-status')).toHaveText('Recording')
     await expect(recordingAction).toHaveText('Pause (10 min)')
 
     const stillsRoot = getStillsRoot(contextPath)
@@ -200,7 +200,7 @@ test('stills start while recording is active', async () => {
     assertCaptureFiles(manifestPath, manifest, { requireNonEmptyCount: 1 })
 
     await recordingAction.click()
-    await expect(window.locator('#recording-status')).toHaveText('Paused')
+    await expect(window.locator('#sidebar-recording-status')).toHaveText('Paused')
     await expect(recordingAction).toHaveText('Resume')
   } finally {
     await electronApp.close()
@@ -228,11 +228,11 @@ test('stills capture repeatedly based on the interval', async () => {
     await setContextFolder(window)
     await enableRecordingToggle(window)
 
-    const recordingAction = window.locator('#recording-action')
+    const recordingAction = window.locator('#sidebar-recording-action')
     await expect(recordingAction).toBeEnabled()
 
     await recordingAction.click()
-    await expect(window.locator('#recording-status')).toHaveText('Capturing')
+    await expect(window.locator('#sidebar-recording-status')).toHaveText('Recording')
     await expect(recordingAction).toHaveText('Pause (10 min)')
 
     const stillsRoot = getStillsRoot(contextPath)
@@ -241,7 +241,7 @@ test('stills capture repeatedly based on the interval', async () => {
     await waitForCaptureCount(manifestPath, 2)
 
     await recordingAction.click()
-    await expect(window.locator('#recording-status')).toHaveText('Paused')
+    await expect(window.locator('#sidebar-recording-status')).toHaveText('Paused')
     await expect(recordingAction).toHaveText('Resume')
 
     await waitForCaptureCount(manifestPath, 2)
@@ -270,11 +270,11 @@ test('stills stop and save the manifest when the user goes idle', async () => {
     await setContextFolder(window)
     await enableRecordingToggle(window)
 
-    const recordingAction = window.locator('#recording-action')
+    const recordingAction = window.locator('#sidebar-recording-action')
     await expect(recordingAction).toBeEnabled()
 
     await recordingAction.click()
-    await expect(window.locator('#recording-status')).toHaveText('Capturing')
+    await expect(window.locator('#sidebar-recording-status')).toHaveText('Recording')
 
     const stillsRoot = getStillsRoot(contextPath)
     const manifestPath = await waitForManifestPath(stillsRoot)
@@ -313,22 +313,22 @@ test('stills resume automatically after the pause window', async () => {
     await setContextFolder(window)
     await enableRecordingToggle(window)
 
-    const recordingAction = window.locator('#recording-action')
+    const recordingAction = window.locator('#sidebar-recording-action')
     await expect(recordingAction).toBeEnabled()
 
     await recordingAction.click()
-    await expect(window.locator('#recording-status')).toHaveText('Capturing')
+    await expect(window.locator('#sidebar-recording-status')).toHaveText('Recording')
 
     await recordingAction.click()
-    await expect(window.locator('#recording-status')).toHaveText('Paused')
+    await expect(window.locator('#sidebar-recording-status')).toHaveText('Paused')
     await expect(recordingAction).toHaveText('Resume')
 
     await expect
       .poll(async () => {
-        const status = await window.locator('#recording-status').textContent()
+        const status = await window.locator('#sidebar-recording-status').textContent()
         return status
       })
-      .toBe('Capturing')
+      .toBe('Recording')
     await expect(recordingAction).toHaveText('Pause (10 min)')
   } finally {
     await electronApp.close()
@@ -352,22 +352,22 @@ test('stills pause and resume with the recording hotkey', async () => {
     await setContextFolder(window)
     await enableRecordingToggle(window)
 
-    const recordingAction = window.locator('#recording-action')
+    const recordingAction = window.locator('#sidebar-recording-action')
     await expect(recordingAction).toBeEnabled()
 
     await recordingAction.click()
-    await expect(window.locator('#recording-status')).toHaveText('Capturing')
+    await expect(window.locator('#sidebar-recording-status')).toHaveText('Recording')
 
     await window.evaluate(() => window.jiminy.simulateStillsHotkey())
     await expect
-      .poll(async () => window.locator('#recording-status').textContent())
+      .poll(async () => window.locator('#sidebar-recording-status').textContent())
       .toBe('Paused')
     await expect(recordingAction).toHaveText('Resume')
 
     await window.evaluate(() => window.jiminy.simulateStillsHotkey())
     await expect
-      .poll(async () => window.locator('#recording-status').textContent())
-      .toBe('Capturing')
+      .poll(async () => window.locator('#sidebar-recording-status').textContent())
+      .toBe('Recording')
     await expect(recordingAction).toHaveText('Pause (10 min)')
   } finally {
     await electronApp.close()

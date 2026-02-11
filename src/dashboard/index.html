@@ -28,14 +28,32 @@
                     type="checkbox"
                     class="sr-only peer"
                   >
-                  <div class="w-10 h-5 bg-zinc-200 dark:bg-zinc-800 rounded-full peer peer-checked:bg-emerald-500 transition-colors"></div>
+                  <div id="sidebar-recording-toggle-track" class="w-10 h-5 bg-zinc-200 dark:bg-zinc-800 rounded-full peer peer-checked:bg-emerald-500 transition-colors"></div>
                   <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform peer-checked:translate-x-5"></div>
                 </label>
               </div>
-              <div class="flex items-center gap-2">
+              <div class="flex items-center gap-2 mb-2">
                 <span id="sidebar-recording-dot" class="w-2 h-2 rounded-full bg-zinc-400"></span>
                 <span id="sidebar-recording-status" class="text-xs font-medium text-zinc-700 dark:text-zinc-200">Off</span>
               </div>
+              <button
+                id="sidebar-recording-action"
+                type="button"
+                class="w-full flex items-center justify-center gap-2 h-7 rounded-md bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-[11px] font-medium text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label="Pause or resume recording"
+              >
+                <svg viewBox="0 0 24 24" class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                  <path d="M12 8v4l2 2" />
+                  <path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                </svg>
+                Pause (10 min)
+              </button>
+              <p
+                id="sidebar-recording-permission"
+                class="text-xs text-red-600 dark:text-red-400 hidden pt-2"
+                role="alert"
+                aria-live="polite"
+              ></p>
               <p
                 id="always-record-when-active-error"
                 data-setting-error="always-record-when-active-error"
@@ -161,7 +179,7 @@
 
           <div id="settings-content" class="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-slim">
             <!-- General -->
-            <section id="section-general" data-section-pane="general" role="tabpanel" aria-label="General settings" class="min-h-full flex flex-col">
+            <section id="section-general" data-section-pane="general" role="tabpanel" aria-label="General settings" class="flex flex-col">
               <div class="space-y-6">
                 <section class="space-y-2">
                 <div class="flex items-center justify-between">
@@ -201,22 +219,10 @@
                       class="px-3 py-1.5 text-xs font-medium bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-md text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed hidden"
                     >Open in Finder</button>
                   </div>
-                  <div class="flex items-center justify-between gap-3">
-                    <p class="text-xs text-zinc-600 dark:text-zinc-300">
-                      Status: <span id="recording-status" class="text-zinc-900 dark:text-zinc-100 font-medium">Not capturing</span>
-                    </p>
-                    <button
-                      id="recording-action"
-                      type="button"
-                      class="px-3 py-1.5 text-xs font-medium bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-md text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >Start capture</button>
-                  </div>
-                  <p id="recording-permission" class="text-xs text-red-600 dark:text-red-400 hidden" role="alert" aria-live="polite"></p>
                 </section>
               </div>
 
-              <div class="mt-auto pt-6 space-y-3">
-                <hr class="border-zinc-100 dark:border-zinc-800">
+              <div class="mt-6 pt-2 space-y-3">
                 <div class="flex items-center justify-end gap-3">
                   <span id="copy-log-status" data-setting-status="copy-log-status" class="text-xs text-emerald-600 dark:text-emerald-400 hidden" aria-live="polite"></span>
                   <span id="copy-log-error" data-setting-error="copy-log-error" class="text-xs text-red-600 dark:text-red-400 hidden" role="alert" aria-live="polite"></span>
@@ -578,10 +584,10 @@
                         type="checkbox"
                         class="sr-only peer"
                       >
-                      <div class="w-10 h-5 bg-zinc-200 dark:bg-zinc-800 rounded-full peer peer-checked:bg-emerald-500 transition-colors"></div>
-                      <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform peer-checked:translate-x-5"></div>
-                    </label>
-                  </div>
+                  <div class="w-10 h-5 bg-zinc-200 dark:bg-zinc-800 rounded-full peer peer-checked:bg-emerald-500 transition-colors"></div>
+                  <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform peer-checked:translate-x-5"></div>
+                </label>
+              </div>
                   <p id="wizard-always-record-when-active-error" data-setting-error="always-record-when-active-error" class="text-xs text-red-600 dark:text-red-400 hidden" role="alert" aria-live="polite"></p>
                   <span id="wizard-always-record-when-active-status" data-setting-status="always-record-when-active-status" class="text-xs text-emerald-600 dark:text-emerald-400 hidden" aria-live="polite"></span>
                 </section>

@@ -7,6 +7,9 @@
     const {
       sidebarRecordingDot,
       sidebarRecordingStatus,
+      sidebarRecordingToggleTrack,
+      sidebarRecordingActionButton,
+      sidebarRecordingPermission,
       recordingDetails,
       recordingPath,
       recordingOpenFolderButton,
@@ -33,11 +36,12 @@
 
       let label = 'Off'
       let dotClass = 'bg-zinc-400'
+      const togglePausedClass = '!bg-amber-500'
 
       if (alwaysEnabled) {
         if (currentScreenStillsPaused) {
           label = 'Paused'
-          dotClass = 'bg-zinc-400'
+          dotClass = 'bg-amber-500'
         } else if (isCaptureActive()) {
           label = 'Recording'
           dotClass = 'bg-emerald-500'
@@ -51,8 +55,14 @@
         sidebarRecordingStatus.textContent = label
       }
       if (sidebarRecordingDot) {
-        sidebarRecordingDot.classList.remove('bg-zinc-400', 'bg-emerald-500')
+        sidebarRecordingDot.classList.remove('bg-zinc-400', 'bg-emerald-500', 'bg-amber-500')
         sidebarRecordingDot.classList.add(dotClass)
+      }
+      if (sidebarRecordingToggleTrack) {
+        sidebarRecordingToggleTrack.classList.remove(togglePausedClass)
+        if (alwaysEnabled && currentScreenStillsPaused) {
+          sidebarRecordingToggleTrack.classList.add(togglePausedClass)
+        }
       }
     }
 
@@ -130,16 +140,29 @@
         recordingActionButton.disabled = !currentAlwaysRecordWhenActive || !currentContextFolderPath
       }
 
-      if (recordingPermission) {
+      if (sidebarRecordingActionButton) {
+        const isActive = isCaptureActive()
+        let label = 'Start capture'
+        if (currentScreenStillsPaused) {
+          label = 'Resume'
+        } else if (isActive) {
+          label = 'Pause (10 min)'
+        }
+        sidebarRecordingActionButton.textContent = label
+        sidebarRecordingActionButton.disabled = !currentAlwaysRecordWhenActive || !currentContextFolderPath
+      }
+
+      const permissionElement = sidebarRecordingPermission || recordingPermission
+      if (permissionElement) {
         const permissionStatus = currentScreenRecordingPermissionStatus || ''
         const needsPermission = permissionStatus && permissionStatus !== 'granted'
         if (needsPermission) {
-          recordingPermission.textContent =
+          permissionElement.textContent =
             'Screen Recording permission required. Enable Jiminy in System Settings \u2192 Privacy & Security \u2192 Screen Recording.'
         } else {
-          recordingPermission.textContent = ''
+          permissionElement.textContent = ''
         }
-        recordingPermission.classList.toggle('hidden', !recordingPermission.textContent)
+        permissionElement.classList.toggle('hidden', !permissionElement.textContent)
       }
     }
 
@@ -210,6 +233,12 @@
 
     if (recordingActionButton) {
       recordingActionButton.addEventListener('click', () => {
+        void handleAction()
+      })
+    }
+
+    if (sidebarRecordingActionButton) {
+      sidebarRecordingActionButton.addEventListener('click', () => {
         void handleAction()
       })
     }

@@ -150,6 +150,10 @@ const createElements = () => {
     'advanced-toggle-btn': new TestElement(),
     'advanced-options': new TestElement(),
     'recording-hotkey': new TestElement(),
+    'sidebar-recording-dot': new TestElement(),
+    'sidebar-recording-status': new TestElement(),
+    'sidebar-recording-action': new TestElement(),
+    'sidebar-recording-permission': new TestElement(),
     'context-folder-path': new TestElement(),
     'context-folder-choose': new TestElement(),
     'context-folder-error': new TestElement(),
@@ -168,9 +172,6 @@ const createElements = () => {
     'wizard-always-record-when-active-status': new TestElement(),
     'recording-details': new TestElement(),
     'recording-path': new TestElement(),
-    'recording-status': new TestElement(),
-    'recording-action': new TestElement(),
-    'recording-permission': new TestElement(),
     'llm-provider': new TestElement(),
     'llm-provider-error': new TestElement(),
     'updates-check': new TestElement(),
@@ -350,7 +351,7 @@ test('stills action button starts capture when inactive', async () => {
     await elements['recording-nav'].click()
     await flushPromises()
 
-    await elements['recording-action'].click()
+    await elements['sidebar-recording-action'].click()
     await flushPromises()
 
     assert.equal(startCalls.length, 1)
@@ -400,22 +401,22 @@ test('stills action button pauses and resumes when paused', async () => {
     await elements['recording-nav'].click()
     await flushPromises()
 
-    assert.equal(elements['recording-status'].textContent, 'Capturing')
-    assert.equal(elements['recording-action'].textContent, 'Pause (10 min)')
+    assert.equal(elements['sidebar-recording-status'].textContent, 'Recording')
+    assert.equal(elements['sidebar-recording-action'].textContent, 'Pause (10 min)')
 
-    await elements['recording-action'].click()
+    await elements['sidebar-recording-action'].click()
     await flushPromises()
 
     assert.equal(pauseCalls.length, 1)
-    assert.equal(elements['recording-status'].textContent, 'Paused')
-    assert.equal(elements['recording-action'].textContent, 'Resume')
+    assert.equal(elements['sidebar-recording-status'].textContent, 'Paused')
+    assert.equal(elements['sidebar-recording-action'].textContent, 'Resume')
 
-    await elements['recording-action'].click()
+    await elements['sidebar-recording-action'].click()
     await flushPromises()
 
     assert.equal(startCalls.length, 1)
-    assert.equal(elements['recording-status'].textContent, 'Capturing')
-    assert.equal(elements['recording-action'].textContent, 'Pause (10 min)')
+    assert.equal(elements['sidebar-recording-status'].textContent, 'Recording')
+    assert.equal(elements['sidebar-recording-action'].textContent, 'Pause (10 min)')
   } finally {
     global.document = priorDocument
     global.window = priorWindow
