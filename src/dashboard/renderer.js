@@ -89,6 +89,7 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
   const wizardSkillStatus = document.getElementById('wizard-skill-status')
   const wizardSkillError = document.getElementById('wizard-skill-error')
   const wizardSkillPath = document.getElementById('wizard-skill-path')
+  const wizardSkillCursorRestartNote = document.getElementById('wizard-skill-cursor-restart-note')
 
   const contextFolderInputs = selectAll('[data-setting="context-folder-path"]')
   const contextFolderChooseButtons = selectAll('[data-action="context-folder-choose"]')
@@ -117,6 +118,7 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
   const recordingDetails = document.getElementById('recording-details')
   const recordingPath = document.getElementById('recording-path')
   const recordingOpenFolderButton = document.getElementById('recording-open-folder')
+  const appVersionLabel = document.getElementById('app-version')
 
   const updateButtons = selectAll('[data-action="updates-check"]')
   const updateStatuses = selectAll('[data-setting-status="updates-status"]')
@@ -303,7 +305,8 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
       skillInstallButton: wizardSkillInstallButton,
       skillInstallStatus: wizardSkillStatus,
       skillInstallError: wizardSkillError,
-      skillInstallPath: wizardSkillPath
+      skillInstallPath: wizardSkillPath,
+      skillCursorRestartNote: wizardSkillCursorRestartNote
     },
     jiminy,
     getState: state.getWizardState,
@@ -353,6 +356,7 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
   apis.settingsApi = runBootstrapSettings({
     window,
     elements: {
+      appVersionLabel,
       contextFolderChooseButtons,
       contextFolderErrors,
       contextFolderStatuses,

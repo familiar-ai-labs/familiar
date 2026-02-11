@@ -7,6 +7,15 @@ const { resolveHarnessSkillPath } = require('../skills/installer');
 
 let onSettingsSaved = null;
 
+function readAppVersion() {
+    try {
+        return app.getVersion();
+    } catch (error) {
+        console.error('Failed to read app version for settings payload', error);
+        return 'unknown';
+    }
+}
+
 /**
  * Registers IPC handlers for settings operations.
  */
@@ -19,6 +28,7 @@ function registerSettingsHandlers(options = {}) {
 }
 
 function handleGetSettings() {
+    const appVersion = readAppVersion();
     try {
         const settingsPath = resolveSettingsPath();
         const isFirstRun = !fs.existsSync(settingsPath);
@@ -69,6 +79,7 @@ function handleGetSettings() {
                 installPath: skillInstallerInstallPath,
             },
             screenRecordingPermissionStatus,
+            appVersion,
             isFirstRun
         };
     } catch (error) {
@@ -83,6 +94,7 @@ function handleGetSettings() {
             alwaysRecordWhenActive: false,
             skillInstaller: { harness: '', installPath: '' },
             screenRecordingPermissionStatus: getScreenRecordingPermissionStatus(),
+            appVersion,
             isFirstRun: false
         };
     }

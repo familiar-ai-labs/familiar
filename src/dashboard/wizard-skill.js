@@ -13,7 +13,8 @@
       skillInstallButton,
       skillInstallStatus,
       skillInstallError,
-      skillInstallPath
+      skillInstallPath,
+      skillCursorRestartNote
     } = elements
 
     const isReady = Boolean(jiminy.installSkill && jiminy.getSkillInstallStatus)
@@ -28,6 +29,13 @@
       const value = message || ''
       skillInstallPath.textContent = value ? `Install path: ${value}` : ''
       skillInstallPath.classList.toggle('hidden', !value)
+    }
+    const setCursorRestartNoteVisibility = (harness) => {
+      if (!skillCursorRestartNote) {
+        return
+      }
+      const shouldShow = harness === 'cursor'
+      skillCursorRestartNote.classList.toggle('hidden', !shouldShow)
     }
 
     const persistSkillInstaller = async ({ harness, installPath } = {}) => {
@@ -63,6 +71,7 @@
     }
 
     const checkInstallStatus = async (harness) => {
+      setCursorRestartNoteVisibility(harness)
       if (!isReady || !harness) {
         setPath('')
         return { ok: false }
@@ -102,6 +111,7 @@
 
     const handleHarnessChange = async (event) => {
       const harness = event?.target?.value || ''
+      setCursorRestartNoteVisibility(harness)
       clearMessages()
       setPath('')
       setSkillInstalled(false)
@@ -180,6 +190,7 @@
     }
 
     const { currentSkillHarness } = getState()
+    setCursorRestartNoteVisibility(currentSkillHarness)
     if (currentSkillHarness) {
       syncHarnessSelection(currentSkillHarness)
       void checkInstallStatus(currentSkillHarness)

@@ -133,7 +133,8 @@ const createJiminy = (overrides = {}) => ({
     llmProviderApiKey: '',
     stillsMarkdownExtractorType: 'llm',
     alwaysRecordWhenActive: false,
-    screenRecordingPermissionStatus: 'granted'
+    screenRecordingPermissionStatus: 'granted',
+    appVersion: '0.0.22'
   }),
   pickContextFolder: async () => ({ canceled: true }),
   saveSettings: async () => ({ ok: true }),
@@ -184,6 +185,7 @@ const createElements = () => {
     'hotkeys-reset': new TestElement(),
     'hotkeys-status': new TestElement(),
     'hotkeys-error': new TestElement(),
+    'app-version': new TestElement(),
     'settings-header': new TestElement(),
     'settings-content': new TestElement(),
     'section-title': new TestElement(),
@@ -232,6 +234,38 @@ const createElements = () => {
 
   return elements
 }
+
+test('loads app version in the sidebar header', async () => {
+  const jiminy = createJiminy({
+    getSettings: async () => ({
+      contextFolderPath: '',
+      llmProviderName: 'gemini',
+      llmProviderApiKey: '',
+      stillsMarkdownExtractorType: 'llm',
+      alwaysRecordWhenActive: false,
+      screenRecordingPermissionStatus: 'granted',
+      appVersion: '9.8.7'
+    })
+  })
+
+  const elements = createElements()
+  const document = new TestDocument(elements)
+  const priorDocument = global.document
+  const priorWindow = global.window
+  global.document = document
+  global.window = { jiminy }
+
+  try {
+    loadRenderer()
+    document.trigger('DOMContentLoaded')
+    await flushPromises()
+
+    assert.equal(elements['app-version'].textContent, '9.8.7')
+  } finally {
+    global.document = priorDocument
+    global.window = priorWindow
+  }
+})
 
 test('llm api key saves on change when provider is set', async () => {
   const saveCalls = []

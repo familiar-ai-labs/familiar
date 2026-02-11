@@ -1,8 +1,6 @@
 function buildTrayMenuTemplate ({
   onRecordingPause,
   onOpenSettings,
-  onAbout,
-  onRestart,
   onQuit,
   recordingAccelerator,
   recordingPaused,
@@ -23,9 +21,7 @@ function buildTrayMenuTemplate ({
   return [
     recordingItem,
     { label: 'Settings', click: onOpenSettings },
-    { label: 'About', click: onAbout },
     { type: 'separator' },
-    { label: 'Restart', click: onRestart },
     { label: 'Quit', click: onQuit }
   ]
 }

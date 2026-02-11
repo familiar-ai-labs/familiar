@@ -30,6 +30,7 @@
     const updateWizardUI = typeof options.updateWizardUI === 'function' ? options.updateWizardUI : () => {}
 
     const {
+      appVersionLabel = null,
       contextFolderChooseButtons = [],
       contextFolderErrors = [],
       contextFolderStatuses = [],
@@ -236,6 +237,9 @@
         setMessage(copyLogStatuses, '')
         setMessage(hotkeysErrors, '')
         setMessage(hotkeysStatuses, '')
+        if (appVersionLabel) {
+          appVersionLabel.textContent = result.appVersion || ''
+        }
         return result
       } catch (error) {
         console.error('Failed to load settings', error)

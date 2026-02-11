@@ -7,8 +7,6 @@ test('buildTrayMenuTemplate returns the expected items', () => {
     const template = buildTrayMenuTemplate({
         onRecordingPause: () => {},
         onOpenSettings: () => {},
-        onAbout: () => {},
-        onRestart: () => {},
         onQuit: () => {},
     });
 
@@ -17,61 +15,55 @@ test('buildTrayMenuTemplate returns the expected items', () => {
     assert.deepEqual(labels, [
         'Start Recording',
         'Settings',
-        'About',
-        'Restart',
         'Quit',
     ]);
-    assert.equal(template[3].type, 'separator');
+    assert.equal(template[2].type, 'separator');
 });
 
-test('about click does not trigger open settings', () => {
+test('settings click does not trigger quit', () => {
     let openSettingsCalls = 0;
-    let aboutCalls = 0;
+    let quitCalls = 0;
 
     const template = buildTrayMenuTemplate({
         onRecordingPause: () => {},
         onOpenSettings: () => {
             openSettingsCalls += 1;
         },
-        onAbout: () => {
-            aboutCalls += 1;
+        onQuit: () => {
+            quitCalls += 1;
         },
-        onRestart: () => {},
-        onQuit: () => {},
     });
 
-    const aboutItem = template.find((item) => item.label === 'About');
-    assert.ok(aboutItem);
+    const settingsItem = template.find((item) => item.label === 'Settings');
+    assert.ok(settingsItem);
 
-    aboutItem.click();
-
-    assert.equal(aboutCalls, 1);
-    assert.equal(openSettingsCalls, 0);
-});
-
-test('settings click does not trigger about', () => {
-    let openSettingsCalls = 0;
-    let aboutCalls = 0;
-
-    const template = buildTrayMenuTemplate({
-        onRecordingPause: () => {},
-        onOpenSettings: () => {
-            openSettingsCalls += 1;
-        },
-        onAbout: () => {
-            aboutCalls += 1;
-        },
-        onRestart: () => {},
-        onQuit: () => {},
-    });
-
-    const openItem = template.find((item) => item.label === 'Settings');
-    assert.ok(openItem);
-
-    openItem.click();
+    settingsItem.click();
 
     assert.equal(openSettingsCalls, 1);
-    assert.equal(aboutCalls, 0);
+    assert.equal(quitCalls, 0);
+});
+
+test('quit click does not trigger open settings', () => {
+    let openSettingsCalls = 0;
+    let quitCalls = 0;
+
+    const template = buildTrayMenuTemplate({
+        onRecordingPause: () => {},
+        onOpenSettings: () => {
+            openSettingsCalls += 1;
+        },
+        onQuit: () => {
+            quitCalls += 1;
+        },
+    });
+
+    const quitItem = template.find((item) => item.label === 'Quit');
+    assert.ok(quitItem);
+
+    quitItem.click();
+
+    assert.equal(quitCalls, 1);
+    assert.equal(openSettingsCalls, 0);
 });
 
 test('recording item click does not trigger settings', () => {
@@ -85,8 +77,6 @@ test('recording item click does not trigger settings', () => {
         onOpenSettings: () => {
             openSettingsCalls += 1;
         },
-        onAbout: () => {},
-        onRestart: () => {},
         onQuit: () => {},
     });
 
@@ -103,8 +93,6 @@ test('buildTrayMenuTemplate applies accelerators when provided', () => {
     const template = buildTrayMenuTemplate({
         onRecordingPause: () => {},
         onOpenSettings: () => {},
-        onAbout: () => {},
-        onRestart: () => {},
         onQuit: () => {},
         recordingAccelerator: 'CommandOrControl+R',
     });
@@ -118,8 +106,6 @@ test('buildTrayMenuTemplate omits accelerators when empty', () => {
     const template = buildTrayMenuTemplate({
         onRecordingPause: () => {},
         onOpenSettings: () => {},
-        onAbout: () => {},
-        onRestart: () => {},
         onQuit: () => {},
         recordingAccelerator: '',
     });
@@ -133,8 +119,6 @@ test('buildTrayMenuTemplate uses resume label when paused', () => {
     const template = buildTrayMenuTemplate({
         onRecordingPause: () => {},
         onOpenSettings: () => {},
-        onAbout: () => {},
-        onRestart: () => {},
         onQuit: () => {},
         recordingPaused: true,
     });
