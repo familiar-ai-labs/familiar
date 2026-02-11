@@ -11,6 +11,7 @@
       defaults: options.defaults,
       getState: options.getState,
       setContextFolderValue: options.setContextFolderValue,
+      setSkillHarness: options.setSkillHarness,
       setLlmProviderValue: options.setLlmProviderValue,
       setLlmApiKeyPending: options.setLlmApiKeyPending,
       setLlmApiKeySaved: options.setLlmApiKeySaved,
