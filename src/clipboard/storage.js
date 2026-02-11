@@ -1,7 +1,7 @@
 const path = require('node:path')
 const fs = require('node:fs/promises')
 
-const { JIMINY_BEHIND_THE_SCENES_DIR_NAME, STILLS_MARKDOWN_DIR_NAME } = require('../const')
+const { FAMILIAR_BEHIND_THE_SCENES_DIR_NAME, STILLS_MARKDOWN_DIR_NAME } = require('../const')
 
 function buildTimestamp (date = new Date()) {
   const pad = (value, size = 2) => String(value).padStart(size, '0')
@@ -25,7 +25,7 @@ function getClipboardMirrorDirectory (contextFolderPath, sessionId) {
   }
   return path.join(
     contextFolderPath,
-    JIMINY_BEHIND_THE_SCENES_DIR_NAME,
+    FAMILIAR_BEHIND_THE_SCENES_DIR_NAME,
     STILLS_MARKDOWN_DIR_NAME,
     sessionId
   )

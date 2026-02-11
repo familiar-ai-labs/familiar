@@ -1,7 +1,7 @@
 (function (global) {
   const createStills = (options = {}) => {
     const elements = options.elements || {}
-    const jiminy = options.jiminy || {}
+    const familiar = options.familiar || {}
     const getState = typeof options.getState === 'function' ? options.getState : () => ({})
 
     const {
@@ -31,7 +31,7 @@
       currentScreenStillsState === 'recording' || currentScreenStillsState === 'idleGrace'
 
     const buildStillsPath = (contextFolderPath) =>
-      contextFolderPath ? `${contextFolderPath}/jiminy/stills` : ''
+      contextFolderPath ? `${contextFolderPath}/familiar/stills` : ''
 
     const updateSidebarStatus = (alwaysEnabled) => {
       if (!sidebarRecordingStatus && !sidebarRecordingDot) {
@@ -134,11 +134,11 @@
     }
 
     const refreshStatus = async () => {
-      if (!jiminy.getScreenStillsStatus) {
+      if (!familiar.getScreenStillsStatus) {
         return
       }
       try {
-        const result = await jiminy.getScreenStillsStatus()
+        const result = await familiar.getScreenStillsStatus()
         if (result && result.ok) {
           currentScreenStillsState = result.state || 'disabled'
           currentScreenStillsPaused = Boolean(result.manualPaused)
@@ -219,13 +219,13 @@
     }
 
     const handleCheckPermissions = async () => {
-      if (!jiminy.checkScreenRecordingPermission || isCheckingPermission) {
+      if (!familiar.checkScreenRecordingPermission || isCheckingPermission) {
         return
       }
       isCheckingPermission = true
       updateStillsUI()
       try {
-        const result = await jiminy.checkScreenRecordingPermission()
+        const result = await familiar.checkScreenRecordingPermission()
         wizardPermissionState = result?.permissionStatus === 'granted' ? 'granted' : 'denied'
       } catch (error) {
         console.error('Failed to check Screen Recording permission', error)
@@ -237,11 +237,11 @@
     }
 
     const handleOpenScreenRecordingSettings = async () => {
-      if (!jiminy.openScreenRecordingSettings) {
+      if (!familiar.openScreenRecordingSettings) {
         return
       }
       try {
-        const result = await jiminy.openScreenRecordingSettings()
+        const result = await familiar.openScreenRecordingSettings()
         if (!result || result.ok !== true) {
           console.error('Failed to open Screen Recording settings', result?.message || result)
         }
@@ -272,16 +272,16 @@
     }
 
     const handleAction = async () => {
-      if (!jiminy.startScreenStills || !jiminy.pauseScreenStills) {
+      if (!familiar.startScreenStills || !familiar.pauseScreenStills) {
         return
       }
       try {
         if (currentScreenStillsPaused) {
-          await jiminy.startScreenStills()
+          await familiar.startScreenStills()
         } else if (isCaptureActive()) {
-          await jiminy.pauseScreenStills()
+          await familiar.pauseScreenStills()
         } else {
-          await jiminy.startScreenStills()
+          await familiar.startScreenStills()
         }
       } catch (error) {
         console.error('Failed to toggle stills', error)
@@ -292,11 +292,11 @@
     }
 
     const handleOpenFolder = async () => {
-      if (!jiminy.openStillsFolder) {
+      if (!familiar.openStillsFolder) {
         return
       }
       try {
-        const result = await jiminy.openStillsFolder()
+        const result = await familiar.openStillsFolder()
         if (!result || result.ok !== true) {
           console.error('Failed to open stills folder', result?.message || result)
         }
@@ -348,9 +348,9 @@
     }
   }
 
-  const registry = global.JiminyStills || {}
+  const registry = global.FamiliarStills || {}
   registry.createStills = createStills
-  global.JiminyStills = registry
+  global.FamiliarStills = registry
 
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = registry

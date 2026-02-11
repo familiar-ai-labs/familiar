@@ -125,7 +125,7 @@ const loadRenderer = () => {
   require(resolvedRendererPath)
 }
 
-const createJiminy = (overrides = {}) => ({
+const createFamiliar = (overrides = {}) => ({
   platform: 'darwin',
   getSettings: async () => ({
     contextFolderPath: '',
@@ -242,7 +242,7 @@ const createElements = () => {
 }
 
 test('loads app version in the sidebar header', async () => {
-  const jiminy = createJiminy({
+  const familiar = createFamiliar({
     getSettings: async () => ({
       contextFolderPath: '',
       llmProviderName: 'gemini',
@@ -258,7 +258,7 @@ test('loads app version in the sidebar header', async () => {
   const priorDocument = global.document
   const priorWindow = global.window
   global.document = document
-  global.window = { jiminy }
+  global.window = { familiar }
 
   try {
     loadRenderer()
@@ -274,7 +274,7 @@ test('loads app version in the sidebar header', async () => {
 
 test('llm api key saves on change when provider is set', async () => {
   const saveCalls = []
-  const jiminy = createJiminy({
+  const familiar = createFamiliar({
     getSettings: async () => ({
       contextFolderPath: '',
       llmProviderName: 'gemini',
@@ -291,7 +291,7 @@ test('llm api key saves on change when provider is set', async () => {
   const priorDocument = global.document
   const priorWindow = global.window
   global.document = document
-  global.window = { jiminy }
+  global.window = { familiar }
 
   try {
     loadRenderer()
@@ -316,7 +316,7 @@ test('llm api key saves on change when provider is set', async () => {
 
 test('always record toggle saves on change', async () => {
   const saveCalls = []
-  const jiminy = createJiminy({
+  const familiar = createFamiliar({
     getSettings: async () => ({
       contextFolderPath: '',
       llmProviderName: 'gemini',
@@ -334,7 +334,7 @@ test('always record toggle saves on change', async () => {
   const priorDocument = global.document
   const priorWindow = global.window
   global.document = document
-  global.window = { jiminy }
+  global.window = { familiar }
 
   try {
     loadRenderer()
@@ -361,7 +361,7 @@ test('always record toggle saves on change', async () => {
 test('wizard permission check is click-driven and denied state shows settings shortcut', async () => {
   let checkCalls = 0
   let openSettingsCalls = 0
-  const jiminy = createJiminy({
+  const familiar = createFamiliar({
     checkScreenRecordingPermission: async () => {
       checkCalls += 1
       return { ok: true, permissionStatus: 'denied', granted: false }
@@ -377,7 +377,7 @@ test('wizard permission check is click-driven and denied state shows settings sh
   const priorDocument = global.document
   const priorWindow = global.window
   global.document = document
-  global.window = { jiminy }
+  global.window = { familiar }
 
   try {
     loadRenderer()
@@ -406,7 +406,7 @@ test('wizard permission check is click-driven and denied state shows settings sh
 
 test('wizard permission check granted state reveals recording toggle', async () => {
   let checkCalls = 0
-  const jiminy = createJiminy({
+  const familiar = createFamiliar({
     checkScreenRecordingPermission: async () => {
       checkCalls += 1
       return { ok: true, permissionStatus: 'granted', granted: true }
@@ -418,7 +418,7 @@ test('wizard permission check granted state reveals recording toggle', async () 
   const priorDocument = global.document
   const priorWindow = global.window
   global.document = document
-  global.window = { jiminy }
+  global.window = { familiar }
 
   try {
     loadRenderer()
@@ -440,7 +440,7 @@ test('wizard permission check granted state reveals recording toggle', async () 
 })
 
 test('wizard step 3 bypasses permission flow when recording is already enabled', async () => {
-  const jiminy = createJiminy({
+  const familiar = createFamiliar({
     getSettings: async () => ({
       contextFolderPath: '/tmp/context',
       llmProviderName: 'gemini',
@@ -456,7 +456,7 @@ test('wizard step 3 bypasses permission flow when recording is already enabled',
   const priorDocument = global.document
   const priorWindow = global.window
   global.document = document
-  global.window = { jiminy }
+  global.window = { familiar }
 
   try {
     loadRenderer()
@@ -473,7 +473,7 @@ test('wizard step 3 bypasses permission flow when recording is already enabled',
 
 test('stills action button starts capture when inactive', async () => {
   const startCalls = []
-  const jiminy = createJiminy({
+  const familiar = createFamiliar({
     getSettings: async () => ({
       contextFolderPath: '/tmp/context',
       llmProviderName: 'gemini',
@@ -492,7 +492,7 @@ test('stills action button starts capture when inactive', async () => {
   const priorDocument = global.document
   const priorWindow = global.window
   global.document = document
-  global.window = { jiminy }
+  global.window = { familiar }
 
   try {
     loadRenderer()
@@ -516,7 +516,7 @@ test('stills action button pauses and resumes when paused', async () => {
   const pauseCalls = []
   const startCalls = []
   let status = { ok: true, state: 'recording', isRecording: true, manualPaused: false }
-  const jiminy = createJiminy({
+  const familiar = createFamiliar({
     getSettings: async () => ({
       contextFolderPath: '/tmp/context',
       llmProviderName: 'gemini',
@@ -541,7 +541,7 @@ test('stills action button pauses and resumes when paused', async () => {
   const priorDocument = global.document
   const priorWindow = global.window
   global.document = document
-  global.window = { jiminy }
+  global.window = { familiar }
 
   try {
     loadRenderer()
@@ -574,7 +574,7 @@ test('stills action button pauses and resumes when paused', async () => {
 })
 
 test('hotkey recording surfaces suspend errors', async () => {
-  const jiminy = createJiminy({
+  const familiar = createFamiliar({
     suspendHotkeys: async () => {
       throw new Error('suspend failed')
     }
@@ -585,7 +585,7 @@ test('hotkey recording surfaces suspend errors', async () => {
   const priorDocument = global.document
   const priorWindow = global.window
   global.document = document
-  global.window = { jiminy }
+  global.window = { familiar }
 
   try {
     loadRenderer()
@@ -606,7 +606,7 @@ test('hotkey recording surfaces suspend errors', async () => {
 })
 
 test('hotkey recording surfaces resume errors', async () => {
-  const jiminy = createJiminy({
+  const familiar = createFamiliar({
     suspendHotkeys: async () => {},
     resumeHotkeys: async () => {
       throw new Error('resume failed')
@@ -618,7 +618,7 @@ test('hotkey recording surfaces resume errors', async () => {
   const priorDocument = global.document
   const priorWindow = global.window
   global.document = document
-  global.window = { jiminy }
+  global.window = { familiar }
 
   try {
     loadRenderer()
@@ -646,7 +646,7 @@ test('hotkey recording surfaces resume errors', async () => {
 
 test('auto-saves LLM provider selection', async () => {
   const saveCalls = []
-  const jiminy = {
+  const familiar = {
     getSettings: async () => ({
       contextFolderPath: '',
       llmProviderName: 'gemini',
@@ -664,7 +664,7 @@ test('auto-saves LLM provider selection', async () => {
   const priorDocument = global.document
   const priorWindow = global.window
   global.document = document
-  global.window = { jiminy }
+  global.window = { familiar }
 
   try {
     const rendererPath = path.join(__dirname, '..', 'src', 'dashboard', 'renderer.js')
@@ -689,7 +689,7 @@ test('auto-saves LLM provider selection', async () => {
 
 test('check for updates reports update when latest is higher', async () => {
   const updateCalls = []
-  const jiminy = createJiminy({
+  const familiar = createFamiliar({
     checkForUpdates: async () => {
       updateCalls.push(true)
       return { ok: true, updateInfo: { version: '0.0.2' }, currentVersion: '0.0.1' }
@@ -701,7 +701,7 @@ test('check for updates reports update when latest is higher', async () => {
   const priorDocument = global.document
   const priorWindow = global.window
   global.document = document
-  global.window = { jiminy }
+  global.window = { familiar }
 
   try {
     loadRenderer()
@@ -724,7 +724,7 @@ test('check for updates reports update when latest is higher', async () => {
 
 test('check for updates reports no update when latest matches current', async () => {
   const updateCalls = []
-  const jiminy = createJiminy({
+  const familiar = createFamiliar({
     checkForUpdates: async () => {
       updateCalls.push(true)
       return { ok: true, updateInfo: { version: '0.0.4' }, currentVersion: '0.0.4' }
@@ -736,7 +736,7 @@ test('check for updates reports no update when latest matches current', async ()
   const priorDocument = global.document
   const priorWindow = global.window
   global.document = document
-  global.window = { jiminy }
+  global.window = { familiar }
 
   try {
     loadRenderer()
@@ -757,7 +757,7 @@ test('check for updates reports no update when latest matches current', async ()
 test('download progress updates the updates progress bar', async () => {
   const progressHandlers = []
   const downloadedHandlers = []
-  const jiminy = createJiminy({
+  const familiar = createFamiliar({
     onUpdateDownloadProgress: (handler) => {
       progressHandlers.push(handler)
     },
@@ -771,7 +771,7 @@ test('download progress updates the updates progress bar', async () => {
   const priorDocument = global.document
   const priorWindow = global.window
   global.document = document
-  global.window = { jiminy }
+  global.window = { familiar }
 
   try {
     loadRenderer()

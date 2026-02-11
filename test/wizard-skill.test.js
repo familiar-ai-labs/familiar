@@ -62,9 +62,9 @@ const createHarness = ({ currentSkillHarness = '' } = {}) => {
   const cursor = new TestInput('cursor')
   const skillCursorRestartNote = { classList: new ClassList() }
 
-  const jiminy = {
+  const familiar = {
     getSkillInstallStatus: async () => ({ ok: true, installed: false, path: '' }),
-    installSkill: async () => ({ ok: true, path: '/tmp/skills/jiminy' })
+    installSkill: async () => ({ ok: true, path: '/tmp/skills/familiar' })
   }
 
   const registry = loadWizardSkillModule()
@@ -75,7 +75,7 @@ const createHarness = ({ currentSkillHarness = '' } = {}) => {
       skillInstallPath: { classList: new ClassList(), textContent: '' },
       skillCursorRestartNote
     },
-    jiminy,
+    familiar,
     getState: () => ({ currentSkillHarness: state.currentSkillHarness }),
     setSkillHarness: (harness) => {
       state.currentSkillHarness = harness

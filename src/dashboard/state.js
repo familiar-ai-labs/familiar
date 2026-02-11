@@ -197,9 +197,9 @@
     }
   }
 
-  const registry = global.JiminyDashboardState || {}
+  const registry = global.FamiliarDashboardState || {}
   registry.createDashboardState = createDashboardState
-  global.JiminyDashboardState = registry
+  global.FamiliarDashboardState = registry
 
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = registry

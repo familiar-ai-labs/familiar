@@ -1,13 +1,13 @@
 (function registerBootstrapHotkeys(global) {
   function bootstrapHotkeys(options = {}) {
     const targetWindow = options.window
-    if (!targetWindow || !targetWindow.JiminyHotkeys || typeof targetWindow.JiminyHotkeys.createHotkeys !== 'function') {
+    if (!targetWindow || !targetWindow.FamiliarHotkeys || typeof targetWindow.FamiliarHotkeys.createHotkeys !== 'function') {
       return null
     }
 
-    return targetWindow.JiminyHotkeys.createHotkeys({
+    return targetWindow.FamiliarHotkeys.createHotkeys({
       elements: options.elements,
-      jiminy: options.jiminy,
+      familiar: options.familiar,
       setMessage: options.setMessage,
       updateWizardUI: options.updateWizardUI,
       getState: options.getState,
@@ -16,9 +16,9 @@
     })
   }
 
-  const registry = global.JiminyDashboardBootstrap || {}
+  const registry = global.FamiliarDashboardBootstrap || {}
   registry.bootstrapHotkeys = bootstrapHotkeys
-  global.JiminyDashboardBootstrap = registry
+  global.FamiliarDashboardBootstrap = registry
 
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = { bootstrapHotkeys }

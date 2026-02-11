@@ -1,20 +1,20 @@
 (function registerBootstrapWizard(global) {
   function bootstrapWizard(options = {}) {
     const targetWindow = options.window
-    if (!targetWindow || !targetWindow.JiminyWizard || typeof targetWindow.JiminyWizard.createWizard !== 'function') {
+    if (!targetWindow || !targetWindow.FamiliarWizard || typeof targetWindow.FamiliarWizard.createWizard !== 'function') {
       return null
     }
 
-    return targetWindow.JiminyWizard.createWizard({
+    return targetWindow.FamiliarWizard.createWizard({
       elements: options.elements,
       getState: options.getState,
       onDone: options.onDone
     })
   }
 
-  const registry = global.JiminyDashboardBootstrap || {}
+  const registry = global.FamiliarDashboardBootstrap || {}
   registry.bootstrapWizard = bootstrapWizard
-  global.JiminyDashboardBootstrap = registry
+  global.FamiliarDashboardBootstrap = registry
 
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = { bootstrapWizard }

@@ -1,9 +1,9 @@
 ---
-name: jiminy
+name: familiar
 description: Locate, interpret, and filter the user's past behavior. Use when the harness needs to answer questions about past activity, repeated behaviors, or question where on-screen behavior can be helpful.
 ---
 
-# Jiminy Stills Markdown
+# Familiar Stills Markdown
 
 ## Purpose
 
@@ -13,13 +13,13 @@ The markdown files are ready to use with regular bash commands, they are already
 ## Locate The Data
 
 1. Use the provided `contextFolderPath` if available.
-2. Otherwise read `~/.jiminy/settings.json` and use `contextFolderPath`.
-3. Stills markdown root lives at `<contextFolderPath>/jiminy/stills-markdown`.
+2. Otherwise read `~/.familiar/settings.json` and use `contextFolderPath`.
+3. Stills markdown root lives at `<contextFolderPath>/familiar/stills-markdown`.
 
 ## Directory Structure
 
-- Session folder pattern: `<contextFolderPath>/jiminy/stills-markdown/session-<timestamp>/`
-- Capture file pattern: `<contextFolderPath>/jiminy/stills-markdown/session-<timestamp>/<captureTimestamp>.md`
+- Session folder pattern: `<contextFolderPath>/familiar/stills-markdown/session-<timestamp>/`
+- Capture file pattern: `<contextFolderPath>/familiar/stills-markdown/session-<timestamp>/<captureTimestamp>.md`
 
 ## Naming Conventions
 
@@ -35,7 +35,7 @@ Each file describes exactly one still image.
 
 ```
 ---
-format: jiminy-layout-v0
+format: familiar-layout-v0
 screen_resolution: <width>x<height>
 grid: <cols>x<rows>
 app: <app name or unknown>

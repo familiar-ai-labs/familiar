@@ -10,9 +10,9 @@ const resetLoggerModule = () => {
 };
 
 test('initLogging writes logs under settings directory', async () => {
-    const tempSettingsDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'jiminy-settings-'));
-    const previousSettingsDir = process.env.JIMINY_SETTINGS_DIR;
-    process.env.JIMINY_SETTINGS_DIR = tempSettingsDir;
+    const tempSettingsDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'familiar-settings-'));
+    const previousSettingsDir = process.env.FAMILIAR_SETTINGS_DIR;
+    process.env.FAMILIAR_SETTINGS_DIR = tempSettingsDir;
 
     const originalConsole = {
         log: console.log,
@@ -29,7 +29,7 @@ test('initLogging writes logs under settings directory', async () => {
 
         console.log('logger test message');
 
-        const logPath = path.join(tempSettingsDir, 'logs', 'jiminy.log');
+        const logPath = path.join(tempSettingsDir, 'logs', 'familiar.log');
         assert.equal(fs.existsSync(logPath), true);
 
         const contents = await fs.promises.readFile(logPath, 'utf-8');
@@ -41,19 +41,19 @@ test('initLogging writes logs under settings directory', async () => {
         console.error = originalConsole.error;
         resetLoggerModule();
         if (typeof previousSettingsDir === 'undefined') {
-            delete process.env.JIMINY_SETTINGS_DIR;
+            delete process.env.FAMILIAR_SETTINGS_DIR;
         } else {
-            process.env.JIMINY_SETTINGS_DIR = previousSettingsDir;
+            process.env.FAMILIAR_SETTINGS_DIR = previousSettingsDir;
         }
     }
 });
 
 test('initLogging rotates logs when size exceeds limit', async () => {
-    const tempSettingsDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'jiminy-settings-'));
-    const previousSettingsDir = process.env.JIMINY_SETTINGS_DIR;
-    const previousLogLimit = process.env.JIMINY_LOG_MAX_BYTES;
-    process.env.JIMINY_SETTINGS_DIR = tempSettingsDir;
-    process.env.JIMINY_LOG_MAX_BYTES = '1024';
+    const tempSettingsDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'familiar-settings-'));
+    const previousSettingsDir = process.env.FAMILIAR_SETTINGS_DIR;
+    const previousLogLimit = process.env.FAMILIAR_LOG_MAX_BYTES;
+    process.env.FAMILIAR_SETTINGS_DIR = tempSettingsDir;
+    process.env.FAMILIAR_LOG_MAX_BYTES = '1024';
 
     const originalConsole = {
         log: console.log,
@@ -72,8 +72,8 @@ test('initLogging rotates logs when size exceeds limit', async () => {
         console.log(largePayload);
         console.log('rotation-trigger');
 
-        const logPath = path.join(tempSettingsDir, 'logs', 'jiminy.log');
-        const rotatedPath = path.join(tempSettingsDir, 'logs', 'jiminy.log.1');
+        const logPath = path.join(tempSettingsDir, 'logs', 'familiar.log');
+        const rotatedPath = path.join(tempSettingsDir, 'logs', 'familiar.log.1');
 
         assert.equal(fs.existsSync(rotatedPath), true);
         assert.equal(fs.existsSync(logPath), true);
@@ -87,22 +87,22 @@ test('initLogging rotates logs when size exceeds limit', async () => {
         console.error = originalConsole.error;
         resetLoggerModule();
         if (typeof previousSettingsDir === 'undefined') {
-            delete process.env.JIMINY_SETTINGS_DIR;
+            delete process.env.FAMILIAR_SETTINGS_DIR;
         } else {
-            process.env.JIMINY_SETTINGS_DIR = previousSettingsDir;
+            process.env.FAMILIAR_SETTINGS_DIR = previousSettingsDir;
         }
         if (typeof previousLogLimit === 'undefined') {
-            delete process.env.JIMINY_LOG_MAX_BYTES;
+            delete process.env.FAMILIAR_LOG_MAX_BYTES;
         } else {
-            process.env.JIMINY_LOG_MAX_BYTES = previousLogLimit;
+            process.env.FAMILIAR_LOG_MAX_BYTES = previousLogLimit;
         }
     }
 });
 
 test('initLogging reports write failures to stderr', async () => {
-    const tempSettingsDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'jiminy-settings-'));
-    const previousSettingsDir = process.env.JIMINY_SETTINGS_DIR;
-    process.env.JIMINY_SETTINGS_DIR = tempSettingsDir;
+    const tempSettingsDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'familiar-settings-'));
+    const previousSettingsDir = process.env.FAMILIAR_SETTINGS_DIR;
+    process.env.FAMILIAR_SETTINGS_DIR = tempSettingsDir;
 
     const originalConsole = {
         log: console.log,
@@ -143,9 +143,9 @@ test('initLogging reports write failures to stderr', async () => {
         console.error = originalConsole.error;
         resetLoggerModule();
         if (typeof previousSettingsDir === 'undefined') {
-            delete process.env.JIMINY_SETTINGS_DIR;
+            delete process.env.FAMILIAR_SETTINGS_DIR;
         } else {
-            process.env.JIMINY_SETTINGS_DIR = previousSettingsDir;
+            process.env.FAMILIAR_SETTINGS_DIR = previousSettingsDir;
         }
     }
 });

@@ -5,21 +5,21 @@ const { resolveSettingsDir } = require('./settings')
 
 const DEFAULT_MAX_LOG_SIZE_BYTES = 1024 * 1024
 const MAX_LOG_SIZE_BYTES = (() => {
-  const envValue = Number(process.env.JIMINY_LOG_MAX_BYTES)
+  const envValue = Number(process.env.FAMILIAR_LOG_MAX_BYTES)
   if (Number.isFinite(envValue) && envValue > 0) {
     return envValue
   }
   return DEFAULT_MAX_LOG_SIZE_BYTES
 })()
-const LOG_FILENAME = 'jiminy.log'
-const LOG_BACKUP_FILENAME = 'jiminy.log.1'
+const LOG_FILENAME = 'familiar.log'
+const LOG_BACKUP_FILENAME = 'familiar.log.1'
 
 let initialized = false
 
 const reportLoggerError = (message, error) => {
   try {
     const details = error && error.message ? `: ${error.message}` : ''
-    const line = `[jiminy logger] ${message}${details}\n`
+    const line = `[familiar logger] ${message}${details}\n`
     process.stderr.write(line)
   } catch (_error) {
     // Swallow to avoid cascading failures if stderr is unavailable.

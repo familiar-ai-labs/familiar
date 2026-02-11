@@ -1,6 +1,6 @@
-const SETTINGS_DIR_NAME = '.jiminy'
+const SETTINGS_DIR_NAME = '.familiar'
 const SETTINGS_FILE_NAME = 'settings.json'
-const JIMINY_BEHIND_THE_SCENES_DIR_NAME = 'jiminy'
+const FAMILIAR_BEHIND_THE_SCENES_DIR_NAME = 'familiar'
 const STILLS_DIR_NAME = 'stills'
 const STILLS_MARKDOWN_DIR_NAME = 'stills-markdown'
 const STILLS_DB_FILENAME = 'stills.db'
@@ -8,7 +8,7 @@ const STILLS_DB_FILENAME = 'stills.db'
 module.exports = {
   SETTINGS_DIR_NAME,
   SETTINGS_FILE_NAME,
-  JIMINY_BEHIND_THE_SCENES_DIR_NAME,
+  FAMILIAR_BEHIND_THE_SCENES_DIR_NAME,
   STILLS_DIR_NAME,
   STILLS_MARKDOWN_DIR_NAME,
   STILLS_DB_FILENAME

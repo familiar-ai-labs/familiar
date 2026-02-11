@@ -10,7 +10,7 @@ const { RetryableError } = require('../src/utils/retry')
 test('parseBatchResponse splits markdown blocks by separator', () => {
   const response = [
     '---',
-    'format: jiminy-layout-v0',
+    'format: familiar-layout-v0',
     '---',
     '# Layout Map',
     'block 1',
@@ -18,7 +18,7 @@ test('parseBatchResponse splits markdown blocks by separator', () => {
     '- "A"',
     '---',
     '---',
-    'format: jiminy-layout-v0',
+    'format: familiar-layout-v0',
     '---',
     '# Layout Map',
     'block 2',

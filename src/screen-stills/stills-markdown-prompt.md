@@ -4,7 +4,7 @@ Do not infer hidden content. If something is unreadable, write "UNCLEAR".
 Use the exact format below and keep placeholders if unknown.
 
 ---
-format: jiminy-layout-v0
+format: familiar-layout-v0
 screen_resolution: <width>x<height>
 grid: <cols>x<rows>
 app: <app name or unknown>

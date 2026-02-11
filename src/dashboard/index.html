@@ -5,7 +5,7 @@
     <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'">
     <link href="./styles.css" rel="stylesheet">
-    <title>Jiminy Settings</title>
+    <title>Familiar Settings</title>
   </head>
   <body class="bg-white dark:bg-[#111] text-zinc-800 dark:text-zinc-200 font-sans h-screen overflow-hidden">
     <div class="relative h-full w-full flex">
@@ -13,7 +13,7 @@
       <aside class="w-[190px] flex-none bg-zinc-50/90 dark:bg-zinc-900/60 border-r border-zinc-200 dark:border-zinc-800 flex flex-col pt-3 pb-3">
           <div class="px-4 mb-4 flex items-center gap-2">
             <img src="../icon.png" alt="" class="w-5 h-5 rounded-md object-cover shadow-sm">
-            <span class="text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Jiminy</span>
+            <span class="text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Familiar</span>
             <span id="app-version" class="text-xs font-medium text-zinc-500 dark:text-zinc-400" aria-label="App version"></span>
           </div>
 
@@ -205,7 +205,7 @@
                 </div>
                 <p id="context-folder-error" data-setting-error="context-folder-error" class="text-xs text-red-600 dark:text-red-400 hidden" role="alert" aria-live="polite"></p>
                 <p class="text-xs text-zinc-500 dark:text-zinc-400">
-                  Choose where Jiminy stores local captures.
+                  Choose where Familiar stores local captures.
                 </p>
 		              </section>
 
@@ -232,7 +232,7 @@
                     data-action="copy-debug-log"
                     type="button"
                     class="px-3 py-1.5 text-xs font-medium bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-md text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                    title="Copies ~/.jiminy/logs/jiminy.log to your clipboard"
+                    title="Copies ~/.familiar/logs/familiar.log to your clipboard"
                   >Copy Debug Log</button>
                 </div>
               </div>
@@ -242,7 +242,7 @@
 	              <section class="space-y-2">
 	                <h3 class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Privacy & Data</h3>
                   <p class="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                  Jiminy is designed to be local-first. Your Context Folder is the source of truth.
+                  Familiar is designed to be local-first. Your Context Folder is the source of truth.
                   In Cloud mode, generating results from recordings sends still images directly from your Mac to the provider you configure.
                   In Local mode, still processing happens on-device and nothing leaves your machine.
                   </p>
@@ -251,19 +251,19 @@
               <section class="space-y-2">
                 <label class="section-label">Where Your Data Lives</label>
                 <ul class="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed list-disc pl-4 space-y-1">
-                  <li>Everything is saved under <span class="font-mono text-zinc-700 dark:text-zinc-200">&lt;Context Folder&gt;/jiminy/</span>.</li>
-                  <li>Recorded still images: <span class="font-mono text-zinc-700 dark:text-zinc-200">jiminy/stills/</span>.</li>
-                  <li>Extracted stills markdown: <span class="font-mono text-zinc-700 dark:text-zinc-200">jiminy/stills-markdown/</span>.</li>
-                  <li>Clipboard text (while recording): <span class="font-mono text-zinc-700 dark:text-zinc-200">jiminy/stills-markdown/session-*/&lt;timestamp&gt;.clipboard.txt</span>.</li>
-                  <li>Settings file: <span class="font-mono text-zinc-700 dark:text-zinc-200">~/.jiminy/settings.json</span>.</li>
+                  <li>Everything is saved under <span class="font-mono text-zinc-700 dark:text-zinc-200">&lt;Context Folder&gt;/familiar/</span>.</li>
+                  <li>Recorded still images: <span class="font-mono text-zinc-700 dark:text-zinc-200">familiar/stills/</span>.</li>
+                  <li>Extracted stills markdown: <span class="font-mono text-zinc-700 dark:text-zinc-200">familiar/stills-markdown/</span>.</li>
+                  <li>Clipboard text (while recording): <span class="font-mono text-zinc-700 dark:text-zinc-200">familiar/stills-markdown/session-*/&lt;timestamp&gt;.clipboard.txt</span>.</li>
+                  <li>Settings file: <span class="font-mono text-zinc-700 dark:text-zinc-200">~/.familiar/settings.json</span>.</li>
                 </ul>
               </section>
 
 	              <section class="space-y-2">
 	                <label class="section-label">What Leaves Your Machine</label>
 	                <ul class="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed list-disc pl-4 space-y-1">
-	                  <li>In Cloud mode, Jiminy sends capture content directly to the AI provider you configure (for extraction).</li>
-	                  <li>Requests go directly from your Mac to that provider (not through a Jiminy server).</li>
+	                  <li>In Cloud mode, Familiar sends capture content directly to the AI provider you configure (for extraction).</li>
+	                  <li>Requests go directly from your Mac to that provider (not through a Familiar server).</li>
 	                  <li>In Local mode, capture content stays on-device.</li>
 	                </ul>
 	              </section>
@@ -271,7 +271,7 @@
               <section class="space-y-2">
                 <label class="section-label">Recording Behavior</label>
                 <ul class="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed list-disc pl-4 space-y-1">
-                  <li>When enabled, Jiminy captures a still every few seconds while you are active.</li>
+                  <li>When enabled, Familiar captures a still every few seconds while you are active.</li>
                   <li>It stops when your Mac is idle.</li>
                   <li>You can pause for 10 minutes from the tray menu or the Toggle Recording hotkey.</li>
                 </ul>
@@ -458,7 +458,7 @@
               <div data-wizard-step="1" class="max-w-[360px] mx-auto space-y-5">
                 <div class="text-center space-y-1">
                   <h3 class="text-sm font-medium text-zinc-900 dark:text-zinc-100">Choose your context folder</h3>
-                  <p class="text-xs text-zinc-500 dark:text-zinc-400">Jiminy stores everything inside <span class="font-mono text-zinc-700 dark:text-zinc-200">&lt;Context Folder&gt;/jiminy/</span>.</p>
+                  <p class="text-xs text-zinc-500 dark:text-zinc-400">Familiar stores everything inside <span class="font-mono text-zinc-700 dark:text-zinc-200">&lt;Context Folder&gt;/familiar/</span>.</p>
                 </div>
                 <section class="space-y-2">
                   <div class="flex items-center justify-between">
@@ -581,7 +581,7 @@
                       id="wizard-open-screen-recording-settings"
                       type="button"
                       class="px-3 py-2 text-xs font-semibold bg-white dark:bg-zinc-800 border border-indigo-300 dark:border-indigo-700 rounded-lg text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 focus:outline-none transition-colors cursor-pointer hidden"
-                    >Enable Jiminy In Screen Reording</button>
+                    >Enable Familiar In Screen Reording</button>
                   </div>
                 </section>
                 <section id="wizard-recording-toggle-section" class="space-y-2 hidden">
@@ -607,8 +607,8 @@
 
               <div data-wizard-step="4" class="max-w-[360px] mx-auto space-y-5 hidden">
                 <div class="text-center space-y-1">
-                  <h3 class="text-sm font-medium text-zinc-900 dark:text-zinc-100">Install the Jiminy skill</h3>
-                  <p class="text-xs text-zinc-500 dark:text-zinc-400">Pick the harness and install Jiminy into your skills folder.</p>
+                  <h3 class="text-sm font-medium text-zinc-900 dark:text-zinc-100">Install the Familiar skill</h3>
+                  <p class="text-xs text-zinc-500 dark:text-zinc-400">Pick the harness and install Familiar into your skills folder.</p>
                 </div>
                 <section class="space-y-2">
                   <label class="section-label">Harness</label>

@@ -8,7 +8,7 @@ const HARNESS_SKILL_DIRS = {
     cursor: path.join('.cursor', 'skills'),
 };
 
-const SKILL_NAME = 'jiminy';
+const SKILL_NAME = 'familiar';
 
 async function copyFileViaReadWrite(sourcePath, destinationPath) {
     const data = await fs.promises.readFile(sourcePath);

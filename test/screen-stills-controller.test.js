@@ -8,7 +8,7 @@ const { EventEmitter } = require('node:events')
 const { createScreenStillsController } = require('../src/screen-stills/controller')
 
 const makeTempContext = () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-context-'))
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-context-'))
   fs.mkdirSync(root, { recursive: true })
   return root
 }

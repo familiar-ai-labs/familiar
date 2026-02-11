@@ -6,7 +6,7 @@ const { SETTINGS_DIR_NAME, SETTINGS_FILE_NAME } = require('./const');
 const { DEFAULT_RECORDING_HOTKEY } = require('./hotkeys');
 
 const resolveSettingsDir = (settingsDir) =>
-    settingsDir || process.env.JIMINY_SETTINGS_DIR || path.join(os.homedir(), SETTINGS_DIR_NAME);
+    settingsDir || process.env.FAMILIAR_SETTINGS_DIR || path.join(os.homedir(), SETTINGS_DIR_NAME);
 
 const resolveSettingsPath = (options = {}) => path.join(resolveSettingsDir(options.settingsDir), SETTINGS_FILE_NAME);
 

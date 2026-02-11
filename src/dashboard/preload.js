@@ -1,6 +1,6 @@
 const { contextBridge, ipcRenderer } = require('electron')
 
-contextBridge.exposeInMainWorld('jiminy', {
+contextBridge.exposeInMainWorld('familiar', {
   platform: process.platform,
   electronVersion: process.versions.electron,
   nodeVersion: process.versions.node,

@@ -1,12 +1,12 @@
 const assert = require('node:assert/strict')
 const { test } = require('node:test')
 
-test('bootstrapSettings forwards setSkillHarness to JiminySettings.createSettings', () => {
+test('bootstrapSettings forwards setSkillHarness to FamiliarSettings.createSettings', () => {
   const { bootstrapSettings } = require('../src/dashboard/bootstrap/settings')
 
   let receivedOptions = null
   const window = {
-    JiminySettings: {
+    FamiliarSettings: {
       createSettings: (options) => {
         receivedOptions = options
         return { isReady: true, loadSettings: async () => ({}) }
@@ -19,7 +19,7 @@ test('bootstrapSettings forwards setSkillHarness to JiminySettings.createSetting
   const result = bootstrapSettings({
     window,
     elements: {},
-    jiminy: {},
+    familiar: {},
     defaults: {},
     getState: () => ({}),
     setContextFolderValue: () => {},

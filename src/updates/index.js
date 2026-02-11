@@ -138,7 +138,7 @@ const promptForRestart = async (info) => {
       defaultId: 0,
       cancelId: 1,
       message: 'Update ready to install',
-      detail: `Version ${version} has been downloaded. Restart Jiminy to apply the update.`,
+      detail: `Version ${version} has been downloaded. Restart Familiar to apply the update.`,
     });
 
     if (result.response === 0) {

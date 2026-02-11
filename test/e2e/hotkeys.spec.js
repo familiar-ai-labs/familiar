@@ -6,7 +6,7 @@ const { _electron: electron } = require('playwright')
 
 test('hotkeys save regular and option combinations', async () => {
   const appRoot = path.join(__dirname, '../..')
-  const settingsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-e2e-'))
+  const settingsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-settings-e2e-'))
   const launchArgs = ['.']
   if (process.platform === 'linux' || process.env.CI) {
     launchArgs.push('--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage')
@@ -17,8 +17,8 @@ test('hotkeys save regular and option combinations', async () => {
     cwd: appRoot,
     env: {
       ...process.env,
-      JIMINY_E2E: '1',
-      JIMINY_SETTINGS_DIR: settingsDir
+      FAMILIAR_E2E: '1',
+      FAMILIAR_SETTINGS_DIR: settingsDir
     }
   })
 

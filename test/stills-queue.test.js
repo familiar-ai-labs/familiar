@@ -8,7 +8,7 @@ const Database = require('better-sqlite3')
 const { createStillsQueue } = require('../src/screen-stills/stills-queue')
 
 const makeTempContext = () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-stills-queue-'))
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-stills-queue-'))
   fs.mkdirSync(root, { recursive: true })
   return root
 }
@@ -17,7 +17,7 @@ test('stills queue enqueues and processes rows', () => {
   const contextFolderPath = makeTempContext()
   const queue = createStillsQueue({ contextFolderPath, logger: { log: () => {} } })
 
-  const imagePath = path.join(contextFolderPath, 'jiminy', 'stills', 'session-1', 'frame.webp')
+  const imagePath = path.join(contextFolderPath, 'familiar', 'stills', 'session-1', 'frame.webp')
   const capturedAt = new Date().toISOString()
 
   const inserted = queue.enqueueCapture({
@@ -37,7 +37,7 @@ test('stills queue enqueues and processes rows', () => {
 
   const done = queue.markDone({
     id: batch[0].id,
-    markdownPath: path.join(contextFolderPath, 'jiminy', 'stills-markdown', 'frame.md'),
+    markdownPath: path.join(contextFolderPath, 'familiar', 'stills-markdown', 'frame.md'),
     provider: 'openai',
     model: 'gpt-4o-mini'
   })
@@ -50,7 +50,7 @@ test('stills queue marks failed', () => {
   const contextFolderPath = makeTempContext()
   const queue = createStillsQueue({ contextFolderPath, logger: { log: () => {} } })
 
-  const imagePath = path.join(contextFolderPath, 'jiminy', 'stills', 'session-2', 'frame.webp')
+  const imagePath = path.join(contextFolderPath, 'familiar', 'stills', 'session-2', 'frame.webp')
   const capturedAt = new Date().toISOString()
 
   queue.enqueueCapture({
@@ -75,7 +75,7 @@ test('stills queue requeues stale processing rows on startup', () => {
   const contextFolderPath = makeTempContext()
   const queue = createStillsQueue({ contextFolderPath, logger: { log: () => {} } })
 
-  const imagePath = path.join(contextFolderPath, 'jiminy', 'stills', 'session-3', 'frame.webp')
+  const imagePath = path.join(contextFolderPath, 'familiar', 'stills', 'session-3', 'frame.webp')
   const capturedAt = new Date().toISOString()
 
   queue.enqueueCapture({
@@ -111,7 +111,7 @@ test('stills queue markPending requeues work without discarding it', () => {
   const contextFolderPath = makeTempContext()
   const queue = createStillsQueue({ contextFolderPath, logger: { log: () => {} } })
 
-  const imagePath = path.join(contextFolderPath, 'jiminy', 'stills', 'session-4', 'frame.webp')
+  const imagePath = path.join(contextFolderPath, 'familiar', 'stills', 'session-4', 'frame.webp')
   const capturedAt = new Date().toISOString()
 
   queue.enqueueCapture({

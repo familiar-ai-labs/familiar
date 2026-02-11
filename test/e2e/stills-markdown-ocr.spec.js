@@ -5,7 +5,7 @@ const { test, expect } = require('playwright/test')
 const { _electron: electron } = require('playwright')
 
 const {
-  JIMINY_BEHIND_THE_SCENES_DIR_NAME,
+  FAMILIAR_BEHIND_THE_SCENES_DIR_NAME,
   STILLS_DIR_NAME,
   STILLS_MARKDOWN_DIR_NAME
 } = require('../../src/const')
@@ -25,27 +25,27 @@ const launchApp = async ({ contextPath, settingsDir, env = {} }) => {
     cwd: appRoot,
     env: {
       ...process.env,
-      JIMINY_E2E: '1',
-      JIMINY_E2E_CONTEXT_PATH: contextPath,
-      JIMINY_SETTINGS_DIR: settingsDir,
+      FAMILIAR_E2E: '1',
+      FAMILIAR_E2E_CONTEXT_PATH: contextPath,
+      FAMILIAR_SETTINGS_DIR: settingsDir,
       ...env
     }
   })
 }
 
 const stillsRootForContext = (contextPath) =>
-  path.join(contextPath, JIMINY_BEHIND_THE_SCENES_DIR_NAME, STILLS_DIR_NAME)
+  path.join(contextPath, FAMILIAR_BEHIND_THE_SCENES_DIR_NAME, STILLS_DIR_NAME)
 
 const markdownRootForContext = (contextPath) =>
-  path.join(contextPath, JIMINY_BEHIND_THE_SCENES_DIR_NAME, STILLS_MARKDOWN_DIR_NAME)
+  path.join(contextPath, FAMILIAR_BEHIND_THE_SCENES_DIR_NAME, STILLS_MARKDOWN_DIR_NAME)
 
 test('stills markdown worker uses local Apple Vision OCR helper (native binary)', async () => {
   if (process.platform !== 'darwin') {
     test.skip(true, 'Apple Vision OCR is only supported on macOS.')
   }
 
-  const contextPath = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-context-stills-md-'))
-  const settingsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-e2e-'))
+  const contextPath = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-context-stills-md-'))
+  const settingsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-settings-e2e-'))
   const appRoot = path.join(__dirname, '../..')
   const ocrBinaryPath = path.join(appRoot, 'scripts', 'bin', 'apple-vision-ocr')
 
@@ -62,10 +62,10 @@ test('stills markdown worker uses local Apple Vision OCR helper (native binary)'
     contextPath,
     settingsDir,
     env: {
-      JIMINY_APPLE_VISION_OCR_BINARY: ocrBinaryPath,
-      JIMINY_E2E_OCR_SESSION_ID: sessionId,
-      JIMINY_E2E_OCR_CAPTURED_AT: capturedAt,
-      JIMINY_E2E_OCR_FILE_BASE: fileBase
+      FAMILIAR_APPLE_VISION_OCR_BINARY: ocrBinaryPath,
+      FAMILIAR_E2E_OCR_SESSION_ID: sessionId,
+      FAMILIAR_E2E_OCR_CAPTURED_AT: capturedAt,
+      FAMILIAR_E2E_OCR_FILE_BASE: fileBase
     }
   })
 
@@ -114,23 +114,23 @@ test('stills markdown worker uses local Apple Vision OCR helper (native binary)'
         const pathLocal = process.mainModule.require('node:path')
         const { app } = process.mainModule.require('electron')
 
-        const contextPathLocal = process.env.JIMINY_E2E_CONTEXT_PATH
+        const contextPathLocal = process.env.FAMILIAR_E2E_CONTEXT_PATH
         if (typeof contextPathLocal !== 'string' || !contextPathLocal) {
-          throw new Error(`Missing JIMINY_E2E_CONTEXT_PATH (got ${typeof contextPathLocal}).`)
+          throw new Error(`Missing FAMILIAR_E2E_CONTEXT_PATH (got ${typeof contextPathLocal}).`)
         }
 
-        const sessionId = process.env.JIMINY_E2E_OCR_SESSION_ID
-        const capturedAt = process.env.JIMINY_E2E_OCR_CAPTURED_AT
-        const fileBase = process.env.JIMINY_E2E_OCR_FILE_BASE
+        const sessionId = process.env.FAMILIAR_E2E_OCR_SESSION_ID
+        const capturedAt = process.env.FAMILIAR_E2E_OCR_CAPTURED_AT
+        const fileBase = process.env.FAMILIAR_E2E_OCR_FILE_BASE
 
         if (typeof sessionId !== 'string' || !sessionId) {
-          throw new Error(`Missing JIMINY_E2E_OCR_SESSION_ID (got ${typeof sessionId}).`)
+          throw new Error(`Missing FAMILIAR_E2E_OCR_SESSION_ID (got ${typeof sessionId}).`)
         }
         if (typeof capturedAt !== 'string' || !capturedAt) {
-          throw new Error(`Missing JIMINY_E2E_OCR_CAPTURED_AT (got ${typeof capturedAt}).`)
+          throw new Error(`Missing FAMILIAR_E2E_OCR_CAPTURED_AT (got ${typeof capturedAt}).`)
         }
         if (typeof fileBase !== 'string' || !fileBase) {
-          throw new Error(`Missing JIMINY_E2E_OCR_FILE_BASE (got ${typeof fileBase}).`)
+          throw new Error(`Missing FAMILIAR_E2E_OCR_FILE_BASE (got ${typeof fileBase}).`)
         }
 
         const resolvedAppRoot = app.getAppPath()
@@ -140,7 +140,7 @@ test('stills markdown worker uses local Apple Vision OCR helper (native binary)'
 
         const resolvedStillPath = pathLocal.join(
           contextPathLocal,
-          'jiminy',
+          'familiar',
           'stills',
           sessionId,
           `${fileBase}.webp`
@@ -172,25 +172,25 @@ test('stills markdown worker uses local Apple Vision OCR helper (native binary)'
         })
 
         // Keep a handle for cleanup.
-        global.__jiminyE2EStillsMarkdownWorker = worker
+        global.__familiarE2EStillsMarkdownWorker = worker
         worker.start({ contextFolderPath: contextPathLocal })
       })
 
     await expect.poll(() => fs.existsSync(expectedMarkdownPath), { timeout: 30000 }).toBe(true)
 
     const markdown = fs.readFileSync(expectedMarkdownPath, 'utf-8')
-    expect(markdown).toContain('format: jiminy-layout-v0')
+    expect(markdown).toContain('format: familiar-layout-v0')
     expect(markdown).toContain('extractor: apple-vision-ocr')
     expect(markdown).toContain('# OCR')
     // Stable fallback from buildMarkdownLayoutFromOcr when OCR emits zero lines.
     expect(markdown).toContain('NO_TEXT_DETECTED')
   } finally {
     await electronApp.evaluate(() => {
-      const worker = global.__jiminyE2EStillsMarkdownWorker
+      const worker = global.__familiarE2EStillsMarkdownWorker
       if (worker && typeof worker.stop === 'function') {
         worker.stop()
       }
-      global.__jiminyE2EStillsMarkdownWorker = null
+      global.__familiarE2EStillsMarkdownWorker = null
     })
     await electronApp.close()
   }

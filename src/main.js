@@ -31,7 +31,7 @@ let screenStillsController = null;
 let presenceMonitor = null;
 let recordingShutdownInProgress = false;
 
-const isE2E = process.env.JIMINY_E2E === '1';
+const isE2E = process.env.FAMILIAR_E2E === '1';
 const isCI = process.env.CI === 'true' || process.env.CI === '1';
 const pauseDurationOverrideMs = (() => {
     const parsePauseOverride = (value) => {
@@ -44,8 +44,8 @@ const pauseDurationOverrideMs = (() => {
         }
         return Math.floor(parsed);
     };
-    return parsePauseOverride(process.env.JIMINY_E2E_PAUSE_MS)
-      ?? parsePauseOverride(process.env.JIMINY_RECORDING_PAUSE_MS);
+    return parsePauseOverride(process.env.FAMILIAR_E2E_PAUSE_MS)
+      ?? parsePauseOverride(process.env.FAMILIAR_RECORDING_PAUSE_MS);
 })();
 
 initLogging();
@@ -168,7 +168,7 @@ function createSettingsWindow() {
         fullscreenable: false,
         minimizable: false,
         show: false,
-        title: 'Jiminy Settings',
+        title: 'Familiar Settings',
         webPreferences: {
             preload: path.join(__dirname, 'dashboard', 'preload.js'),
             contextIsolation: true,
@@ -255,7 +255,7 @@ function createTray() {
     const trayIcon = trayIconBase.resize({ width: 16, height: 16 });
 
     tray = new Tray(trayIcon);
-    tray.setToolTip('Jiminy');
+    tray.setToolTip('Familiar');
 
     trayHandlers = {
         onRecordingPause: () => {
@@ -374,7 +374,7 @@ ipcMain.handle('screenStills:simulateIdle', (_event, payload = {}) => {
 
 app.whenReady().then(() => {
     if (process.platform !== 'darwin' && !isE2E) {
-        console.error('Jiminy desktop app is macOS-only right now.');
+        console.error('Familiar desktop app is macOS-only right now.');
         app.quit();
         return;
     }

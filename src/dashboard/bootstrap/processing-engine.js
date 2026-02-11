@@ -3,20 +3,20 @@
     const targetWindow = options.window
     if (
       !targetWindow ||
-      !targetWindow.JiminyProcessingEngine ||
-      typeof targetWindow.JiminyProcessingEngine.createProcessingEngine !== 'function'
+      !targetWindow.FamiliarProcessingEngine ||
+      typeof targetWindow.FamiliarProcessingEngine.createProcessingEngine !== 'function'
     ) {
       return null
     }
 
-    return targetWindow.JiminyProcessingEngine.createProcessingEngine({
+    return targetWindow.FamiliarProcessingEngine.createProcessingEngine({
       elements: options.elements
     })
   }
 
-  const registry = global.JiminyDashboardBootstrap || {}
+  const registry = global.FamiliarDashboardBootstrap || {}
   registry.bootstrapProcessingEngine = bootstrapProcessingEngine
-  global.JiminyDashboardBootstrap = registry
+  global.FamiliarDashboardBootstrap = registry
 
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = { bootstrapProcessingEngine }

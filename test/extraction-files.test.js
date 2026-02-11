@@ -19,7 +19,7 @@ test('buildExtractionPath appends extraction suffix when no extension', () => {
 });
 
 test('writeExtractionFile writes markdown with newline', async () => {
-    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'jiminy-extract-'));
+    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'familiar-extract-'));
     const imagePath = path.join(tempDir, 'capture.png');
     const markdown = '# Screenshot Extraction\n\nHello';
 

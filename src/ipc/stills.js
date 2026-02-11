@@ -3,10 +3,10 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const { loadSettings } = require('../settings');
-const { JIMINY_BEHIND_THE_SCENES_DIR_NAME, STILLS_DIR_NAME } = require('../const');
+const { FAMILIAR_BEHIND_THE_SCENES_DIR_NAME, STILLS_DIR_NAME } = require('../const');
 
 function getStillsFolderPath(contextFolderPath) {
-  return path.join(contextFolderPath, JIMINY_BEHIND_THE_SCENES_DIR_NAME, STILLS_DIR_NAME);
+  return path.join(contextFolderPath, FAMILIAR_BEHIND_THE_SCENES_DIR_NAME, STILLS_DIR_NAME);
 }
 
 async function handleOpenStillsFolder() {

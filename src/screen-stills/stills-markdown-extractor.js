@@ -20,7 +20,7 @@ const PROMPT_TEMPLATE = (() => {
   return contents.trimEnd()
 })()
 
-const isLlmMockEnabled = () => process.env.JIMINY_LLM_MOCK === '1'
+const isLlmMockEnabled = () => process.env.FAMILIAR_LLM_MOCK === '1'
 
 const normalizeExtractorType = (settings) => {
   const raw = settings?.stills_markdown_extractor
@@ -98,7 +98,7 @@ const createLlmVisionExtractor = ({
     }
 
     if (isLlmMockEnabled()) {
-      const mockText = process.env.JIMINY_LLM_MOCK_TEXT || 'gibberish'
+      const mockText = process.env.FAMILIAR_LLM_MOCK_TEXT || 'gibberish'
       return new Map(rows.map((row) => [
         String(row.id),
         { markdown: mockText, providerLabel: 'mock', modelLabel: 'mock' }

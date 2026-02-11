@@ -4,15 +4,15 @@ const path = require('node:path')
 const { test, expect } = require('playwright/test')
 const { _electron: electron } = require('playwright')
 
-const { JIMINY_BEHIND_THE_SCENES_DIR_NAME, STILLS_DIR_NAME, STILLS_MARKDOWN_DIR_NAME } = require('../../src/const')
+const { FAMILIAR_BEHIND_THE_SCENES_DIR_NAME, STILLS_DIR_NAME, STILLS_MARKDOWN_DIR_NAME } = require('../../src/const')
 
 test.describe('clipboard mirroring', () => {
   test('mirrors clipboard text into the current stills-markdown session while recording', async () => {
     test.skip(process.platform !== 'darwin', 'Clipboard mirroring is tied to recording (macOS-only in E2E).')
 
     const appRoot = path.join(__dirname, '../..')
-    const contextPath = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-context-clipboard-'))
-    const settingsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-e2e-'))
+    const contextPath = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-context-clipboard-'))
+    const settingsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-settings-e2e-'))
     const launchArgs = ['.']
 
     const electronApp = await electron.launch({
@@ -20,16 +20,16 @@ test.describe('clipboard mirroring', () => {
       cwd: appRoot,
       env: {
         ...process.env,
-        JIMINY_E2E: '1',
-        JIMINY_E2E_CONTEXT_PATH: contextPath,
-        JIMINY_SETTINGS_DIR: settingsDir
+        FAMILIAR_E2E: '1',
+        FAMILIAR_E2E_CONTEXT_PATH: contextPath,
+        FAMILIAR_SETTINGS_DIR: settingsDir
       }
     })
 
     try {
       await electronApp.evaluate(({ clipboard }) => {
-        globalThis.__JIMINY_TEST_CLIPBOARD_TEXT = ''
-        clipboard.readText = () => globalThis.__JIMINY_TEST_CLIPBOARD_TEXT
+        globalThis.__FAMILIAR_TEST_CLIPBOARD_TEXT = ''
+        clipboard.readText = () => globalThis.__FAMILIAR_TEST_CLIPBOARD_TEXT
       })
 
       const window = await electronApp.firstWindow()
@@ -41,17 +41,17 @@ test.describe('clipboard mirroring', () => {
       await expect(window.locator('#context-folder-status')).toHaveText('Saved.')
 
       // Enable recording while active (required for manual start).
-      const enableResult = await window.evaluate(() => window.jiminy.saveSettings({ alwaysRecordWhenActive: true }))
+      const enableResult = await window.evaluate(() => window.familiar.saveSettings({ alwaysRecordWhenActive: true }))
       if (!enableResult || enableResult.ok !== true) {
         test.skip(true, enableResult?.message || 'Unable to enable recording while active in this environment.')
       }
 
-      const startResult = await window.evaluate(() => window.jiminy.startScreenStills())
+      const startResult = await window.evaluate(() => window.familiar.startScreenStills())
       if (!startResult || startResult.ok !== true) {
         test.skip(true, startResult?.message || 'Unable to start recording in this environment.')
       }
 
-      const stillsRoot = path.join(contextPath, JIMINY_BEHIND_THE_SCENES_DIR_NAME, STILLS_DIR_NAME)
+      const stillsRoot = path.join(contextPath, FAMILIAR_BEHIND_THE_SCENES_DIR_NAME, STILLS_DIR_NAME)
       await expect.poll(() => {
         if (!fs.existsSync(stillsRoot)) return []
         return fs.readdirSync(stillsRoot).filter((name) => name.startsWith('session-'))
@@ -60,13 +60,13 @@ test.describe('clipboard mirroring', () => {
       const [sessionId] = fs.readdirSync(stillsRoot).filter((name) => name.startsWith('session-'))
       const markdownSessionDir = path.join(
         contextPath,
-        JIMINY_BEHIND_THE_SCENES_DIR_NAME,
+        FAMILIAR_BEHIND_THE_SCENES_DIR_NAME,
         STILLS_MARKDOWN_DIR_NAME,
         sessionId
       )
 
       await electronApp.evaluate(() => {
-        globalThis.__JIMINY_TEST_CLIPBOARD_TEXT = 'hello from clipboard'
+        globalThis.__FAMILIAR_TEST_CLIPBOARD_TEXT = 'hello from clipboard'
       })
 
       await expect.poll(() => {

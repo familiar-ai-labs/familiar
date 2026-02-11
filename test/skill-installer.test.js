@@ -12,26 +12,26 @@ const {
 
 test('skill installer', async (t) => {
   await t.test('resolveHarnessSkillPath builds harness-specific destinations', () => {
-    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-skill-paths-'))
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-skill-paths-'))
     const homeDir = path.join(tempRoot, 'home')
     fs.mkdirSync(homeDir, { recursive: true })
 
     assert.equal(
       resolveHarnessSkillPath('codex', { homeDir }),
-      path.join(homeDir, '.codex', 'skills', 'jiminy')
+      path.join(homeDir, '.codex', 'skills', 'familiar')
     )
     assert.equal(
       resolveHarnessSkillPath('claude', { homeDir }),
-      path.join(homeDir, '.claude', 'skills', 'jiminy')
+      path.join(homeDir, '.claude', 'skills', 'familiar')
     )
     assert.equal(
       resolveHarnessSkillPath('cursor', { homeDir }),
-      path.join(homeDir, '.cursor', 'skills', 'jiminy')
+      path.join(homeDir, '.cursor', 'skills', 'familiar')
     )
   })
 
   await t.test('installSkill copies and overwrites the destination', async () => {
-    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-skill-install-'))
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-skill-install-'))
     const homeDir = path.join(tempRoot, 'home')
     const sourceDir = path.join(tempRoot, 'source')
     const agentDir = path.join(sourceDir, 'agents')
@@ -49,7 +49,7 @@ test('skill installer', async (t) => {
   })
 
   await t.test('installSkill is asar-safe (does not rely on fs.promises.cp)', async () => {
-    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-skill-asar-safe-'))
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-skill-asar-safe-'))
     const homeDir = path.join(tempRoot, 'home')
     const sourceDir = path.join(tempRoot, 'source')
     fs.mkdirSync(path.join(sourceDir, 'agents'), { recursive: true })
@@ -58,7 +58,7 @@ test('skill installer', async (t) => {
 
     const originalCp = fs.promises.cp
     fs.promises.cp = async () => {
-      const error = new Error('ENOTDIR: not a directory, opendir \"/fake/app.asar/src/skills/jiminy\"')
+      const error = new Error('ENOTDIR: not a directory, opendir \"/fake/app.asar/src/skills/familiar\"')
       error.code = 'ENOTDIR'
       throw error
     }
@@ -77,7 +77,7 @@ test('skill installer', async (t) => {
   })
 
   await t.test('getSkillInstallStatus reflects presence of the skill directory', async () => {
-    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-skill-status-'))
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-skill-status-'))
     const homeDir = path.join(tempRoot, 'home')
     const sourceDir = path.join(tempRoot, 'source')
     fs.mkdirSync(path.join(sourceDir, 'agents'), { recursive: true })
@@ -92,7 +92,7 @@ test('skill installer', async (t) => {
   })
 
   await t.test('installSkill does not delete an existing install when the source dir is invalid', async () => {
-    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-skill-nondestructive-'))
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-skill-nondestructive-'))
     const homeDir = path.join(tempRoot, 'home')
     fs.mkdirSync(homeDir, { recursive: true })
 

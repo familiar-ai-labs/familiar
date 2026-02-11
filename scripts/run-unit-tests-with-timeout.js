@@ -8,12 +8,12 @@ const ROOT_DIR = path.resolve(__dirname, '..');
 const TEST_DIR = path.join(ROOT_DIR, 'test');
 const DEFAULT_LIMIT_MS = 2000;
 const TIME_LIMIT_MS = Number.parseFloat(
-  process.env.JIMINY_UNIT_TEST_TIME_LIMIT_MS ?? `${DEFAULT_LIMIT_MS}`
+  process.env.FAMILIAR_UNIT_TEST_TIME_LIMIT_MS ?? `${DEFAULT_LIMIT_MS}`
 );
 
 if (!Number.isFinite(TIME_LIMIT_MS) || TIME_LIMIT_MS <= 0) {
   console.error(
-    `Invalid JIMINY_UNIT_TEST_TIME_LIMIT_MS: ${process.env.JIMINY_UNIT_TEST_TIME_LIMIT_MS}`
+    `Invalid FAMILIAR_UNIT_TEST_TIME_LIMIT_MS: ${process.env.FAMILIAR_UNIT_TEST_TIME_LIMIT_MS}`
   );
   process.exit(1);
 }

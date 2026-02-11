@@ -11,9 +11,9 @@ const resetModule = (modulePath) => {
 }
 
 test('logs:copyCurrentLogToClipboard copies current log content into clipboard', async () => {
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-logs-ipc-'))
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-logs-ipc-'))
   const logDir = path.join(tmpDir, 'logs')
-  const logPath = path.join(logDir, 'jiminy.log')
+  const logPath = path.join(logDir, 'familiar.log')
   fs.mkdirSync(logDir, { recursive: true })
   fs.writeFileSync(logPath, 'hello log\nline 2\n', 'utf8')
 
@@ -39,8 +39,8 @@ test('logs:copyCurrentLogToClipboard copies current log content into clipboard',
     return originalLoad.call(this, request, parent, isMain)
   }
 
-  const originalEnv = process.env.JIMINY_SETTINGS_DIR
-  process.env.JIMINY_SETTINGS_DIR = tmpDir
+  const originalEnv = process.env.FAMILIAR_SETTINGS_DIR
+  process.env.FAMILIAR_SETTINGS_DIR = tmpDir
 
   resetModule('../src/ipc/logs')
 
@@ -59,13 +59,13 @@ test('logs:copyCurrentLogToClipboard copies current log content into clipboard',
   } finally {
     Module._load = originalLoad
     resetModule('../src/ipc/logs')
-    process.env.JIMINY_SETTINGS_DIR = originalEnv
+    process.env.FAMILIAR_SETTINGS_DIR = originalEnv
     fs.rmSync(tmpDir, { recursive: true, force: true })
   }
 })
 
 test('logs:copyCurrentLogToClipboard returns error when log file is missing', async () => {
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-logs-ipc-missing-'))
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-logs-ipc-missing-'))
 
   const handlers = {}
   const clipboardWrites = []
@@ -89,8 +89,8 @@ test('logs:copyCurrentLogToClipboard returns error when log file is missing', as
     return originalLoad.call(this, request, parent, isMain)
   }
 
-  const originalEnv = process.env.JIMINY_SETTINGS_DIR
-  process.env.JIMINY_SETTINGS_DIR = tmpDir
+  const originalEnv = process.env.FAMILIAR_SETTINGS_DIR
+  process.env.FAMILIAR_SETTINGS_DIR = tmpDir
 
   resetModule('../src/ipc/logs')
 
@@ -105,7 +105,7 @@ test('logs:copyCurrentLogToClipboard returns error when log file is missing', as
   } finally {
     Module._load = originalLoad
     resetModule('../src/ipc/logs')
-    process.env.JIMINY_SETTINGS_DIR = originalEnv
+    process.env.FAMILIAR_SETTINGS_DIR = originalEnv
     fs.rmSync(tmpDir, { recursive: true, force: true })
   }
 })

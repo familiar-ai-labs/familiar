@@ -38,8 +38,8 @@ const createMockSummarizer = ({ text = 'gibberish', model = 'mock' } = {}) => ({
 });
 
 const createSummarizer = (options = {}) => {
-    if (process.env.JIMINY_LLM_MOCK === '1') {
-        return createMockSummarizer({ text: process.env.JIMINY_LLM_MOCK_TEXT || 'gibberish' });
+    if (process.env.FAMILIAR_LLM_MOCK === '1') {
+        return createMockSummarizer({ text: process.env.FAMILIAR_LLM_MOCK_TEXT || 'gibberish' });
     }
 
     return createProviderSummarizer(options);

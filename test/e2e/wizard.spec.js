@@ -6,8 +6,8 @@ const { _electron: electron } = require('playwright')
 
 const launchElectron = (options = {}) => {
   const appRoot = path.join(__dirname, '../..')
-  const settingsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-e2e-'))
-  const skillHomeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-skill-home-e2e-'))
+  const settingsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-settings-e2e-'))
+  const skillHomeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-skill-home-e2e-'))
   const launchArgs = ['.']
   if (process.platform === 'linux' || process.env.CI) {
     launchArgs.push('--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage')
@@ -22,9 +22,9 @@ const launchElectron = (options = {}) => {
       cwd: appRoot,
       env: {
         ...process.env,
-        JIMINY_E2E: '1',
-        JIMINY_E2E_CONTEXT_PATH: options.contextPath,
-        JIMINY_SETTINGS_DIR: settingsDir,
+        FAMILIAR_E2E: '1',
+        FAMILIAR_E2E_CONTEXT_PATH: options.contextPath,
+        FAMILIAR_SETTINGS_DIR: settingsDir,
         HOME: skillHomeDir,
         ...options.env
       }
@@ -40,7 +40,7 @@ const completeWizardPermissionsStep = async (window, nextButton) => {
   await checkPermissionsButton.click()
 
   if ((await checkPermissionsButton.textContent()) !== 'Granted') {
-    const permission = await window.evaluate(() => window.jiminy.checkScreenRecordingPermission())
+    const permission = await window.evaluate(() => window.familiar.checkScreenRecordingPermission())
     test.skip(
       true,
       `Screen Recording permission not granted for wizard flow (status: ${permission?.permissionStatus || 'unknown'}).`
@@ -95,7 +95,7 @@ test('wizard happy flow completes setup and routes to General', async () => {
   const contextPath = path.join(appRoot, 'test', 'fixtures', 'context')
   const { electronApp, settingsDir, skillHomeDir } = launchElectron({
     contextPath,
-    env: { JIMINY_LLM_MOCK: '1', JIMINY_LLM_MOCK_TEXT: 'gibberish' }
+    env: { FAMILIAR_LLM_MOCK: '1', FAMILIAR_LLM_MOCK_TEXT: 'gibberish' }
   })
 
   try {
@@ -145,7 +145,7 @@ test('wizard happy flow completes setup and routes to General', async () => {
     expect(stored.stills_markdown_extractor.llm_provider.api_key).toBe('test-key')
     expect(stored.alwaysRecordWhenActive ?? false).toBe(true)
     expect(stored.skillInstaller.harness).toBe('codex')
-    expect(stored.skillInstaller.installPath).toBe(path.join(skillHomeDir, '.codex', 'skills', 'jiminy'))
+    expect(stored.skillInstaller.installPath).toBe(path.join(skillHomeDir, '.codex', 'skills', 'familiar'))
   } finally {
     await (await electronApp).close()
   }
@@ -156,7 +156,7 @@ test('wizard preserves state when navigating back and forth', async () => {
   const contextPath = path.join(appRoot, 'test', 'fixtures', 'context')
   const { electronApp } = launchElectron({
     contextPath,
-    env: { JIMINY_LLM_MOCK: '1', JIMINY_LLM_MOCK_TEXT: 'gibberish' }
+    env: { FAMILIAR_LLM_MOCK: '1', FAMILIAR_LLM_MOCK_TEXT: 'gibberish' }
   })
 
   try {
@@ -198,7 +198,7 @@ test('wizard intelligence step requires provider and saved api key', async () =>
   const contextPath = path.join(appRoot, 'test', 'fixtures', 'context')
   const { electronApp } = launchElectron({
     contextPath,
-    env: { JIMINY_LLM_MOCK: '1', JIMINY_LLM_MOCK_TEXT: 'gibberish' }
+    env: { FAMILIAR_LLM_MOCK: '1', FAMILIAR_LLM_MOCK_TEXT: 'gibberish' }
   })
 
   try {
@@ -239,7 +239,7 @@ test('wizard resets to first step after Done', async () => {
   const contextPath = path.join(appRoot, 'test', 'fixtures', 'context')
   const { electronApp } = launchElectron({
     contextPath,
-    env: { JIMINY_LLM_MOCK: '1', JIMINY_LLM_MOCK_TEXT: 'gibberish' }
+    env: { FAMILIAR_LLM_MOCK: '1', FAMILIAR_LLM_MOCK_TEXT: 'gibberish' }
   })
 
   try {

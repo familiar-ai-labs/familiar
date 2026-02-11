@@ -1,7 +1,7 @@
 (function (global) {
   const createSettings = (options = {}) => {
     const elements = options.elements || {}
-    const jiminy = options.jiminy || {}
+    const familiar = options.familiar || {}
     const defaults = options.defaults || {}
     const getState = typeof options.getState === 'function' ? options.getState : () => ({})
     const setContextFolderValue = typeof options.setContextFolderValue === 'function'
@@ -54,8 +54,8 @@
 
     const DEFAULT_RECORDING_HOTKEY = defaults.recording || 'CommandOrControl+R'
 
-    const isReady = Boolean(jiminy.pickContextFolder && jiminy.saveSettings && jiminy.getSettings)
-    const canCopyLog = typeof jiminy.copyCurrentLogToClipboard === 'function'
+    const isReady = Boolean(familiar.pickContextFolder && familiar.saveSettings && familiar.getSettings)
+    const canCopyLog = typeof familiar.copyCurrentLogToClipboard === 'function'
 
     const saveContextFolderPath = async (contextFolderPath) => {
       if (!isReady) {
@@ -66,7 +66,7 @@
       setMessage(contextFolderErrors, '')
 
       try {
-        const result = await jiminy.saveSettings({ contextFolderPath })
+        const result = await familiar.saveSettings({ contextFolderPath })
         if (result && result.ok) {
           setMessage(contextFolderStatuses, 'Saved.')
           console.log('Context folder saved', contextFolderPath)
@@ -100,7 +100,7 @@
       }
 
       try {
-        const result = await jiminy.saveSettings({
+        const result = await familiar.saveSettings({
           llmProviderName: currentLlmProviderName,
           llmProviderApiKey: apiKey
         })
@@ -133,7 +133,7 @@
       }
 
       try {
-        const result = await jiminy.saveSettings({ llmProviderName: providerName })
+        const result = await familiar.saveSettings({ llmProviderName: providerName })
         if (result && result.ok) {
           console.log('LLM provider saved', { provider: providerName })
           setMessage(llmProviderErrors, '')
@@ -162,7 +162,7 @@
       setMessage(alwaysRecordWhenActiveErrors, '')
 
       try {
-        const result = await jiminy.saveSettings({ alwaysRecordWhenActive: enabled })
+        const result = await familiar.saveSettings({ alwaysRecordWhenActive: enabled })
         if (result && result.ok) {
           setMessage(alwaysRecordWhenActiveStatuses, 'Saved.')
           setAlwaysRecordWhenActiveValue(enabled)
@@ -190,7 +190,7 @@
 
       const nextValue = extractorType || 'llm'
       try {
-        const result = await jiminy.saveSettings({ stillsMarkdownExtractorType: nextValue })
+        const result = await familiar.saveSettings({ stillsMarkdownExtractorType: nextValue })
         if (result && result.ok) {
           setMessage(stillsMarkdownExtractorStatuses, 'Saved.')
           setStillsMarkdownExtractorType(nextValue)
@@ -214,7 +214,7 @@
       }
 
       try {
-        const result = await jiminy.getSettings()
+        const result = await familiar.getSettings()
         setContextFolderValue(result.contextFolderPath || '')
         setLlmProviderValue(result.llmProviderName || '')
         setLlmApiKeySaved(result.llmProviderApiKey || '')
@@ -275,7 +275,7 @@
         button.addEventListener('click', async () => {
           try {
             setMessage(contextFolderStatuses, 'Opening folder picker...')
-            const result = await jiminy.pickContextFolder()
+            const result = await familiar.pickContextFolder()
             if (result && !result.canceled && result.path) {
               setContextFolderValue(result.path)
               setMessage(contextFolderErrors, '')
@@ -311,7 +311,7 @@
             setMessage(copyLogStatuses, 'Copying...')
             setMessage(copyLogErrors, '')
             try {
-              const result = await jiminy.copyCurrentLogToClipboard()
+              const result = await familiar.copyCurrentLogToClipboard()
               if (result && result.ok) {
                 setMessage(copyLogStatuses, 'Copied.')
               } else {
@@ -397,9 +397,9 @@
     }
   }
 
-  const registry = global.JiminySettings || {}
+  const registry = global.FamiliarSettings || {}
   registry.createSettings = createSettings
-  global.JiminySettings = registry
+  global.FamiliarSettings = registry
 
   // Export for Node/CommonJS so tests can require this module; browsers ignore this.
   if (typeof module !== 'undefined' && module.exports) {

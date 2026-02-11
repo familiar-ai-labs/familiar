@@ -1,7 +1,7 @@
 {
-  "name": "jiminy-desktopapp",
+  "name": "familiar-desktopapp",
   "version": "0.0.22",
-  "description": "Jiminy menu bar app shell (macOS)",
+  "description": "Familiar menu bar app shell (macOS)",
   "main": "src/main.js",
   "scripts": {
     "clean": "rimraf dist",
@@ -22,21 +22,21 @@
     "test:e2e:ui": "playwright test --ui",
     "test:all": "npm run test && npm run test:modelProviderTests && npm run test:e2e && npm run test:unit:timed"
   },
-  "repository": "https://github.com/jiminy-org/jiminy",
+  "repository": "https://github.com/familiar-ai-labs/familiar",
   "keywords": [
     "Electron",
     "menu bar",
     "macOS",
-    "Jiminy"
+    "Familiar"
   ],
   "build": {
-    "appId": "com.jiminy.jiminy-desktop",
-    "productName": "Jiminy",
+    "appId": "com.familiar.familiar-desktop",
+    "productName": "Familiar",
     "publish": [
       {
         "provider": "github",
-        "owner": "Jiminy-org",
-        "repo": "jiminy-releases",
+        "owner": "familiar-ai-labs",
+        "repo": "familiar-releases",
         "releaseType": "release"
       }
     ],
@@ -86,7 +86,7 @@
       ]
     }
   },
-  "author": "Jiminy",
+  "author": "Familiar",
   "license": "CC0-1.0",
   "dependencies": {
     "better-sqlite3": "^12.6.2",

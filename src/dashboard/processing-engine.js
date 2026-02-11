@@ -119,9 +119,9 @@
     }
   }
 
-  const registry = global.JiminyProcessingEngine || {}
+  const registry = global.FamiliarProcessingEngine || {}
   registry.createProcessingEngine = createProcessingEngine
-  global.JiminyProcessingEngine = registry
+  global.FamiliarProcessingEngine = registry
 
   // Export for Node/CommonJS so tests can require this module; browsers ignore this.
   if (typeof module !== 'undefined' && module.exports) {

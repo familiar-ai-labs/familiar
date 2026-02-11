@@ -8,7 +8,7 @@ const { createStillsMarkdownExtractor } = require('./stills-markdown-extractor')
 const { buildBatchPrompt, parseBatchResponse } = require('./stills-markdown-format')
 const { readImageAsBase64, inferMimeType } = require('../utils/image')
 const {
-  JIMINY_BEHIND_THE_SCENES_DIR_NAME,
+  FAMILIAR_BEHIND_THE_SCENES_DIR_NAME,
   STILLS_DIR_NAME,
   STILLS_MARKDOWN_DIR_NAME
 } = require('../const')
@@ -34,8 +34,8 @@ const defaultIsOnlineImpl = async () => {
 }
 
 const resolveMarkdownPath = (contextFolderPath, imagePath) => {
-  const stillsRoot = path.join(contextFolderPath, JIMINY_BEHIND_THE_SCENES_DIR_NAME, STILLS_DIR_NAME)
-  const markdownRoot = path.join(contextFolderPath, JIMINY_BEHIND_THE_SCENES_DIR_NAME, STILLS_MARKDOWN_DIR_NAME)
+  const stillsRoot = path.join(contextFolderPath, FAMILIAR_BEHIND_THE_SCENES_DIR_NAME, STILLS_DIR_NAME)
+  const markdownRoot = path.join(contextFolderPath, FAMILIAR_BEHIND_THE_SCENES_DIR_NAME, STILLS_MARKDOWN_DIR_NAME)
 
   const relative = imagePath.startsWith(stillsRoot)
     ? path.relative(stillsRoot, imagePath)

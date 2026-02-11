@@ -12,7 +12,7 @@ const {
 const { SETTINGS_FILE_NAME } = require('../src/const')
 
 test('saveSettings persists contextFolderPath', () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-'))
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-settings-'))
   const settingsDir = path.join(tempRoot, 'settings')
   const contextDir = path.join(tempRoot, 'context')
   fs.mkdirSync(contextDir)
@@ -24,7 +24,7 @@ test('saveSettings persists contextFolderPath', () => {
 })
 
 test('saveSettings persists stills_markdown_extractor.llm_provider api_key/provider and preserves context', () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-'))
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-settings-'))
   const settingsDir = path.join(tempRoot, 'settings')
   const contextDir = path.join(tempRoot, 'context')
   fs.mkdirSync(contextDir)
@@ -39,33 +39,33 @@ test('saveSettings persists stills_markdown_extractor.llm_provider api_key/provi
 })
 
 test('saveSettings persists skillInstaller harness + installPath', () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-'))
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-settings-'))
   const settingsDir = path.join(tempRoot, 'settings')
 
-  saveSettings({ skillInstaller: { harness: 'codex', installPath: '/tmp/.codex/skills/jiminy' } }, { settingsDir })
+  saveSettings({ skillInstaller: { harness: 'codex', installPath: '/tmp/.codex/skills/familiar' } }, { settingsDir })
 
   const loaded = loadSettings({ settingsDir })
   assert.equal(loaded.skillInstaller?.harness, 'codex')
-  assert.equal(loaded.skillInstaller?.installPath, '/tmp/.codex/skills/jiminy')
+  assert.equal(loaded.skillInstaller?.installPath, '/tmp/.codex/skills/familiar')
 })
 
 test('saveSettings preserves skillInstaller when updating other settings', () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-'))
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-settings-'))
   const settingsDir = path.join(tempRoot, 'settings')
   const contextDir = path.join(tempRoot, 'context')
   fs.mkdirSync(contextDir)
 
-  saveSettings({ skillInstaller: { harness: 'cursor', installPath: '/tmp/.cursor/skills/jiminy' } }, { settingsDir })
+  saveSettings({ skillInstaller: { harness: 'cursor', installPath: '/tmp/.cursor/skills/familiar' } }, { settingsDir })
   saveSettings({ contextFolderPath: contextDir }, { settingsDir })
 
   const loaded = loadSettings({ settingsDir })
   assert.equal(loaded.contextFolderPath, contextDir)
   assert.equal(loaded.skillInstaller?.harness, 'cursor')
-  assert.equal(loaded.skillInstaller?.installPath, '/tmp/.cursor/skills/jiminy')
+  assert.equal(loaded.skillInstaller?.installPath, '/tmp/.cursor/skills/familiar')
 })
 
 test('saveSettings preserves stills_markdown_extractor.llm_provider api_key/provider when updating context path', () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-'))
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-settings-'))
   const settingsDir = path.join(tempRoot, 'settings')
   const contextDir = path.join(tempRoot, 'context')
   fs.mkdirSync(contextDir)
@@ -80,7 +80,7 @@ test('saveSettings preserves stills_markdown_extractor.llm_provider api_key/prov
 })
 
 test('validateContextFolderPath rejects missing directory', () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-'))
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-settings-'))
   const missingPath = path.join(tempRoot, 'missing')
 
   const result = validateContextFolderPath(missingPath)
@@ -89,7 +89,7 @@ test('validateContextFolderPath rejects missing directory', () => {
 })
 
 test('validateContextFolderPath rejects file path', () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-'))
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-settings-'))
   const filePath = path.join(tempRoot, 'not-a-dir.txt')
   fs.writeFileSync(filePath, 'nope', 'utf-8')
 
@@ -99,7 +99,7 @@ test('validateContextFolderPath rejects file path', () => {
 })
 
 test('saveSettings persists recordingHotkey', () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-'))
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-settings-'))
   const settingsDir = path.join(tempRoot, 'settings')
 
   saveSettings({ recordingHotkey: 'Alt+R' }, { settingsDir })
@@ -109,7 +109,7 @@ test('saveSettings persists recordingHotkey', () => {
 })
 
 test('saveSettings persists control/option hotkey combinations', () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-'))
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-settings-'))
   const settingsDir = path.join(tempRoot, 'settings')
 
   saveSettings(
@@ -122,7 +122,7 @@ test('saveSettings persists control/option hotkey combinations', () => {
 })
 
 test('saveSettings preserves hotkeys when updating other settings', () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-'))
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-settings-'))
   const settingsDir = path.join(tempRoot, 'settings')
   const contextDir = path.join(tempRoot, 'context')
   fs.mkdirSync(contextDir)
@@ -136,7 +136,7 @@ test('saveSettings preserves hotkeys when updating other settings', () => {
 })
 
 test('saveSettings preserves other settings when updating hotkeys', () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-'))
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-settings-'))
   const settingsDir = path.join(tempRoot, 'settings')
   const contextDir = path.join(tempRoot, 'context')
   fs.mkdirSync(contextDir)
@@ -152,7 +152,7 @@ test('saveSettings preserves other settings when updating hotkeys', () => {
 })
 
 test('saveSettings preserves updateLastCheckedAt when updating other settings', () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-'))
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-settings-'))
   const settingsDir = path.join(tempRoot, 'settings')
   const contextDir = path.join(tempRoot, 'context')
   fs.mkdirSync(contextDir)
@@ -166,7 +166,7 @@ test('saveSettings preserves updateLastCheckedAt when updating other settings', 
 })
 
 test('saveSettings persists alwaysRecordWhenActive', () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-'))
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-settings-'))
   const settingsDir = path.join(tempRoot, 'settings')
 
   saveSettings({ alwaysRecordWhenActive: true }, { settingsDir })
@@ -176,7 +176,7 @@ test('saveSettings persists alwaysRecordWhenActive', () => {
 })
 
 test('saveSettings preserves alwaysRecordWhenActive when updating other settings', () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-'))
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-settings-'))
   const settingsDir = path.join(tempRoot, 'settings')
   const contextDir = path.join(tempRoot, 'context')
   fs.mkdirSync(contextDir)
@@ -190,7 +190,7 @@ test('saveSettings preserves alwaysRecordWhenActive when updating other settings
 })
 
 test('saveSettings persists stills_markdown_extractor type', () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-'))
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-settings-'))
   const settingsDir = path.join(tempRoot, 'settings')
 
   saveSettings({ stillsMarkdownExtractorType: 'apple_vision_ocr' }, { settingsDir })
@@ -201,7 +201,7 @@ test('saveSettings persists stills_markdown_extractor type', () => {
 })
 
 test('saveSettings preserves stills_markdown_extractor when updating other settings', () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-'))
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-settings-'))
   const settingsDir = path.join(tempRoot, 'settings')
   const contextDir = path.join(tempRoot, 'context')
   fs.mkdirSync(contextDir)
@@ -215,7 +215,7 @@ test('saveSettings preserves stills_markdown_extractor when updating other setti
 })
 
 test('loadSettings exposes parse errors for diagnostics', () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-'))
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-settings-'))
   const settingsDir = path.join(tempRoot, 'settings')
   fs.mkdirSync(settingsDir, { recursive: true })
 

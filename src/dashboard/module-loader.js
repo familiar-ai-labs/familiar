@@ -1,12 +1,12 @@
 (function registerModuleLoader(global) {
   const MODULE_SPECS = [
-    { globalKey: 'JiminyWizard', modulePath: './wizard.js', factory: 'createWizard' },
-    { globalKey: 'JiminyWizardSkill', modulePath: './wizard-skill.js', factory: 'createWizardSkill' },
-    { globalKey: 'JiminyHotkeys', modulePath: './hotkeys.js', factory: 'createHotkeys' },
-    { globalKey: 'JiminyUpdates', modulePath: './updates.js', factory: 'createUpdates' },
-    { globalKey: 'JiminySettings', modulePath: './settings.js', factory: 'createSettings' },
-    { globalKey: 'JiminyProcessingEngine', modulePath: './processing-engine.js', factory: 'createProcessingEngine' },
-    { globalKey: 'JiminyStills', modulePath: './stills.js', factory: 'createStills' }
+    { globalKey: 'FamiliarWizard', modulePath: './wizard.js', factory: 'createWizard' },
+    { globalKey: 'FamiliarWizardSkill', modulePath: './wizard-skill.js', factory: 'createWizardSkill' },
+    { globalKey: 'FamiliarHotkeys', modulePath: './hotkeys.js', factory: 'createHotkeys' },
+    { globalKey: 'FamiliarUpdates', modulePath: './updates.js', factory: 'createUpdates' },
+    { globalKey: 'FamiliarSettings', modulePath: './settings.js', factory: 'createSettings' },
+    { globalKey: 'FamiliarProcessingEngine', modulePath: './processing-engine.js', factory: 'createProcessingEngine' },
+    { globalKey: 'FamiliarStills', modulePath: './stills.js', factory: 'createStills' }
   ]
 
   function assignModule(targetWindow, moduleExports) {
@@ -42,9 +42,9 @@
     }
   }
 
-  const registry = global.JiminyDashboardModuleLoader || {}
+  const registry = global.FamiliarDashboardModuleLoader || {}
   registry.loadDashboardModules = loadDashboardModules
-  global.JiminyDashboardModuleLoader = registry
+  global.FamiliarDashboardModuleLoader = registry
 
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = registry

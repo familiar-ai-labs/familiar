@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "sessionId": "session-2026-02-11T15-08-09-946Z",
+  "startedAt": "2026-02-11T15:08:09.946Z",
+  "endedAt": "2026-02-11T15:08:10.124Z",
+  "intervalSeconds": 4,
+  "scale": 0.5,
+  "format": "webp",
+  "sourceDisplay": {
+    "id": 1,
+    "bounds": {
+      "x": 0,
+      "y": 0,
+      "width": 1440,
+      "height": 900
+    },
+    "scaleFactor": 2
+  },
+  "appVersion": "0.0.22",
+  "captures": [],
+  "stopReason": "quit"
+}

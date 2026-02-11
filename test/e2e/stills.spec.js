@@ -4,7 +4,7 @@ const path = require('node:path')
 const { test, expect } = require('playwright/test')
 const { _electron: electron } = require('playwright')
 const {
-  JIMINY_BEHIND_THE_SCENES_DIR_NAME,
+  FAMILIAR_BEHIND_THE_SCENES_DIR_NAME,
   STILLS_DIR_NAME
 } = require('../../src/const')
 
@@ -23,9 +23,9 @@ const launchApp = async ({ contextPath, settingsDir, env = {} }) => {
     cwd: appRoot,
     env: {
       ...process.env,
-      JIMINY_E2E: '1',
-      JIMINY_E2E_CONTEXT_PATH: contextPath,
-      JIMINY_SETTINGS_DIR: settingsDir,
+      FAMILIAR_E2E: '1',
+      FAMILIAR_E2E_CONTEXT_PATH: contextPath,
+      FAMILIAR_SETTINGS_DIR: settingsDir,
       ...env
     }
   })
@@ -36,7 +36,7 @@ const ensureRecordingPrereqs = async (window) => {
     test.skip(true, 'Screen capture is only supported on macOS.')
   }
 
-  const permission = await window.evaluate(() => window.jiminy.checkScreenRecordingPermission())
+  const permission = await window.evaluate(() => window.familiar.checkScreenRecordingPermission())
   if (permission?.permissionStatus !== 'granted') {
     test.skip(
       true,
@@ -70,7 +70,7 @@ const setIdleSeconds = async (electronApp, idleSeconds) => {
 }
 
 const getStillsRoot = (contextPath) =>
-  path.join(contextPath, JIMINY_BEHIND_THE_SCENES_DIR_NAME, STILLS_DIR_NAME)
+  path.join(contextPath, FAMILIAR_BEHIND_THE_SCENES_DIR_NAME, STILLS_DIR_NAME)
 
 const findManifestPath = (stillsRoot) => {
   if (!fs.existsSync(stillsRoot)) {
@@ -103,7 +103,7 @@ const waitForCaptureCount = async (manifestPath, minimumCount) => {
 const waitForRecordingStopped = async (window) => {
   await expect
     .poll(async () => {
-      const status = await window.evaluate(() => window.jiminy.getScreenStillsStatus())
+      const status = await window.evaluate(() => window.familiar.getScreenStillsStatus())
       return status?.isRecording === true
     })
     .toBeFalsy()
@@ -124,8 +124,8 @@ const assertCaptureFiles = (manifestPath, manifest, options = {}) => {
 }
 
 test('stills save captures to the stills folder', async () => {
-  const contextPath = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-context-stills-'))
-  const settingsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-e2e-'))
+  const contextPath = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-context-stills-'))
+  const settingsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-settings-e2e-'))
 
   const electronApp = await launchApp({ contextPath, settingsDir })
 
@@ -164,8 +164,8 @@ test('stills save captures to the stills folder', async () => {
 })
 
 test('stills start while recording is active', async () => {
-  const contextPath = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-context-stills-'))
-  const settingsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-e2e-'))
+  const contextPath = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-context-stills-'))
+  const settingsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-settings-e2e-'))
 
   const electronApp = await launchApp({ contextPath, settingsDir })
 
@@ -190,7 +190,7 @@ test('stills start while recording is active', async () => {
 
     await expect
       .poll(async () => {
-        const status = await window.evaluate(() => window.jiminy.getScreenStillsStatus())
+        const status = await window.evaluate(() => window.familiar.getScreenStillsStatus())
         return status?.isRecording === true
       })
       .toBeTruthy()
@@ -209,14 +209,14 @@ test('stills start while recording is active', async () => {
 
 test('stills capture repeatedly based on the interval', async () => {
   const intervalMs = 700
-  const contextPath = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-context-stills-'))
-  const settingsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-e2e-'))
+  const contextPath = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-context-stills-'))
+  const settingsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-settings-e2e-'))
 
   const electronApp = await launchApp({
     contextPath,
     settingsDir,
     env: {
-      JIMINY_E2E_STILLS_INTERVAL_MS: String(intervalMs)
+      FAMILIAR_E2E_STILLS_INTERVAL_MS: String(intervalMs)
     }
   })
 
@@ -255,8 +255,8 @@ test('stills capture repeatedly based on the interval', async () => {
 })
 
 test('stills stop and save the manifest when the user goes idle', async () => {
-  const contextPath = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-context-stills-'))
-  const settingsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-e2e-'))
+  const contextPath = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-context-stills-'))
+  const settingsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-settings-e2e-'))
 
   const electronApp = await launchApp({ contextPath, settingsDir })
 
@@ -280,7 +280,7 @@ test('stills stop and save the manifest when the user goes idle', async () => {
     const manifestPath = await waitForManifestPath(stillsRoot)
     await waitForCaptureCount(manifestPath, 1)
 
-    await window.evaluate(() => window.jiminy.simulateStillsIdle({ idleSeconds: 9999 }))
+    await window.evaluate(() => window.familiar.simulateStillsIdle({ idleSeconds: 9999 }))
     await waitForRecordingStopped(window)
 
     const manifest = readManifest(manifestPath)
@@ -293,14 +293,14 @@ test('stills stop and save the manifest when the user goes idle', async () => {
 })
 
 test('stills resume automatically after the pause window', async () => {
-  const contextPath = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-context-stills-'))
-  const settingsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-e2e-'))
+  const contextPath = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-context-stills-'))
+  const settingsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-settings-e2e-'))
 
   const electronApp = await launchApp({
     contextPath,
     settingsDir,
     env: {
-      JIMINY_E2E_PAUSE_MS: '200'
+      FAMILIAR_E2E_PAUSE_MS: '200'
     }
   })
 
@@ -336,8 +336,8 @@ test('stills resume automatically after the pause window', async () => {
 })
 
 test('stills pause and resume with the recording hotkey', async () => {
-  const contextPath = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-context-stills-'))
-  const settingsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-e2e-'))
+  const contextPath = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-context-stills-'))
+  const settingsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-settings-e2e-'))
 
   // Keep the default pause window so the dashboard poller (2s) can observe the paused state.
   // With a tiny pause window override (ex: 200ms) the app may auto-resume before the UI refreshes.
@@ -358,13 +358,13 @@ test('stills pause and resume with the recording hotkey', async () => {
     await recordingAction.click()
     await expect(window.locator('#sidebar-recording-status')).toHaveText('Recording')
 
-    await window.evaluate(() => window.jiminy.simulateStillsHotkey())
+    await window.evaluate(() => window.familiar.simulateStillsHotkey())
     await expect
       .poll(async () => window.locator('#sidebar-recording-status').textContent())
       .toBe('Paused')
     await expect(recordingAction).toHaveText('Resume')
 
-    await window.evaluate(() => window.jiminy.simulateStillsHotkey())
+    await window.evaluate(() => window.familiar.simulateStillsHotkey())
     await expect
       .poll(async () => window.locator('#sidebar-recording-status').textContent())
       .toBe('Recording')

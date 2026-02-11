@@ -1,7 +1,7 @@
 (function (global) {
   const createHotkeys = (options = {}) => {
     const elements = options.elements || {}
-    const jiminy = options.jiminy || {}
+    const familiar = options.familiar || {}
     const setMessage = typeof options.setMessage === 'function' ? options.setMessage : () => {}
     const updateWizardUI = typeof options.updateWizardUI === 'function' ? options.updateWizardUI : () => {}
     const getState = typeof options.getState === 'function' ? options.getState : () => ({})
@@ -133,7 +133,7 @@
     const formatAcceleratorForDisplay = (accelerator) => {
       if (!accelerator) return 'Click to set...'
 
-      const isMac = jiminy.platform === 'darwin'
+      const isMac = familiar.platform === 'darwin'
       return accelerator
         .replace(/CommandOrControl/g, isMac ? '⌘' : 'Ctrl')
         .replace(/Command/g, '⌘')
@@ -168,9 +168,9 @@
         await stopRecording(recordingElement)
       }
 
-      if (jiminy.suspendHotkeys) {
+      if (familiar.suspendHotkeys) {
         try {
-          await jiminy.suspendHotkeys()
+          await familiar.suspendHotkeys()
           console.log('Global hotkeys suspended for recording')
         } catch (error) {
           console.error('Failed to suspend hotkeys', error)
@@ -195,9 +195,9 @@
       }
 
       let resumeOk = true
-      if (wasRecording && jiminy.resumeHotkeys) {
+      if (wasRecording && familiar.resumeHotkeys) {
         try {
-          await jiminy.resumeHotkeys()
+          await familiar.resumeHotkeys()
           console.log('Global hotkeys resumed after recording')
         } catch (error) {
           console.error('Failed to resume hotkeys', error)
@@ -258,10 +258,10 @@
           const recordingHotkey = state.currentRecordingHotkey
 
           try {
-            const result = await jiminy.saveSettings({ recordingHotkey })
+            const result = await familiar.saveSettings({ recordingHotkey })
             if (result && result.ok) {
-              if (jiminy.reregisterHotkeys) {
-                const reregisterResult = await jiminy.reregisterHotkeys()
+              if (familiar.reregisterHotkeys) {
+                const reregisterResult = await familiar.reregisterHotkeys()
                 if (reregisterResult && reregisterResult.ok) {
                   setMessage(hotkeysStatuses, 'Saved and applied.')
                 } else {
@@ -304,9 +304,9 @@
     }
   }
 
-  const registry = global.JiminyHotkeys || {}
+  const registry = global.FamiliarHotkeys || {}
   registry.createHotkeys = createHotkeys
-  global.JiminyHotkeys = registry
+  global.FamiliarHotkeys = registry
 
   // Export for Node/CommonJS so tests can require this module; browsers ignore this.
   if (typeof module !== 'undefined' && module.exports) {

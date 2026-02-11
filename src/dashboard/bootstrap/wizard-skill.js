@@ -1,13 +1,13 @@
 (function registerBootstrapWizardSkill(global) {
   function bootstrapWizardSkill(options = {}) {
     const targetWindow = options.window
-    if (!targetWindow || !targetWindow.JiminyWizardSkill || typeof targetWindow.JiminyWizardSkill.createWizardSkill !== 'function') {
+    if (!targetWindow || !targetWindow.FamiliarWizardSkill || typeof targetWindow.FamiliarWizardSkill.createWizardSkill !== 'function') {
       return null
     }
 
-    return targetWindow.JiminyWizardSkill.createWizardSkill({
+    return targetWindow.FamiliarWizardSkill.createWizardSkill({
       elements: options.elements,
-      jiminy: options.jiminy,
+      familiar: options.familiar,
       getState: options.getState,
       setSkillHarness: options.setSkillHarness,
       setSkillInstalled: options.setSkillInstalled,
@@ -16,9 +16,9 @@
     })
   }
 
-  const registry = global.JiminyDashboardBootstrap || {}
+  const registry = global.FamiliarDashboardBootstrap || {}
   registry.bootstrapWizardSkill = bootstrapWizardSkill
-  global.JiminyDashboardBootstrap = registry
+  global.FamiliarDashboardBootstrap = registry
 
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = { bootstrapWizardSkill }

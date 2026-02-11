@@ -1,7 +1,7 @@
 (function (global) {
   const createUpdates = (options = {}) => {
     const elements = options.elements || {}
-    const jiminy = options.jiminy || {}
+    const familiar = options.familiar || {}
     const setMessage = typeof options.setMessage === 'function' ? options.setMessage : () => {}
 
     const {
@@ -118,7 +118,7 @@
     }
 
     const handleCheck = async () => {
-      if (!jiminy.checkForUpdates) {
+      if (!familiar.checkForUpdates) {
         setMessage(updateErrors, 'Update bridge unavailable. Restart the app.')
         return
       }
@@ -128,7 +128,7 @@
       setUpdateCheckState(true)
 
       try {
-        const result = await jiminy.checkForUpdates({ reason: 'manual' })
+        const result = await familiar.checkForUpdates({ reason: 'manual' })
         if (result && result.ok) {
           const version = result.updateInfo && result.updateInfo.version
             ? result.updateInfo.version
@@ -177,26 +177,26 @@
       })
     }
 
-    if (typeof jiminy.onUpdateDownloadProgress === 'function') {
-      jiminy.onUpdateDownloadProgress((payload) => {
+    if (typeof familiar.onUpdateDownloadProgress === 'function') {
+      familiar.onUpdateDownloadProgress((payload) => {
         handleDownloadProgress(payload)
       })
     }
 
-    if (typeof jiminy.onUpdateDownloaded === 'function') {
-      jiminy.onUpdateDownloaded((payload) => {
+    if (typeof familiar.onUpdateDownloaded === 'function') {
+      familiar.onUpdateDownloaded((payload) => {
         handleDownloadComplete(payload)
       })
     }
 
     return {
-      isReady: Boolean(jiminy.checkForUpdates)
+      isReady: Boolean(familiar.checkForUpdates)
     }
   }
 
-  const registry = global.JiminyUpdates || {}
+  const registry = global.FamiliarUpdates || {}
   registry.createUpdates = createUpdates
-  global.JiminyUpdates = registry
+  global.FamiliarUpdates = registry
 
   // Export for Node/CommonJS so tests can require this module; browsers ignore this.
   if (typeof module !== 'undefined' && module.exports) {

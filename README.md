@@ -1,6 +1,6 @@
-# Jiminy Desktop App
+# Familiar Desktop App
 
-Menu bar app shell for Jiminy (macOS only).
+Menu bar app shell for Familiar (macOS only).
 
 ## Run
 
@@ -18,7 +18,7 @@ npm run test:modelProviderTests
 ```
 
 -   `npm test` runs unit tests (excludes `test/modelProviderTests`).
--   `npm run test:unit:timed` runs unit tests and fails if they take longer than 2s (override with `JIMINY_UNIT_TEST_TIME_LIMIT_MS`).
+-   `npm run test:unit:timed` runs unit tests and fails if they take longer than 2s (override with `FAMILIAR_UNIT_TEST_TIME_LIMIT_MS`).
 -   `npm run test:modelProviderTests` runs live provider tests (requires `LLM_API_KEY`).
 
 ## E2E Tests (Playwright)
@@ -29,14 +29,14 @@ npm run test:e2e
 
 E2E helpers:
 
--   `JIMINY_E2E=1` opens the Settings window on launch and bypasses native dialogs.
--   `JIMINY_E2E_CONTEXT_PATH` supplies the folder picker result.
--   `JIMINY_E2E_STILLS_INTERVAL_MS` overrides the still capture interval for E2E (milliseconds).
--   `JIMINY_E2E_PAUSE_MS` overrides the pause window for E2E (milliseconds).
--   `JIMINY_SETTINGS_DIR` overrides the settings storage directory.
--   `JIMINY_LLM_MOCK=1` replaces LLM calls with a mock summarizer/extractor.
--   `JIMINY_LLM_MOCK_TEXT` sets the mock summary text (default: `gibberish`).
--   On Linux CI/E2E runs (`JIMINY_E2E=1` or `CI=true`), the app disables GPU and sandbox flags to improve launch reliability.
+-   `FAMILIAR_E2E=1` opens the Settings window on launch and bypasses native dialogs.
+-   `FAMILIAR_E2E_CONTEXT_PATH` supplies the folder picker result.
+-   `FAMILIAR_E2E_STILLS_INTERVAL_MS` overrides the still capture interval for E2E (milliseconds).
+-   `FAMILIAR_E2E_PAUSE_MS` overrides the pause window for E2E (milliseconds).
+-   `FAMILIAR_SETTINGS_DIR` overrides the settings storage directory.
+-   `FAMILIAR_LLM_MOCK=1` replaces LLM calls with a mock summarizer/extractor.
+-   `FAMILIAR_LLM_MOCK_TEXT` sets the mock summary text (default: `gibberish`).
+-   On Linux CI/E2E runs (`FAMILIAR_E2E=1` or `CI=true`), the app disables GPU and sandbox flags to improve launch reliability.
 
 ## Run GitHub CI locally
 
@@ -69,7 +69,7 @@ Environment:
 
 ## Publish desktop release (manual)
 
-The workflow `Publish Desktop Release` is a manual GitHub Actions job that builds the macOS artifacts and publishes them to `jiminy-releases`.
+The workflow `Publish Desktop Release` is a manual GitHub Actions job that builds the macOS artifacts and publishes them to `familiar-releases`.
 
 -   Workflow: `.github/workflows/release-desktopapp.yml`
 -   Requires secret: `RELEASE_REPO_GITHUB_TOKEN`
@@ -77,12 +77,12 @@ The workflow `Publish Desktop Release` is a manual GitHub Actions job that build
 
 ## Notes
 
--   The app runs from the macOS menu bar with a Settings window that stores the Context Folder Path, stills extraction mode (AI vs local OCR), and optionally an LLM provider + API key in `~/.jiminy/settings.json`.
+-   The app runs from the macOS menu bar with a Settings window that stores the Context Folder Path, stills extraction mode (AI vs local OCR), and optionally an LLM provider + API key in `~/.familiar/settings.json`.
 -   The packaged app requires macOS 14.0+ (enforced via `LSMinimumSystemVersion`).
 -   The Settings wizard starts with Context Folder selection; the General tab lets you change it anytime.
 -   Auto-launch on login is enabled via Electron login item settings.
--   The Settings window includes a **Recording** tab with an opt-in **Record while active** toggle plus manual pause/resume. When enabled (and permission granted), Jiminy captures downsampled still images into `<contextFolderPath>/jiminy/stills/session-<timestamp>/` with a `manifest.json` describing captures and stop reason.
--   While recording is active, clipboard text is mirrored to `<contextFolderPath>/jiminy/stills-markdown/session-<timestamp>/<timestamp>.clipboard.txt`.
+-   The Settings window includes a **Recording** tab with an opt-in **Record while active** toggle plus manual pause/resume. When enabled (and permission granted), Familiar captures downsampled still images into `<contextFolderPath>/familiar/stills/session-<timestamp>/` with a `manifest.json` describing captures and stop reason.
+-   While recording is active, clipboard text is mirrored to `<contextFolderPath>/familiar/stills-markdown/session-<timestamp>/<timestamp>.clipboard.txt`.
 -   Global hotkeys trigger still capture pause/resume (`Command+R`) on macOS (Electron accelerator `CommandOrControl+R`).
 
 ## Local OCR (Apple Vision)
@@ -95,7 +95,7 @@ Dev helper scripts (from repo root):
 # Build the Apple Vision OCR helper binary (recommended for performance).
 ./code/desktopapp/scripts/build-apple-vision-ocr.sh
 
-# Run OCR on a single image and write a `jiminy-layout-v0` markdown file next to it.
+# Run OCR on a single image and write a `familiar-layout-v0` markdown file next to it.
 node code/desktopapp/scripts/apple-vision-ocr-image-to-markdown.js /path/to/image.png
 ```
 
@@ -105,7 +105,7 @@ The helper is implemented as a small Objective-C CLI (no Swift runtime dependenc
 
 The stills worker looks for the helper binary at:
 
-- `JIMINY_APPLE_VISION_OCR_BINARY` (override), or
+- `FAMILIAR_APPLE_VISION_OCR_BINARY` (override), or
 - `${process.resourcesPath}/apple-vision-ocr` (packaged app), or
 - `<repoRoot>/code/desktopapp/scripts/bin/apple-vision-ocr` (dev).
 
@@ -127,7 +127,7 @@ The stills worker looks for the helper binary at:
                                       │
                                       ▼
            ┌─────────────────────┐
-           │ ~/.jiminy/settings  │
+           │ ~/.familiar/settings  │
            └──────────┬──────────┘
           ┌───────────┴───────────┐
           │                       │

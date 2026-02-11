@@ -1,20 +1,20 @@
 (function registerBootstrapUpdates(global) {
   function bootstrapUpdates(options = {}) {
     const targetWindow = options.window
-    if (!targetWindow || !targetWindow.JiminyUpdates || typeof targetWindow.JiminyUpdates.createUpdates !== 'function') {
+    if (!targetWindow || !targetWindow.FamiliarUpdates || typeof targetWindow.FamiliarUpdates.createUpdates !== 'function') {
       return null
     }
 
-    return targetWindow.JiminyUpdates.createUpdates({
+    return targetWindow.FamiliarUpdates.createUpdates({
       elements: options.elements,
-      jiminy: options.jiminy,
+      familiar: options.familiar,
       setMessage: options.setMessage
     })
   }
 
-  const registry = global.JiminyDashboardBootstrap || {}
+  const registry = global.FamiliarDashboardBootstrap || {}
   registry.bootstrapUpdates = bootstrapUpdates
-  global.JiminyDashboardBootstrap = registry
+  global.FamiliarDashboardBootstrap = registry
 
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = { bootstrapUpdates }

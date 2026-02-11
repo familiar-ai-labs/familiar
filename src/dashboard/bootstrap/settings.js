@@ -1,13 +1,13 @@
 (function registerBootstrapSettings(global) {
   function bootstrapSettings(options = {}) {
     const targetWindow = options.window
-    if (!targetWindow || !targetWindow.JiminySettings || typeof targetWindow.JiminySettings.createSettings !== 'function') {
+    if (!targetWindow || !targetWindow.FamiliarSettings || typeof targetWindow.FamiliarSettings.createSettings !== 'function') {
       return null
     }
 
-    return targetWindow.JiminySettings.createSettings({
+    return targetWindow.FamiliarSettings.createSettings({
       elements: options.elements,
-      jiminy: options.jiminy,
+      familiar: options.familiar,
       defaults: options.defaults,
       getState: options.getState,
       setContextFolderValue: options.setContextFolderValue,
@@ -26,9 +26,9 @@
     })
   }
 
-  const registry = global.JiminyDashboardBootstrap || {}
+  const registry = global.FamiliarDashboardBootstrap || {}
   registry.bootstrapSettings = bootstrapSettings
-  global.JiminyDashboardBootstrap = registry
+  global.FamiliarDashboardBootstrap = registry
 
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = { bootstrapSettings }

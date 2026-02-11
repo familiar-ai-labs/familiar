@@ -51,7 +51,7 @@ test('apple-vision-ocr script: normalize helpers validate inputs', () => {
     assert.throws(() => normalizeMinConfidence('2'), /Invalid --min-confidence/);
 });
 
-test('apple-vision-ocr script: buildMarkdownLayoutFromOcr emits stable jiminy layout skeleton', () => {
+test('apple-vision-ocr script: buildMarkdownLayoutFromOcr emits stable familiar layout skeleton', () => {
     const markdown = buildMarkdownLayoutFromOcr({
         imagePath: '/some/dir/screenshot.png',
         meta: {
@@ -65,7 +65,7 @@ test('apple-vision-ocr script: buildMarkdownLayoutFromOcr emits stable jiminy la
         lines: ['Hello "world"', 'Second line'],
     });
 
-    assert.ok(markdown.includes('format: jiminy-layout-v0\n'));
+    assert.ok(markdown.includes('format: familiar-layout-v0\n'));
     assert.ok(markdown.includes('extractor: apple-vision-ocr\n'));
     assert.ok(markdown.includes('source_image: screenshot.png\n'));
     assert.ok(markdown.includes('screen_resolution: 1200x800\n'));
@@ -79,14 +79,14 @@ test('apple-vision-ocr script: escapeForQuotedBullet escapes backslashes and quo
     assert.equal(escapeForQuotedBullet('a"b'), 'a\\"b');
 });
 
-test('apple-vision-ocr script: runCli writes stable jiminy markdown via helper binary', async () => {
-    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-apple-ocr-test-'));
+test('apple-vision-ocr script: runCli writes stable familiar markdown via helper binary', async () => {
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-apple-ocr-test-'));
     const stubBinaryPath = path.join(tempRoot, 'apple-vision-ocr-stub.js');
     const imagePath = path.join(tempRoot, 'image.png');
     const outPath = path.join(tempRoot, 'out.md');
 
-    const priorEnv = process.env.JIMINY_APPLE_VISION_OCR_BINARY;
-    process.env.JIMINY_APPLE_VISION_OCR_BINARY = stubBinaryPath;
+    const priorEnv = process.env.FAMILIAR_APPLE_VISION_OCR_BINARY;
+    process.env.FAMILIAR_APPLE_VISION_OCR_BINARY = stubBinaryPath;
 
     try {
         fs.writeFileSync(imagePath, 'fake', 'utf-8');
@@ -139,7 +139,7 @@ test('apple-vision-ocr script: runCli writes stable jiminy markdown via helper b
 
         const markdown = fs.readFileSync(outPath, 'utf-8');
 
-        assert.ok(markdown.includes('format: jiminy-layout-v0\n'));
+        assert.ok(markdown.includes('format: familiar-layout-v0\n'));
         assert.ok(markdown.includes('extractor: apple-vision-ocr\n'));
         assert.ok(markdown.includes('source_image: image.png\n'));
         assert.ok(markdown.includes('screen_resolution: 1200x800\n'));
@@ -153,9 +153,9 @@ test('apple-vision-ocr script: runCli writes stable jiminy markdown via helper b
         assert.ok(markdown.includes('- "Second line"\n'));
     } finally {
         if (priorEnv === undefined) {
-            delete process.env.JIMINY_APPLE_VISION_OCR_BINARY;
+            delete process.env.FAMILIAR_APPLE_VISION_OCR_BINARY;
         } else {
-            process.env.JIMINY_APPLE_VISION_OCR_BINARY = priorEnv;
+            process.env.FAMILIAR_APPLE_VISION_OCR_BINARY = priorEnv;
         }
     }
 });

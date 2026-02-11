@@ -149,9 +149,9 @@
     }
   }
 
-  const registry = global.JiminyWizard || {}
+  const registry = global.FamiliarWizard || {}
   registry.createWizard = createWizard
-  global.JiminyWizard = registry
+  global.FamiliarWizard = registry
 
   // Export for Node/CommonJS so tests can require this module; browsers ignore this.
   if (typeof module !== 'undefined' && module.exports) {

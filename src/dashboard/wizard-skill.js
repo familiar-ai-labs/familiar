@@ -1,7 +1,7 @@
 (function (global) {
   const createWizardSkill = (options = {}) => {
     const elements = options.elements || {}
-    const jiminy = options.jiminy || {}
+    const familiar = options.familiar || {}
     const getState = typeof options.getState === 'function' ? options.getState : () => ({})
     const setSkillHarness = typeof options.setSkillHarness === 'function' ? options.setSkillHarness : () => {}
     const setSkillInstalled = typeof options.setSkillInstalled === 'function' ? options.setSkillInstalled : () => {}
@@ -17,8 +17,8 @@
       skillCursorRestartNote
     } = elements
 
-    const isReady = Boolean(jiminy.installSkill && jiminy.getSkillInstallStatus)
-    const canPersist = typeof jiminy.saveSettings === 'function'
+    const isReady = Boolean(familiar.installSkill && familiar.getSkillInstallStatus)
+    const canPersist = typeof familiar.saveSettings === 'function'
 
     const setStatus = (message) => setMessage(skillInstallStatus, message)
     const setError = (message) => setMessage(skillInstallError, message)
@@ -43,7 +43,7 @@
         return
       }
       try {
-        await jiminy.saveSettings({ skillInstaller: { harness, installPath: installPath || '' } })
+        await familiar.saveSettings({ skillInstaller: { harness, installPath: installPath || '' } })
       } catch (error) {
         console.warn('Failed to persist skill installer settings', error)
       }
@@ -79,7 +79,7 @@
 
       syncHarnessSelection(harness)
       try {
-        const result = await jiminy.getSkillInstallStatus({ harness })
+        const result = await familiar.getSkillInstallStatus({ harness })
         if (result && result.ok) {
           setPath(result.path || '')
           setSkillInstalled(Boolean(result.installed))
@@ -148,7 +148,7 @@
       updateInstallButtonState()
 
       try {
-        const result = await jiminy.installSkill({ harness: currentSkillHarness })
+        const result = await familiar.installSkill({ harness: currentSkillHarness })
 	        if (result && result.ok) {
 	          setSkillInstalled(true)
 	          if (result.path) {
@@ -203,9 +203,9 @@
     }
   }
 
-  const registry = global.JiminyWizardSkill || {}
+  const registry = global.FamiliarWizardSkill || {}
   registry.createWizardSkill = createWizardSkill
-  global.JiminyWizardSkill = registry
+  global.FamiliarWizardSkill = registry
 
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = registry

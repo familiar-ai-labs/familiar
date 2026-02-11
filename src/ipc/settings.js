@@ -200,8 +200,8 @@ function handleSaveSettings(_event, payload) {
 }
 
 async function handlePickContextFolder(event) {
-    if (process.env.JIMINY_E2E === '1' && process.env.JIMINY_E2E_CONTEXT_PATH) {
-        const testPath = process.env.JIMINY_E2E_CONTEXT_PATH;
+    if (process.env.FAMILIAR_E2E === '1' && process.env.FAMILIAR_E2E_CONTEXT_PATH) {
+        const testPath = process.env.FAMILIAR_E2E_CONTEXT_PATH;
         const validation = validateContextFolderPath(testPath);
         if (!validation.ok) {
             console.warn('E2E mode: invalid context folder path', {

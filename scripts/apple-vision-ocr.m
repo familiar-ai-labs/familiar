@@ -1,6 +1,6 @@
 // apple-vision-ocr.m
 //
-// Native OCR helper for Jiminy: runs Apple Vision text recognition and emits JSON to stdout.
+// Native OCR helper for Familiar: runs Apple Vision text recognition and emits JSON to stdout.
 // This is intentionally a small CLI binary so the Electron app can run local OCR without
 // bundling Swift runtime dependencies.
 //

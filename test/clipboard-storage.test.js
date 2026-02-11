@@ -10,7 +10,7 @@ const {
   saveClipboardMirrorToDirectory
 } = require('../src/clipboard/storage')
 const {
-  JIMINY_BEHIND_THE_SCENES_DIR_NAME,
+  FAMILIAR_BEHIND_THE_SCENES_DIR_NAME,
   STILLS_MARKDOWN_DIR_NAME
 } = require('../src/const')
 
@@ -25,7 +25,7 @@ test('getClipboardMirrorDirectory returns a path under the context folder and se
   const dir = getClipboardMirrorDirectory('/tmp/context', 'session-123')
   assert.equal(
     dir,
-    path.join('/tmp/context', JIMINY_BEHIND_THE_SCENES_DIR_NAME, STILLS_MARKDOWN_DIR_NAME, 'session-123')
+    path.join('/tmp/context', FAMILIAR_BEHIND_THE_SCENES_DIR_NAME, STILLS_MARKDOWN_DIR_NAME, 'session-123')
   )
 })
 
@@ -37,7 +37,7 @@ test('getClipboardMirrorDirectory returns null without a context folder or sessi
 })
 
 test('saveClipboardMirrorToDirectory writes text to the target directory', async () => {
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'jiminy-clipboard-'))
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'familiar-clipboard-'))
   const nestedDir = path.join(tempDir, 'nested')
   const text = 'Test clipboard content\nwith multiple lines'
   const date = new Date(2026, 0, 2, 3, 4, 5, 6)
@@ -52,7 +52,7 @@ test('saveClipboardMirrorToDirectory writes text to the target directory', async
 })
 
 test('saveClipboardMirrorToDirectory stores clipboard under the context stills-markdown session folder', async () => {
-  const contextDir = await fs.mkdtemp(path.join(os.tmpdir(), 'jiminy-context-clipboard-'))
+  const contextDir = await fs.mkdtemp(path.join(os.tmpdir(), 'familiar-context-clipboard-'))
   const clipboardDir = getClipboardMirrorDirectory(contextDir, 'session-abc')
   const text = 'Clipboard content for context folder test'
   const date = new Date(2026, 0, 2, 3, 4, 5, 6)
@@ -63,7 +63,7 @@ test('saveClipboardMirrorToDirectory stores clipboard under the context stills-m
 })
 
 test('saveClipboardMirrorToDirectory throws on invalid text', async () => {
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'jiminy-clipboard-invalid-'))
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'familiar-clipboard-invalid-'))
 
   await assert.rejects(
     saveClipboardMirrorToDirectory(null, tempDir),

@@ -1,7 +1,7 @@
 const fs = require('node:fs')
 const path = require('node:path')
 const Database = require('better-sqlite3')
-const { JIMINY_BEHIND_THE_SCENES_DIR_NAME, STILLS_DB_FILENAME } = require('../const')
+const { FAMILIAR_BEHIND_THE_SCENES_DIR_NAME, STILLS_DB_FILENAME } = require('../const')
 
 const STATUS = Object.freeze({
   PENDING: 'pending',
@@ -11,7 +11,7 @@ const STATUS = Object.freeze({
 })
 
 const resolveDbPath = (contextFolderPath) =>
-  path.join(contextFolderPath, JIMINY_BEHIND_THE_SCENES_DIR_NAME, STILLS_DB_FILENAME)
+  path.join(contextFolderPath, FAMILIAR_BEHIND_THE_SCENES_DIR_NAME, STILLS_DB_FILENAME)
 
 const createStillsQueue = ({ contextFolderPath, logger = console } = {}) => {
   if (!contextFolderPath) {

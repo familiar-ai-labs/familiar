@@ -34,7 +34,7 @@ const buildMarkdownLayoutFromOcr = ({ imagePath, meta, lines } = {}) => {
 
   return [
     '---',
-    'format: jiminy-layout-v0',
+    'format: familiar-layout-v0',
     'extractor: apple-vision-ocr',
     `source_image: ${basename}`,
     `screen_resolution: ${resolution}`,
@@ -113,7 +113,7 @@ const fileExists = async (candidatePath) => {
 }
 
 const resolveAppleVisionOcrBinaryPath = async ({ logger = console } = {}) => {
-  const envOverride = process.env.JIMINY_APPLE_VISION_OCR_BINARY
+  const envOverride = process.env.FAMILIAR_APPLE_VISION_OCR_BINARY
   if (envOverride && (await fileExists(envOverride))) {
     return envOverride
   }

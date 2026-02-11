@@ -1,14 +1,14 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-const { JIMINY_BEHIND_THE_SCENES_DIR_NAME, STILLS_DIR_NAME } = require('../const');
+const { FAMILIAR_BEHIND_THE_SCENES_DIR_NAME, STILLS_DIR_NAME } = require('../const');
 
 function formatTimestamp(date) {
   return date.toISOString().replace(/[:.]/g, '-');
 }
 
 function getStillsRoot(contextFolderPath) {
-  return path.join(contextFolderPath, JIMINY_BEHIND_THE_SCENES_DIR_NAME, STILLS_DIR_NAME);
+  return path.join(contextFolderPath, FAMILIAR_BEHIND_THE_SCENES_DIR_NAME, STILLS_DIR_NAME);
 }
 
 function createSessionStore({

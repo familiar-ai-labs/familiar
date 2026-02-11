@@ -25,8 +25,8 @@ function resolveIntervalMs(options, logger) {
     return Math.round(options.intervalSeconds * 1000);
   }
 
-  const isE2E = process.env.JIMINY_E2E === '1';
-  const overrideValue = process.env.JIMINY_E2E_STILLS_INTERVAL_MS;
+  const isE2E = process.env.FAMILIAR_E2E === '1';
+  const overrideValue = process.env.FAMILIAR_E2E_STILLS_INTERVAL_MS;
   if (isE2E && overrideValue) {
     const parsed = Number.parseInt(overrideValue, 10);
     if (Number.isFinite(parsed) && parsed > 0) {
@@ -354,7 +354,7 @@ function createRecorder(options = {}) {
         throw new Error('Context folder path missing for recording.');
       }
       if (!isScreenRecordingPermissionGranted()) {
-        throw new Error('Screen Recording permission is not granted. Enable Jiminy in System Settings \u2192 Privacy & Security \u2192 Screen Recording.');
+        throw new Error('Screen Recording permission is not granted. Enable Familiar in System Settings \u2192 Privacy & Security \u2192 Screen Recording.');
       }
 
       async function startOnce() {

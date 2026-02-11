@@ -3,7 +3,7 @@ const fs = require('node:fs')
 const path = require('node:path')
 const { resolveSettingsDir } = require('../settings')
 
-const LOG_FILENAME = 'jiminy.log'
+const LOG_FILENAME = 'familiar.log'
 
 function resolveLogFilePath(options = {}) {
   const settingsDir = options.settingsDir

@@ -1,20 +1,20 @@
 (function registerBootstrapStills(global) {
   function bootstrapStills(options = {}) {
     const targetWindow = options.window
-    if (!targetWindow || !targetWindow.JiminyStills || typeof targetWindow.JiminyStills.createStills !== 'function') {
+    if (!targetWindow || !targetWindow.FamiliarStills || typeof targetWindow.FamiliarStills.createStills !== 'function') {
       return null
     }
 
-    return targetWindow.JiminyStills.createStills({
+    return targetWindow.FamiliarStills.createStills({
       elements: options.elements,
-      jiminy: options.jiminy,
+      familiar: options.familiar,
       getState: options.getState
     })
   }
 
-  const registry = global.JiminyDashboardBootstrap || {}
+  const registry = global.FamiliarDashboardBootstrap || {}
   registry.bootstrapStills = bootstrapStills
-  global.JiminyDashboardBootstrap = registry
+  global.FamiliarDashboardBootstrap = registry
 
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = { bootstrapStills }

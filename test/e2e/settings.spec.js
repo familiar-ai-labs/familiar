@@ -8,7 +8,7 @@ test('choose button sets the context folder path', async () => {
   const appRoot = path.join(__dirname, '../..')
   const contextPath = path.join(appRoot, 'test', 'fixtures', 'context')
   const expectedContextPath = path.resolve(contextPath)
-  const settingsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-settings-e2e-'))
+  const settingsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-settings-e2e-'))
   const launchArgs = ['.']
   if (process.platform === 'linux' || process.env.CI) {
     launchArgs.push('--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage')
@@ -19,9 +19,9 @@ test('choose button sets the context folder path', async () => {
     cwd: appRoot,
     env: {
       ...process.env,
-      JIMINY_E2E: '1',
-      JIMINY_E2E_CONTEXT_PATH: contextPath,
-      JIMINY_SETTINGS_DIR: settingsDir
+      FAMILIAR_E2E: '1',
+      FAMILIAR_E2E_CONTEXT_PATH: contextPath,
+      FAMILIAR_SETTINGS_DIR: settingsDir
     }
   })
 

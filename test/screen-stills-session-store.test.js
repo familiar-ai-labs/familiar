@@ -13,7 +13,7 @@ const readManifest = (manifestPath) =>
   JSON.parse(fs.readFileSync(manifestPath, 'utf-8'))
 
 const makeTempContext = () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'jiminy-context-'))
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-context-'))
   fs.mkdirSync(root, { recursive: true })
   return root
 }
@@ -48,7 +48,7 @@ test('stills session store writes manifest and captures', () => {
 
 test('recoverIncompleteSessions finalizes unfinished stills manifests', () => {
   const contextFolderPath = makeTempContext()
-  const stillsRoot = path.join(contextFolderPath, 'jiminy', 'stills', 'session-test')
+  const stillsRoot = path.join(contextFolderPath, 'familiar', 'stills', 'session-test')
   fs.mkdirSync(stillsRoot, { recursive: true })
 
   const manifestPath = path.join(stillsRoot, 'manifest.json')

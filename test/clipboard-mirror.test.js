@@ -3,7 +3,7 @@ const assert = require('node:assert/strict')
 const path = require('node:path')
 
 const { createClipboardMirror } = require('../src/clipboard/mirror')
-const { JIMINY_BEHIND_THE_SCENES_DIR_NAME, STILLS_MARKDOWN_DIR_NAME } = require('../src/const')
+const { FAMILIAR_BEHIND_THE_SCENES_DIR_NAME, STILLS_MARKDOWN_DIR_NAME } = require('../src/const')
 
 test('clipboard mirror writes on change, skips empty and unchanged text', async () => {
   const saved = []
@@ -41,7 +41,7 @@ test('clipboard mirror writes on change, skips empty and unchanged text', async 
   assert.equal(saved[1].text, 'world')
   assert.equal(
     saved[0].directory,
-    path.join('/tmp/context', JIMINY_BEHIND_THE_SCENES_DIR_NAME, STILLS_MARKDOWN_DIR_NAME, 'session-123')
+    path.join('/tmp/context', FAMILIAR_BEHIND_THE_SCENES_DIR_NAME, STILLS_MARKDOWN_DIR_NAME, 'session-123')
   )
 })
 

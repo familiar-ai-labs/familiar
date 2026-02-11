@@ -11,7 +11,7 @@ const execFileAsync = promisify(execFile);
 const DEFAULT_OCR_BINARY_PATH = path.resolve(__dirname, 'bin', 'apple-vision-ocr');
 
 const resolveOcrBinaryPath = () => {
-    const override = process.env.JIMINY_APPLE_VISION_OCR_BINARY;
+    const override = process.env.FAMILIAR_APPLE_VISION_OCR_BINARY;
     if (override && String(override).trim()) {
         return path.resolve(String(override));
     }
@@ -243,7 +243,7 @@ const buildMarkdownLayoutFromOcr = ({ imagePath, meta, lines } = {}) => {
 
     return [
         '---',
-        'format: jiminy-layout-v0',
+        'format: familiar-layout-v0',
         `extractor: apple-vision-ocr`,
         `source_image: ${basename}`,
         `screen_resolution: ${resolution}`,
@@ -352,7 +352,7 @@ module.exports = {
     runAppleVisionOcr,
     runCli,
     // Expose the default path for diagnostics; actual resolution happens at runtime
-    // (supports JIMINY_APPLE_VISION_OCR_BINARY override).
+    // (supports FAMILIAR_APPLE_VISION_OCR_BINARY override).
     OCR_BINARY_PATH: DEFAULT_OCR_BINARY_PATH,
     resolveOcrBinaryPath,
 };

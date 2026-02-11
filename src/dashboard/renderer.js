@@ -10,8 +10,8 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
   }
 
   function resolveBootstrapModules() {
-    if (window.JiminyDashboardBootstrap) {
-      return window.JiminyDashboardBootstrap
+    if (window.FamiliarDashboardBootstrap) {
+      return window.FamiliarDashboardBootstrap
     }
     if (typeof require === 'function') {
       return {
@@ -27,9 +27,9 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
     return {}
   }
 
-  const jiminy = window.jiminy || {}
-  const moduleLoader = resolveModule('JiminyDashboardModuleLoader', './module-loader')
-  const stateModule = resolveModule('JiminyDashboardState', './state')
+  const familiar = window.familiar || {}
+  const moduleLoader = resolveModule('FamiliarDashboardModuleLoader', './module-loader')
+  const stateModule = resolveModule('FamiliarDashboardState', './state')
   const bootstrap = resolveBootstrapModules()
   const loadDashboardModules = moduleLoader?.loadDashboardModules
   const createDashboardState = stateModule?.createDashboardState
@@ -311,7 +311,7 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
       skillInstallPath: wizardSkillPath,
       skillCursorRestartNote: wizardSkillCursorRestartNote
     },
-    jiminy,
+    familiar,
     getState: state.getWizardState,
     setSkillHarness: state.setSkillHarness,
     setSkillInstalled: state.setSkillInstalled,
@@ -329,7 +329,7 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
       updateProgressBar,
       updateProgressLabel
     },
-    jiminy,
+    familiar,
     setMessage
   })
 
@@ -348,7 +348,7 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
       wizardOpenScreenRecordingSettingsButton,
       wizardRecordingToggleSection
     },
-    jiminy,
+    familiar,
     getState: state.getRecordingState
   })
 
@@ -383,7 +383,7 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
       hotkeysErrors,
       hotkeysStatuses
     },
-    jiminy,
+    familiar,
     defaults: {
       recording: DEFAULT_RECORDING_HOTKEY
     },
@@ -423,7 +423,7 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
       hotkeysStatuses,
       hotkeysErrors
     },
-    jiminy,
+    familiar,
     setMessage,
     updateWizardUI: state.updateWizardUI,
     getState: state.getHotkeysState,

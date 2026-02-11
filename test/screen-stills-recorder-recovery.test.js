@@ -111,7 +111,7 @@ test('recorder.start force-resets and retries once when renderer reports capture
           const sessionId = 'session-test';
           return {
             sessionId,
-            sessionDir: `${contextFolderPath}/jiminy/stills/${sessionId}`,
+            sessionDir: `${contextFolderPath}/familiar/stills/${sessionId}`,
             nextCaptureFile: (capturedAt) => ({ fileName: 'capture.webp', capturedAt }),
             addCapture: () => {},
             finalize: () => {}
@@ -140,7 +140,7 @@ test('recorder.start force-resets and retries once when renderer reports capture
     };
 
     const recorder = createRecorder({ logger, intervalSeconds: 1 });
-    const result = await recorder.start({ contextFolderPath: '/tmp/jiminy-test' });
+    const result = await recorder.start({ contextFolderPath: '/tmp/familiar-test' });
 
     assert.equal(result.ok, true);
     assert.equal(startCalls, 2);
@@ -283,7 +283,7 @@ test('recorder.start recreates the capture window when force-stop fails, then re
           const sessionId = `session-test-${Math.random().toString(16).slice(2)}`;
           return {
             sessionId,
-            sessionDir: `${contextFolderPath}/jiminy/stills/${sessionId}`,
+            sessionDir: `${contextFolderPath}/familiar/stills/${sessionId}`,
             nextCaptureFile: (capturedAt) => ({ fileName: 'capture.webp', capturedAt }),
             addCapture: () => {},
             finalize: () => {}
@@ -312,7 +312,7 @@ test('recorder.start recreates the capture window when force-stop fails, then re
     };
 
     const recorder = createRecorder({ logger, intervalSeconds: 1 });
-    const result = await recorder.start({ contextFolderPath: '/tmp/jiminy-test' });
+    const result = await recorder.start({ contextFolderPath: '/tmp/familiar-test' });
 
     assert.equal(result.ok, true);
     assert.equal(startCalls, 2);
