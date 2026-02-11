@@ -18,7 +18,7 @@
     "test": "npm run rebuild:node && find test -name \"*.test.js\" -not -path \"*/e2e/*\" -not -path \"*/modelProviderTests/*\" -print0 | xargs -0 node --test",
     "test:unit:timed": "npm run rebuild:node && node scripts/run-unit-tests-with-timeout.js",
     "test:modelProviderTests": "npm run rebuild:node && find test/modelProviderTests -name \"*.test.js\" -print0 | xargs -0 node --test",
-    "test:e2e": "npm run rebuild:electron && playwright test",
+    "test:e2e": "npm run build:apple-vision-ocr && npm run rebuild:electron && playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:all": "npm run test && npm run test:modelProviderTests && npm run test:e2e && npm run test:unit:timed"
   },
@@ -59,6 +59,7 @@
         "dmg",
         "zip"
       ],
+      "minimumSystemVersion": "14.0",
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
       "entitlements": "build/entitlements.mac.plist",

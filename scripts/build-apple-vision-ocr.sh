@@ -7,24 +7,40 @@ if [[ "$(uname -s)" != "Darwin" ]]; then
 fi
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SRC="$ROOT_DIR/apple-vision-ocr.swift"
+SRC="$ROOT_DIR/apple-vision-ocr.m"
 OUT_DIR="$ROOT_DIR/bin"
 OUT="$OUT_DIR/apple-vision-ocr"
 
 mkdir -p "$OUT_DIR"
 
-# In some sandboxed environments, Swift/Clang module cache writes to ~/.cache can be blocked.
-# Redirect caches to a writable tmp directory.
-CACHE_ROOT="${TMPDIR:-/tmp}/jiminy-apple-vision-ocr-build-cache"
-mkdir -p "$CACHE_ROOT"
-
 echo "Building Apple Vision OCR helper..."
 echo "  src: $SRC"
 echo "  out: $OUT"
 
-HOME="$CACHE_ROOT" \
-XDG_CACHE_HOME="$CACHE_ROOT" \
-TMPDIR="${TMPDIR:-/tmp}" \
-xcrun swiftc -O -whole-module-optimization -o "$OUT" "$SRC"
+xcrun clang \
+  -O3 \
+  -fobjc-arc \
+  -mmacosx-version-min=14.0 \
+  -Werror \
+  -framework Foundation \
+  -framework Vision \
+  -framework ImageIO \
+  -framework CoreGraphics \
+  -framework CoreML \
+  -o "$OUT" \
+  "$SRC"
+
+# Guardrails: ensure we didn't accidentally bump the deployment target or pull Swift runtime deps.
+MINOS="$(otool -l "$OUT" | awk 'BEGIN{inBuild=0} /LC_BUILD_VERSION/{inBuild=1} inBuild && /minos/{print $2; exit}')"
+if [[ "$MINOS" != 14.* ]]; then
+  echo "error: apple-vision-ocr minos must be 14.x, got: ${MINOS:-unknown}" >&2
+  exit 1
+fi
+
+if otool -L "$OUT" | grep -q "libswift"; then
+  echo "error: apple-vision-ocr unexpectedly links Swift runtime dylibs" >&2
+  otool -L "$OUT" | grep "libswift" >&2 || true
+  exit 1
+fi
 
 echo "Built: $OUT"

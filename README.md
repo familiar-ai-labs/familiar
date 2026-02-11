@@ -78,6 +78,7 @@ The workflow `Publish Desktop Release` is a manual GitHub Actions job that build
 ## Notes
 
 -   The app runs from the macOS menu bar with a Settings window that stores the Context Folder Path, stills extraction mode (AI vs local OCR), and optionally an LLM provider + API key in `~/.jiminy/settings.json`.
+-   The packaged app requires macOS 14.0+ (enforced via `LSMinimumSystemVersion`).
 -   The Settings wizard starts with Context Folder selection; the General tab lets you change it anytime.
 -   Auto-launch on login is enabled via Electron login item settings.
 -   The Settings window includes a **Recording** tab with an opt-in **Record while active** toggle plus manual pause/resume. When enabled (and permission granted), Jiminy captures downsampled still images into `<contextFolderPath>/jiminy/stills/session-<timestamp>/` with a `manifest.json` describing captures and stop reason.
@@ -99,6 +100,8 @@ node code/desktopapp/scripts/apple-vision-ocr-image-to-markdown.js /path/to/imag
 ```
 
 Packaging: the app needs to ship a native helper binary named `apple-vision-ocr` in the Electron `resources/` directory. This repo configures electron-builder `extraResources` to copy it from `code/desktopapp/scripts/bin/apple-vision-ocr` into `resources/apple-vision-ocr`.
+
+The helper is implemented as a small Objective-C CLI (no Swift runtime dependencies) and is built with a macOS deployment target of 14.0.
 
 The stills worker looks for the helper binary at:
 

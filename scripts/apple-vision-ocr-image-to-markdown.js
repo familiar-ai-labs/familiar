@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 const fs = require('node:fs/promises');
-const os = require('node:os');
 const path = require('node:path');
 const { execFile } = require('node:child_process');
 const { promisify } = require('node:util');
@@ -9,7 +8,6 @@ const { writeExtractionFile } = require('../src/utils/extraction-files');
 
 const execFileAsync = promisify(execFile);
 
-const SWIFT_OCR_SCRIPT = path.resolve(__dirname, 'apple-vision-ocr.swift');
 const DEFAULT_OCR_BINARY_PATH = path.resolve(__dirname, 'bin', 'apple-vision-ocr');
 
 const resolveOcrBinaryPath = () => {
@@ -23,13 +21,12 @@ const resolveOcrBinaryPath = () => {
 const usage = () =>
     [
         'Usage:',
-        '  node code/desktopapp/scripts/apple-vision-ocr-image-to-markdown.js <image-path> [--out <path>] [--level accurate|fast] [--languages en-US,es-ES] [--no-correction] [--min-confidence 0.0-1.0] [--debug-json] [--observations] [--use-swift]',
+        '  node code/desktopapp/scripts/apple-vision-ocr-image-to-markdown.js <image-path> [--out <path>] [--level accurate|fast] [--languages en-US,es-ES] [--no-correction] [--min-confidence 0.0-1.0] [--debug-json] [--observations]',
         '',
         'Notes:',
         '  - Local-only OCR using Apple Vision (macOS). No API key required.',
         '  - By default, runs the prebuilt helper binary at code/desktopapp/scripts/bin/apple-vision-ocr.',
         '  - If the binary is missing, run: ./code/desktopapp/scripts/build-apple-vision-ocr.sh',
-        '  - Fallback mode (slower): --use-swift uses `xcrun swift` to run the Swift source directly.',
         '  - By default, disables OCR observations (bounding boxes) for performance; enable with --observations.',
         '',
     ].join('\n');
@@ -88,10 +85,6 @@ const parseArgs = (argv) => {
         }
         if (arg === '--observations') {
             args.observations = true;
-            continue;
-        }
-        if (arg === '--use-swift') {
-            args.useSwift = true;
             continue;
         }
         if (arg === '--help' || arg === '-h') {
@@ -155,7 +148,6 @@ const runAppleVisionOcr = async ({
     languages,
     usesLanguageCorrection,
     minConfidence,
-    useSwift,
     emitObservations,
 } = {}) => {
     const OCR_BINARY_PATH = resolveOcrBinaryPath();
@@ -185,56 +177,15 @@ const runAppleVisionOcr = async ({
         ocrArgs.push('--no-observations');
     }
 
-    if (!useSwift && binaryExists) {
-        const { stdout } = await execFileAsync(OCR_BINARY_PATH, ocrArgs, {
-            maxBuffer: 1024 * 1024 * 50,
-        });
-
-        let parsed;
-        try {
-            parsed = JSON.parse(stdout);
-        } catch (error) {
-            throw new Error(
-                `Failed to parse Apple OCR JSON output. stdout begins with: ${JSON.stringify(
-                    String(stdout).slice(0, 200)
-                )}`
-            );
-        }
-
-        const meta = parsed.meta && typeof parsed.meta === 'object' ? parsed.meta : {};
-        const lines = Array.isArray(parsed.lines) ? parsed.lines : [];
-        return { meta, lines, raw: parsed };
+    if (!binaryExists) {
+      throw new Error(
+        `Apple Vision OCR helper binary not found at ${OCR_BINARY_PATH}. Build it with ./code/desktopapp/scripts/build-apple-vision-ocr.sh`
+      );
     }
 
-    const run = async (env) =>
-        execFileAsync('xcrun', ['swift', SWIFT_OCR_SCRIPT, ...ocrArgs], {
-            maxBuffer: 1024 * 1024 * 50,
-            env,
-        });
-
-    let stdout;
-    try {
-        ({ stdout } = await run({ ...process.env, __JIMINY_OCR_MODE: 'swift' }));
-    } catch (error) {
-        const combined = String(error?.stderr || '') + String(error?.stdout || '') + String(error?.message || '');
-        const shouldRetry =
-            combined.includes('ModuleCache') &&
-            (combined.includes('Operation not permitted') || combined.includes('Permission denied'));
-
-        if (!shouldRetry) {
-            throw error;
-        }
-
-        const cacheRoot = path.join(os.tmpdir(), 'jiminy-apple-vision-ocr-cache');
-        await fs.mkdir(cacheRoot, { recursive: true });
-        ({ stdout } = await run({
-            ...process.env,
-            __JIMINY_OCR_MODE: 'swift',
-            HOME: cacheRoot,
-            XDG_CACHE_HOME: cacheRoot,
-            TMPDIR: os.tmpdir(),
-        }));
-    }
+    const { stdout } = await execFileAsync(OCR_BINARY_PATH, ocrArgs, {
+      maxBuffer: 1024 * 1024 * 50,
+    });
 
     let parsed;
     try {
@@ -362,7 +313,6 @@ const runCli = async (argv = process.argv.slice(2)) => {
         languages: languages || 'auto',
         usesLanguageCorrection,
         minConfidence,
-        mode: args.useSwift ? 'swift' : 'binary',
         observations: emitObservations,
     });
 
@@ -372,7 +322,6 @@ const runCli = async (argv = process.argv.slice(2)) => {
         languages,
         usesLanguageCorrection,
         minConfidence,
-        useSwift: Boolean(args.useSwift),
         emitObservations,
     });
 
@@ -406,5 +355,4 @@ module.exports = {
     // (supports JIMINY_APPLE_VISION_OCR_BINARY override).
     OCR_BINARY_PATH: DEFAULT_OCR_BINARY_PATH,
     resolveOcrBinaryPath,
-    SWIFT_OCR_SCRIPT,
 };
