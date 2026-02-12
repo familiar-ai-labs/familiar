@@ -73,7 +73,7 @@ The workflow `Publish Desktop Release` is a manual GitHub Actions job that build
 
 -   Workflow: `.github/workflows/release-desktopapp.yml`
 -   Requires secret: `RELEASE_REPO_GITHUB_TOKEN`
--   The `RELEASE_REPO_GITHUB_TOKEN` secret must have `contents:write` access to `familiar-ai-labs/familiar`.
+-   The `RELEASE_REPO_GITHUB_TOKEN` secret must have `contents:write` access to `familiar-software/familiar`.
 -   Uses `CSC_IDENTITY_AUTO_DISCOVERY=false` until signing/notarization is configured.
 -   `npm run dist:mac` builds and publishes both macOS architectures (`arm64` and `x64`).
 -   You can also build one architecture locally with `npm run dist:mac:arm64` or `npm run dist:mac:x64`.
