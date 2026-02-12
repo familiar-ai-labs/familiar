@@ -20,8 +20,7 @@
       isLlmApiKeySaved: false,
       currentSkillHarness: '',
       isSkillInstalled: false,
-      currentRecordingHotkey: defaults.recording || '',
-      isFirstRun: false
+      currentRecordingHotkey: defaults.recording || ''
     }
 
     function callIfAvailable(target, method, ...args) {
@@ -128,14 +127,6 @@
       updateWizardUI()
     }
 
-    function setIsFirstRun(value) {
-      state.isFirstRun = Boolean(value)
-    }
-
-    function getIsFirstRun() {
-      return state.isFirstRun
-    }
-
     function getWizardState() {
       return {
         currentContextFolderPath: state.currentContextFolderPath,
@@ -188,8 +179,6 @@
       setSkillHarness,
       setSkillInstalled,
       setHotkeysFromSettings,
-      setIsFirstRun,
-      getIsFirstRun,
       getWizardState,
       getRecordingState,
       getSettingsState,

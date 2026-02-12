@@ -247,6 +247,22 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
   }
 
   function handleWizardDone() {
+    if (typeof familiar.saveSettings === 'function') {
+      familiar
+        .saveSettings({ wizardCompleted: true })
+        .then((result) => {
+          if (result && result.ok) {
+            console.log('Wizard completion saved')
+            return
+          }
+          console.warn('Failed to save wizard completion', {
+            message: result?.message || 'unknown-error'
+          })
+        })
+        .catch((error) => {
+          console.error('Failed to save wizard completion', error)
+        })
+    }
     setActiveSection('general')
   }
 
@@ -435,13 +451,12 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
 
   async function initialize() {
     const settingsResult = await apis.settingsApi.loadSettings()
-    state.setIsFirstRun(Boolean(settingsResult?.isFirstRun))
     callIfAvailable(apis.recordingApi, 'updateStillsUI')
     const savedHarness = settingsResult?.skillInstaller?.harness || ''
     if (savedHarness && apis.wizardSkillApi && typeof apis.wizardSkillApi.checkInstallStatus === 'function') {
       await apis.wizardSkillApi.checkInstallStatus(savedHarness)
     }
-    const defaultSection = state.getIsFirstRun() ? 'wizard' : 'general'
+    const defaultSection = settingsResult?.wizardCompleted === true ? 'general' : 'wizard'
     setActiveSection(defaultSection)
     state.updateWizardUI()
   }

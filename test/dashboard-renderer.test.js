@@ -189,13 +189,20 @@ const createElements = () => {
     'hotkeys-reset': new TestElement(),
     'hotkeys-status': new TestElement(),
     'hotkeys-error': new TestElement(),
+    'wizard-back': new TestElement(),
+    'wizard-next': new TestElement(),
+    'wizard-done': new TestElement(),
     'app-version': new TestElement(),
     'settings-header': new TestElement(),
     'settings-content': new TestElement(),
     'section-title': new TestElement(),
     'section-subtitle': new TestElement(),
+    'section-general': new TestElement(),
+    'section-wizard': new TestElement(),
     'section-updates': new TestElement(),
     'section-recording': new TestElement(),
+    'general-nav': new TestElement(),
+    'wizard-nav': new TestElement(),
     'updates-nav': new TestElement(),
     'recording-nav': new TestElement()
   }
@@ -233,6 +240,14 @@ const createElements = () => {
   elements['hotkeys-status'].dataset.settingStatus = 'hotkeys-status'
   elements['hotkeys-error'].dataset.settingError = 'hotkeys-error'
 
+  elements['wizard-back'].dataset.action = 'wizard-back'
+  elements['wizard-next'].dataset.action = 'wizard-next'
+  elements['wizard-done'].dataset.action = 'wizard-done'
+
+  elements['section-general'].dataset.sectionPane = 'general'
+  elements['general-nav'].dataset.sectionTarget = 'general'
+  elements['section-wizard'].dataset.sectionPane = 'wizard'
+  elements['wizard-nav'].dataset.sectionTarget = 'wizard'
   elements['section-updates'].dataset.sectionPane = 'updates'
   elements['updates-nav'].dataset.sectionTarget = 'updates'
   elements['section-recording'].dataset.sectionPane = 'recording'
@@ -266,6 +281,114 @@ test('loads app version in the sidebar header', async () => {
     await flushPromises()
 
     assert.equal(elements['app-version'].textContent, '9.8.7')
+  } finally {
+    global.document = priorDocument
+    global.window = priorWindow
+  }
+})
+
+test('defaults to wizard when wizardCompleted is missing', async () => {
+  const familiar = createFamiliar({
+    getSettings: async () => ({
+      contextFolderPath: '',
+      llmProviderName: 'gemini',
+      llmProviderApiKey: '',
+      stillsMarkdownExtractorType: 'llm',
+      alwaysRecordWhenActive: false,
+      appVersion: '9.8.7'
+    })
+  })
+
+  const elements = createElements()
+  const document = new TestDocument(elements)
+  const priorDocument = global.document
+  const priorWindow = global.window
+  global.document = document
+  global.window = { familiar }
+
+  try {
+    loadRenderer()
+    document.trigger('DOMContentLoaded')
+    await flushPromises()
+
+    assert.equal(elements['section-title'].textContent, 'Setup Wizard')
+    assert.equal(elements['settings-header'].classList.contains('hidden'), true)
+    assert.equal(elements['settings-content'].classList.contains('hidden'), true)
+  } finally {
+    global.document = priorDocument
+    global.window = priorWindow
+  }
+})
+
+test('defaults to general when wizardCompleted is true', async () => {
+  const familiar = createFamiliar({
+    getSettings: async () => ({
+      contextFolderPath: '',
+      llmProviderName: 'gemini',
+      llmProviderApiKey: '',
+      stillsMarkdownExtractorType: 'llm',
+      alwaysRecordWhenActive: false,
+      wizardCompleted: true,
+      appVersion: '9.8.7'
+    })
+  })
+
+  const elements = createElements()
+  const document = new TestDocument(elements)
+  const priorDocument = global.document
+  const priorWindow = global.window
+  global.document = document
+  global.window = { familiar }
+
+  try {
+    loadRenderer()
+    document.trigger('DOMContentLoaded')
+    await flushPromises()
+
+    assert.equal(elements['section-title'].textContent, 'General Settings')
+    assert.equal(elements['settings-header'].classList.contains('hidden'), false)
+    assert.equal(elements['settings-content'].classList.contains('hidden'), false)
+  } finally {
+    global.document = priorDocument
+    global.window = priorWindow
+  }
+})
+
+test('wizard done saves wizardCompleted flag', async () => {
+  const saveCalls = []
+  const familiar = createFamiliar({
+    getSettings: async () => ({
+      contextFolderPath: '/tmp/context',
+      llmProviderName: 'gemini',
+      llmProviderApiKey: '',
+      stillsMarkdownExtractorType: 'llm',
+      alwaysRecordWhenActive: false,
+      appVersion: '9.8.7'
+    }),
+    saveSettings: async (payload) => {
+      saveCalls.push(payload)
+      return { ok: true }
+    }
+  })
+
+  const elements = createElements()
+  const document = new TestDocument(elements)
+  const priorDocument = global.document
+  const priorWindow = global.window
+  global.document = document
+  global.window = { familiar }
+
+  try {
+    loadRenderer()
+    document.trigger('DOMContentLoaded')
+    await flushPromises()
+
+    await elements['wizard-done'].click()
+    await flushPromises()
+
+    assert.equal(saveCalls.length, 1)
+    assert.deepEqual(saveCalls[0], { wizardCompleted: true })
+    assert.equal(elements['section-title'].textContent, 'General Settings')
   } finally {
     global.document = priorDocument
     global.window = priorWindow

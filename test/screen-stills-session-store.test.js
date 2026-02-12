@@ -32,7 +32,8 @@ test('stills session store writes manifest and captures', () => {
   const first = store.nextCaptureFile(new Date('2025-01-01T00:00:00.000Z'))
   store.addCapture({
     fileName: first.fileName,
-    capturedAt: first.capturedAt
+    capturedAt: first.capturedAt,
+    displayId: 1
   })
   store.finalize('idle')
 
@@ -42,6 +43,7 @@ test('stills session store writes manifest and captures', () => {
   assert.equal(manifest.intervalSeconds, 2)
   assert.equal(manifest.captures.length, 1)
   assert.equal(manifest.captures[0].file, first.fileName)
+  assert.equal(manifest.captures[0].displayId, 1)
   assert.equal(manifest.stopReason, 'idle')
   assert.ok(manifest.endedAt)
 })

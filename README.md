@@ -83,9 +83,10 @@ The workflow `Publish Desktop Release` is a manual GitHub Actions job that build
 
 -   The app runs from the macOS menu bar with a Settings window that stores the Context Folder Path, stills extraction mode (AI vs local OCR), and optionally an LLM provider + API key in `~/.familiar/settings.json`.
 -   The packaged app requires macOS 14.0+ (enforced via `LSMinimumSystemVersion`).
+-   The first dashboard view is controlled by `wizardCompleted` in `~/.familiar/settings.json`: if missing/false, Settings opens in Wizard; if true, it opens in General.
 -   The Settings wizard starts with Context Folder selection; the General tab lets you change it anytime.
 -   Auto-launch on login is enabled via Electron login item settings.
--   The Settings window includes a **Recording** tab with an opt-in **Record while active** toggle plus manual pause/resume. When enabled (and permission granted), Familiar captures downsampled still images into `<contextFolderPath>/familiar/stills/session-<timestamp>/` with a `manifest.json` describing captures and stop reason.
+-   The Settings window includes a **Recording** tab with an opt-in **Record while active** toggle plus manual pause/resume. When enabled (and permission granted), Familiar captures downsampled still images into `<contextFolderPath>/familiar/stills/session-<timestamp>/` with a `manifest.json` describing captures and stop reason. On multi-monitor setups, capture follows the display nearest the cursor.
 -   While recording is active, clipboard text is mirrored to `<contextFolderPath>/familiar/stills-markdown/session-<timestamp>/<timestamp>.clipboard.txt`.
 -   Global hotkeys trigger still capture pause/resume (`Command+R`) on macOS (Electron accelerator `CommandOrControl+R`).
 

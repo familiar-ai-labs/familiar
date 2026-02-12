@@ -233,41 +233,184 @@ function createRecorder(options = {}) {
     });
   }
 
-  async function resolveCaptureSource() {
-    const displays = screen.getAllDisplays();
-    const primaryDisplay = screen.getPrimaryDisplay();
+  function getDisplaySnapshot(display) {
+    return {
+      id: display.id,
+      bounds: { ...display.bounds },
+      scaleFactor: display.scaleFactor
+    };
+  }
+
+  function findDisplayById(displays, displayId) {
+    if (!Array.isArray(displays) || displays.length === 0) {
+      return null;
+    }
+    return displays.find(function (candidate) {
+      return String(candidate.id) === String(displayId);
+    }) || null;
+  }
+
+  function resolveCaptureDimensions(display) {
+    const fullWidth = Math.max(1, Math.round(display.bounds.width * display.scaleFactor));
+    const fullHeight = Math.max(1, Math.round(display.bounds.height * display.scaleFactor));
+    return {
+      captureWidth: ensureEven(fullWidth * CAPTURE_CONFIG.scale),
+      captureHeight: ensureEven(fullHeight * CAPTURE_CONFIG.scale)
+    };
+  }
+
+  function resolveDisplayForCursor() {
+    const displays =
+      typeof screen?.getAllDisplays === 'function'
+        ? screen.getAllDisplays()
+        : [];
+    const primaryDisplay =
+      typeof screen?.getPrimaryDisplay === 'function'
+        ? screen.getPrimaryDisplay()
+        : null;
+    const fallbackDisplay = primaryDisplay || displays[0] || null;
+
+    if (!fallbackDisplay) {
+      throw new Error('No displays available for stills capture.');
+    }
+
+    let targetDisplay = fallbackDisplay;
+    if (
+      typeof screen?.getCursorScreenPoint === 'function' &&
+      typeof screen?.getDisplayNearestPoint === 'function'
+    ) {
+      try {
+        const cursorPoint = screen.getCursorScreenPoint();
+        const nearestDisplay = screen.getDisplayNearestPoint(cursorPoint);
+        if (nearestDisplay && nearestDisplay.id != null) {
+          targetDisplay = nearestDisplay;
+        }
+      } catch (error) {
+        logger.warn('Failed to resolve cursor display; falling back to primary display', {
+          error: error?.message || String(error)
+        });
+      }
+    }
+
+    return {
+      displays,
+      primaryDisplay: fallbackDisplay,
+      targetDisplay: targetDisplay || fallbackDisplay
+    };
+  }
+
+  async function resolveCaptureSourceForDisplay({
+    displays,
+    primaryDisplay,
+    targetDisplay
+  } = {}) {
+    if (!targetDisplay) {
+      throw new Error('Target display is required to resolve stills source.');
+    }
+
     const sources = await desktopCapturer.getSources({ types: ['screen'] });
     if (!Array.isArray(sources) || sources.length === 0) {
       throw new Error('No screen sources available for stills.');
     }
 
-    if (displays.length > 1) {
-      logger.log('Multiple displays detected; capturing primary display', {
-        displayCount: displays.length,
-        primaryDisplayId: primaryDisplay.id
+    const targetSource = sources.find(function (candidate) {
+      return String(candidate.display_id) === String(targetDisplay.id);
+    });
+
+    const primarySource = primaryDisplay
+      ? sources.find(function (candidate) {
+          return String(candidate.display_id) === String(primaryDisplay.id);
+        })
+      : null;
+
+    const source = targetSource || primarySource || sources[0];
+    const sourceDisplay =
+      findDisplayById(displays, source.display_id) ||
+      (targetSource ? targetDisplay : primaryDisplay) ||
+      targetDisplay;
+
+    if (!targetSource) {
+      logger.warn('Cursor display source unavailable; falling back to available display source', {
+        cursorDisplayId: targetDisplay.id,
+        fallbackDisplayId: sourceDisplay?.id ?? null
       });
     }
 
-    const source = sources.find(function (candidate) {
-      return String(candidate.display_id) === String(primaryDisplay.id);
-    }) || sources[0];
-
-    const fullWidth = Math.max(1, Math.round(primaryDisplay.bounds.width * primaryDisplay.scaleFactor));
-    const fullHeight = Math.max(1, Math.round(primaryDisplay.bounds.height * primaryDisplay.scaleFactor));
-
-    const captureWidth = ensureEven(fullWidth * CAPTURE_CONFIG.scale);
-    const captureHeight = ensureEven(fullHeight * CAPTURE_CONFIG.scale);
+    const { captureWidth, captureHeight } = resolveCaptureDimensions(sourceDisplay);
 
     return {
       sourceId: source.id,
       captureWidth,
       captureHeight,
-      sourceDisplay: {
-        id: primaryDisplay.id,
-        bounds: { ...primaryDisplay.bounds },
-        scaleFactor: primaryDisplay.scaleFactor
-      }
+      sourceDisplay: getDisplaySnapshot(sourceDisplay)
     };
+  }
+
+  function isSameCaptureSource(currentSource, nextSource) {
+    if (!currentSource || !nextSource) {
+      return false;
+    }
+    return (
+      String(currentSource.sourceId) === String(nextSource.sourceId) &&
+      currentSource.captureWidth === nextSource.captureWidth &&
+      currentSource.captureHeight === nextSource.captureHeight &&
+      String(currentSource.sourceDisplay?.id) === String(nextSource.sourceDisplay?.id)
+    );
+  }
+
+  async function startRendererCapture(nextSourceDetails, reason) {
+    const window = await ensureWindowReady();
+    const requestId = randomUUID();
+    window.webContents.send('screen-stills:start', {
+      requestId,
+      sourceId: nextSourceDetails.sourceId,
+      captureWidth: nextSourceDetails.captureWidth,
+      captureHeight: nextSourceDetails.captureHeight,
+      format: CAPTURE_CONFIG.format
+    });
+    await waitForStatus(requestId, START_TIMEOUT_MS, ['started']);
+    logger.log('Recording capture source started', {
+      reason,
+      displayId: nextSourceDetails.sourceDisplay.id,
+      sourceId: nextSourceDetails.sourceId
+    });
+  }
+
+  async function ensureCaptureSource(reason) {
+    const displayContext = resolveDisplayForCursor();
+    const nextSourceDetails = await resolveCaptureSourceForDisplay(displayContext);
+
+    if (isSameCaptureSource(sourceDetails, nextSourceDetails)) {
+      return sourceDetails;
+    }
+
+    const previousSource = sourceDetails;
+    if (previousSource) {
+      const stopResult = await tryStopRendererCapture({ timeoutMs: STOP_TIMEOUT_MS });
+      if (!stopResult.ok) {
+        throw stopResult.error || new Error('Failed to stop previous display capture.');
+      }
+    }
+
+    try {
+      await startRendererCapture(nextSourceDetails, reason || 'capture-source-update');
+      sourceDetails = nextSourceDetails;
+    } catch (error) {
+      if (previousSource) {
+        sourceDetails = null;
+      }
+      throw error;
+    }
+
+    if (previousSource) {
+      logger.log('Recording capture source switched to cursor display', {
+        reason: reason || 'capture-source-update',
+        fromDisplayId: previousSource.sourceDisplay?.id ?? null,
+        toDisplayId: sourceDetails.sourceDisplay?.id ?? null
+      });
+    }
+
+    return sourceDetails;
   }
 
   function scheduleCaptureLoop() {
@@ -292,7 +435,7 @@ function createRecorder(options = {}) {
   }
 
   async function captureNext() {
-    if (!sessionStore || !sourceDetails) {
+    if (!sessionStore) {
       return;
     }
     if (captureInProgress) {
@@ -306,6 +449,7 @@ function createRecorder(options = {}) {
 
     const requestId = randomUUID();
     try {
+      const activeSourceDetails = await ensureCaptureSource('capture-tick');
       const window = await ensureWindowReady();
       window.webContents.send('screen-stills:capture', {
         requestId,
@@ -316,7 +460,8 @@ function createRecorder(options = {}) {
       if (sessionStore) {
         sessionStore.addCapture({
           fileName: nextCapture.fileName,
-          capturedAt: nextCapture.capturedAt
+          capturedAt: nextCapture.capturedAt,
+          displayId: activeSourceDetails?.sourceDisplay?.id
         });
         if (queueStore) {
           try {
@@ -358,7 +503,8 @@ function createRecorder(options = {}) {
       }
 
       async function startOnce() {
-        sourceDetails = await resolveCaptureSource();
+        const initialDisplayContext = resolveDisplayForCursor();
+        const initialSourceDetails = await resolveCaptureSourceForDisplay(initialDisplayContext);
         recoverIncompleteSessions(contextFolderPath, logger);
 
         const appVersion = typeof app?.getVersion === 'function' ? app.getVersion() : null;
@@ -367,7 +513,7 @@ function createRecorder(options = {}) {
           intervalSeconds: intervalMs / 1000,
           scale: CAPTURE_CONFIG.scale,
           format: CAPTURE_CONFIG.format,
-          sourceDisplay: sourceDetails.sourceDisplay,
+          sourceDisplay: initialSourceDetails.sourceDisplay,
           appVersion,
           logger
         });
@@ -375,18 +521,9 @@ function createRecorder(options = {}) {
 
         logger.log('Recording session started', { sessionDir: sessionStore.sessionDir });
 
-        const window = await ensureWindowReady();
-        const requestId = randomUUID();
-        window.webContents.send('screen-stills:start', {
-          requestId,
-          sourceId: sourceDetails.sourceId,
-          captureWidth: sourceDetails.captureWidth,
-          captureHeight: sourceDetails.captureHeight,
-          format: CAPTURE_CONFIG.format
-        });
-
         try {
-          await waitForStatus(requestId, START_TIMEOUT_MS, ['started']);
+          await startRendererCapture(initialSourceDetails, 'session-start');
+          sourceDetails = initialSourceDetails;
         } catch (error) {
           sessionStore.finalize('start_failed');
           sessionStore = null;

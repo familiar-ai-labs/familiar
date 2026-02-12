@@ -8,6 +8,17 @@ const resetRecorderModule = () => {
   delete require.cache[resolved];
 };
 
+async function waitForCondition(predicate, { timeoutMs = 2000, intervalMs = 10, message } = {}) {
+  const start = Date.now();
+  while (Date.now() - start <= timeoutMs) {
+    if (predicate()) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+  throw new Error(message || 'Timed out waiting for condition.');
+}
+
 test('recorder.start force-resets and retries once when renderer reports capture already in progress', async () => {
   resetRecorderModule();
 
@@ -335,6 +346,319 @@ test('recorder.start recreates the capture window when force-stop fails, then re
 
     const stopAttempted = sendCalls.some((call) => call.channel === 'screen-stills:stop');
     assert.equal(stopAttempted, true);
+  } finally {
+    Module._load = originalLoad;
+    resetRecorderModule();
+  }
+});
+
+test('recorder follows cursor display and switches capture source between monitors', async () => {
+  resetRecorderModule();
+
+  const ipcMain = new EventEmitter();
+  const sendCalls = [];
+  let startCalls = 0;
+  let stopCalls = 0;
+  let captureCalls = 0;
+  let cursorPoint = { x: 100, y: 100 };
+  const captureDisplayIds = [];
+  const displays = [
+    { id: 1, bounds: { x: 0, y: 0, width: 1000, height: 800 }, scaleFactor: 1 },
+    { id: 2, bounds: { x: 1000, y: 0, width: 1000, height: 800 }, scaleFactor: 1 }
+  ];
+
+  function resolveDisplayNearestPoint(point) {
+    if (point && point.x >= 1000) {
+      return displays[1];
+    }
+    return displays[0];
+  }
+
+  function createWebContents() {
+    const webContents = new EventEmitter();
+    webContents.getURL = () => 'file://stills.html';
+    webContents.send = (channel, payload) => {
+      sendCalls.push({ channel, payload });
+      if (channel === 'screen-stills:start') {
+        startCalls += 1;
+        process.nextTick(() => {
+          ipcMain.emit('screen-stills:status', {}, {
+            requestId: payload.requestId,
+            status: 'started'
+          });
+        });
+      }
+
+      if (channel === 'screen-stills:stop') {
+        stopCalls += 1;
+        process.nextTick(() => {
+          ipcMain.emit('screen-stills:status', {}, {
+            requestId: payload.requestId,
+            status: 'stopped'
+          });
+        });
+      }
+
+      if (channel === 'screen-stills:capture') {
+        captureCalls += 1;
+        process.nextTick(() => {
+          if (captureCalls === 1) {
+            cursorPoint = { x: 1200, y: 100 };
+          }
+          ipcMain.emit('screen-stills:status', {}, {
+            requestId: payload.requestId,
+            status: 'captured',
+            filePath: payload.filePath
+          });
+        });
+      }
+    };
+    return webContents;
+  }
+
+  function BrowserWindowStub() {
+    this.webContents = createWebContents();
+    this._destroyed = false;
+
+    this.loadFile = () => {
+      process.nextTick(() => {
+        this.webContents.emit('did-finish-load');
+        ipcMain.emit('screen-stills:ready', { sender: this.webContents });
+      });
+    };
+
+    this.on = () => {};
+    this.isDestroyed = () => this._destroyed;
+    this.destroy = () => {
+      this._destroyed = true;
+    };
+  }
+
+  const stubElectron = {
+    BrowserWindow: BrowserWindowStub,
+    desktopCapturer: {
+      getSources: async () => [
+        { id: 'screen:1', display_id: '1' },
+        { id: 'screen:2', display_id: '2' }
+      ]
+    },
+    ipcMain,
+    screen: {
+      getAllDisplays: () => displays,
+      getPrimaryDisplay: () => displays[0],
+      getCursorScreenPoint: () => cursorPoint,
+      getDisplayNearestPoint: (point) => resolveDisplayNearestPoint(point)
+    },
+    app: { getVersion: () => 'test' }
+  };
+
+  const originalLoad = Module._load;
+  Module._load = function (request, parent, isMain) {
+    if (request === 'electron') {
+      return stubElectron;
+    }
+    if (request === '../screen-capture/permissions') {
+      return { isScreenRecordingPermissionGranted: () => true };
+    }
+    if (request === './session-store') {
+      return {
+        recoverIncompleteSessions: () => {},
+        createSessionStore: ({ contextFolderPath }) => {
+          const sessionId = 'session-test';
+          return {
+            sessionId,
+            sessionDir: `${contextFolderPath}/familiar/stills/${sessionId}`,
+            nextCaptureFile: (capturedAt) => ({
+              fileName: `${Date.now()}.webp`,
+              capturedAt
+            }),
+            addCapture: ({ displayId }) => {
+              captureDisplayIds.push(displayId);
+            },
+            finalize: () => {}
+          };
+        }
+      };
+    }
+    if (request === './stills-queue') {
+      return {
+        createStillsQueue: () => ({
+          enqueueCapture: () => {},
+          close: () => {}
+        })
+      };
+    }
+    return originalLoad.call(this, request, parent, isMain);
+  };
+
+  try {
+    const { createRecorder } = require('../src/screen-stills/recorder');
+    const recorder = createRecorder({ logger: console, intervalSeconds: 0.02 });
+    const result = await recorder.start({ contextFolderPath: '/tmp/familiar-test' });
+    assert.equal(result.ok, true);
+
+    await waitForCondition(
+      () => captureCalls >= 2 && startCalls >= 2,
+      { message: 'Expected second display capture to start.' }
+    );
+
+    await recorder.stop({ reason: 'test' });
+
+    const sourceIds = sendCalls
+      .filter((call) => call.channel === 'screen-stills:start')
+      .map((call) => call.payload.sourceId);
+
+    assert.equal(sourceIds[0], 'screen:1');
+    assert.equal(sourceIds.includes('screen:2'), true);
+    assert.equal(captureDisplayIds.includes(1), true);
+    assert.equal(captureDisplayIds.includes(2), true);
+    assert.equal(stopCalls >= 2, true);
+  } finally {
+    Module._load = originalLoad;
+    resetRecorderModule();
+  }
+});
+
+test('recorder falls back to primary display source when cursor display source is unavailable', async () => {
+  resetRecorderModule();
+
+  const ipcMain = new EventEmitter();
+  const sendCalls = [];
+  const logs = [];
+  const captureDisplayIds = [];
+  const displays = [
+    { id: 1, bounds: { x: 0, y: 0, width: 1000, height: 800 }, scaleFactor: 1 },
+    { id: 2, bounds: { x: 1000, y: 0, width: 1000, height: 800 }, scaleFactor: 1 }
+  ];
+
+  function createWebContents() {
+    const webContents = new EventEmitter();
+    webContents.getURL = () => 'file://stills.html';
+    webContents.send = (channel, payload) => {
+      sendCalls.push({ channel, payload });
+      if (channel === 'screen-stills:start') {
+        process.nextTick(() => {
+          ipcMain.emit('screen-stills:status', {}, {
+            requestId: payload.requestId,
+            status: 'started'
+          });
+        });
+      }
+
+      if (channel === 'screen-stills:stop') {
+        process.nextTick(() => {
+          ipcMain.emit('screen-stills:status', {}, {
+            requestId: payload.requestId,
+            status: 'stopped'
+          });
+        });
+      }
+
+      if (channel === 'screen-stills:capture') {
+        process.nextTick(() => {
+          ipcMain.emit('screen-stills:status', {}, {
+            requestId: payload.requestId,
+            status: 'captured',
+            filePath: payload.filePath
+          });
+        });
+      }
+    };
+    return webContents;
+  }
+
+  function BrowserWindowStub() {
+    this.webContents = createWebContents();
+    this._destroyed = false;
+
+    this.loadFile = () => {
+      process.nextTick(() => {
+        this.webContents.emit('did-finish-load');
+        ipcMain.emit('screen-stills:ready', { sender: this.webContents });
+      });
+    };
+
+    this.on = () => {};
+    this.isDestroyed = () => this._destroyed;
+    this.destroy = () => {
+      this._destroyed = true;
+    };
+  }
+
+  const stubElectron = {
+    BrowserWindow: BrowserWindowStub,
+    desktopCapturer: {
+      getSources: async () => [{ id: 'screen:1', display_id: '1' }]
+    },
+    ipcMain,
+    screen: {
+      getAllDisplays: () => displays,
+      getPrimaryDisplay: () => displays[0],
+      getCursorScreenPoint: () => ({ x: 1200, y: 100 }),
+      getDisplayNearestPoint: () => displays[1]
+    },
+    app: { getVersion: () => 'test' }
+  };
+
+  const originalLoad = Module._load;
+  Module._load = function (request, parent, isMain) {
+    if (request === 'electron') {
+      return stubElectron;
+    }
+    if (request === '../screen-capture/permissions') {
+      return { isScreenRecordingPermissionGranted: () => true };
+    }
+    if (request === './session-store') {
+      return {
+        recoverIncompleteSessions: () => {},
+        createSessionStore: ({ contextFolderPath }) => {
+          const sessionId = 'session-test';
+          return {
+            sessionId,
+            sessionDir: `${contextFolderPath}/familiar/stills/${sessionId}`,
+            nextCaptureFile: (capturedAt) => ({ fileName: 'capture.webp', capturedAt }),
+            addCapture: ({ displayId }) => {
+              captureDisplayIds.push(displayId);
+            },
+            finalize: () => {}
+          };
+        }
+      };
+    }
+    if (request === './stills-queue') {
+      return {
+        createStillsQueue: () => ({
+          enqueueCapture: () => {},
+          close: () => {}
+        })
+      };
+    }
+    return originalLoad.call(this, request, parent, isMain);
+  };
+
+  try {
+    const { createRecorder } = require('../src/screen-stills/recorder');
+    const logger = {
+      log: (...args) => logs.push({ level: 'log', args }),
+      warn: (...args) => logs.push({ level: 'warn', args }),
+      error: (...args) => logs.push({ level: 'error', args })
+    };
+    const recorder = createRecorder({ logger, intervalSeconds: 1 });
+    const result = await recorder.start({ contextFolderPath: '/tmp/familiar-test' });
+    assert.equal(result.ok, true);
+
+    await recorder.stop({ reason: 'test' });
+
+    const firstStart = sendCalls.find((call) => call.channel === 'screen-stills:start');
+    assert.equal(firstStart?.payload?.sourceId, 'screen:1');
+    assert.equal(captureDisplayIds[0], 1);
+
+    const fallbackWarned = logs.some((entry) =>
+      entry.level === 'warn' &&
+      typeof entry.args?.[0] === 'string' &&
+      entry.args[0].includes('Cursor display source unavailable')
+    );
+    assert.equal(fallbackWarned, true);
   } finally {
     Module._load = originalLoad;
     resetRecorderModule();

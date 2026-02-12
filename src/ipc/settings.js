@@ -1,6 +1,5 @@
 const { app, BrowserWindow, dialog, ipcMain } = require('electron');
-const fs = require('node:fs');
-const { loadSettings, resolveSettingsPath, saveSettings, validateContextFolderPath } = require('../settings');
+const { loadSettings, saveSettings, validateContextFolderPath } = require('../settings');
 const { DEFAULT_RECORDING_HOTKEY } = require('../hotkeys');
 const { getScreenRecordingPermissionStatus, openScreenRecordingSettings } = require('../screen-capture/permissions');
 const { resolveHarnessSkillPath } = require('../skills/installer');
@@ -32,8 +31,6 @@ function registerSettingsHandlers(options = {}) {
 function handleGetSettings() {
     const appVersion = readAppVersion();
     try {
-        const settingsPath = resolveSettingsPath();
-        const isFirstRun = !fs.existsSync(settingsPath);
         const settings = loadSettings();
         const contextFolderPath = settings.contextFolderPath || '';
         const llmProviderName = settings?.stills_markdown_extractor?.llm_provider?.provider || '';
@@ -51,6 +48,7 @@ function handleGetSettings() {
         })();
         const recordingHotkey = typeof settings.recordingHotkey === 'string' ? settings.recordingHotkey : DEFAULT_RECORDING_HOTKEY;
         const alwaysRecordWhenActive = settings.alwaysRecordWhenActive === true;
+        const wizardCompleted = settings.wizardCompleted === true;
         const skillInstallerHarness = typeof settings?.skillInstaller?.harness === 'string' ? settings.skillInstaller.harness : '';
         const skillInstallerInstallPath =
             typeof settings?.skillInstaller?.installPath === 'string' ? settings.skillInstaller.installPath : '';
@@ -75,12 +73,12 @@ function handleGetSettings() {
             stillsMarkdownExtractorType,
             recordingHotkey,
             alwaysRecordWhenActive,
+            wizardCompleted,
             skillInstaller: {
                 harness: skillInstallerHarness,
                 installPath: skillInstallerInstallPath,
             },
-            appVersion,
-            isFirstRun
+            appVersion
         };
     } catch (error) {
         console.error('Failed to load settings', error);
@@ -92,9 +90,9 @@ function handleGetSettings() {
             stillsMarkdownExtractorType: 'apple_vision_ocr',
             recordingHotkey: DEFAULT_RECORDING_HOTKEY,
             alwaysRecordWhenActive: false,
+            wizardCompleted: false,
             skillInstaller: { harness: '', installPath: '' },
-            appVersion,
-            isFirstRun: false
+            appVersion
         };
     }
 }
@@ -105,6 +103,7 @@ function handleSaveSettings(_event, payload) {
     const hasLlmProviderName = Object.prototype.hasOwnProperty.call(payload || {}, 'llmProviderName');
     const hasStillsMarkdownExtractorType = Object.prototype.hasOwnProperty.call(payload || {}, 'stillsMarkdownExtractorType');
     const hasAlwaysRecordWhenActive = Object.prototype.hasOwnProperty.call(payload || {}, 'alwaysRecordWhenActive');
+    const hasWizardCompleted = Object.prototype.hasOwnProperty.call(payload || {}, 'wizardCompleted');
     const hasRecordingHotkey = Object.prototype.hasOwnProperty.call(payload || {}, 'recordingHotkey');
     const hasSkillInstaller = Object.prototype.hasOwnProperty.call(payload || {}, 'skillInstaller');
     const settingsPayload = {};
@@ -115,6 +114,7 @@ function handleSaveSettings(_event, payload) {
         !hasLlmProviderName &&
         !hasStillsMarkdownExtractorType &&
         !hasAlwaysRecordWhenActive &&
+        !hasWizardCompleted &&
         !hasRecordingHotkey &&
         !hasSkillInstaller
     ) {
@@ -163,6 +163,10 @@ function handleSaveSettings(_event, payload) {
     if (hasAlwaysRecordWhenActive) {
         const nextValue = payload.alwaysRecordWhenActive === true;
         settingsPayload.alwaysRecordWhenActive = nextValue;
+    }
+
+    if (hasWizardCompleted) {
+        settingsPayload.wizardCompleted = payload.wizardCompleted === true;
     }
 
     if (hasSkillInstaller) {

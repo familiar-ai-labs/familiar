@@ -189,6 +189,30 @@ test('saveSettings preserves alwaysRecordWhenActive when updating other settings
   assert.equal(loaded.contextFolderPath, contextDir)
 })
 
+test('saveSettings persists wizardCompleted', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-settings-'))
+  const settingsDir = path.join(tempRoot, 'settings')
+
+  saveSettings({ wizardCompleted: true }, { settingsDir })
+
+  const loaded = loadSettings({ settingsDir })
+  assert.equal(loaded.wizardCompleted, true)
+})
+
+test('saveSettings preserves wizardCompleted when updating other settings', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-settings-'))
+  const settingsDir = path.join(tempRoot, 'settings')
+  const contextDir = path.join(tempRoot, 'context')
+  fs.mkdirSync(contextDir)
+
+  saveSettings({ wizardCompleted: true }, { settingsDir })
+  saveSettings({ contextFolderPath: contextDir }, { settingsDir })
+
+  const loaded = loadSettings({ settingsDir })
+  assert.equal(loaded.wizardCompleted, true)
+  assert.equal(loaded.contextFolderPath, contextDir)
+})
+
 test('saveSettings persists stills_markdown_extractor type', () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-settings-'))
   const settingsDir = path.join(tempRoot, 'settings')

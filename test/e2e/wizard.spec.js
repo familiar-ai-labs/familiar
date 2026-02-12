@@ -144,6 +144,7 @@ test('wizard happy flow completes setup and routes to General', async () => {
     expect(stored.stills_markdown_extractor.llm_provider.provider).toBe('gemini')
     expect(stored.stills_markdown_extractor.llm_provider.api_key).toBe('test-key')
     expect(stored.alwaysRecordWhenActive ?? false).toBe(true)
+    expect(stored.wizardCompleted).toBe(true)
     expect(stored.skillInstaller.harness).toBe('codex')
     expect(stored.skillInstaller.installPath).toBe(path.join(skillHomeDir, '.codex', 'skills', 'familiar'))
   } finally {
@@ -193,7 +194,7 @@ test('wizard preserves state when navigating back and forth', async () => {
   }
 })
 
-test('wizard intelligence step requires provider and saved api key', async () => {
+test('wizard recording step requires provider and saved api key', async () => {
   const appRoot = path.join(__dirname, '../..')
   const contextPath = path.join(appRoot, 'test', 'fixtures', 'context')
   const { electronApp } = launchElectron({

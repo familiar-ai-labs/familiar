@@ -57,11 +57,15 @@ function createSessionStore({
     };
   }
 
-  function addCapture({ fileName, capturedAt }) {
-    manifest.captures.push({
+  function addCapture({ fileName, capturedAt, displayId }) {
+    const capture = {
       file: fileName,
       capturedAt
-    });
+    };
+    if (displayId !== undefined && displayId !== null) {
+      capture.displayId = displayId;
+    }
+    manifest.captures.push(capture);
     writeManifest();
   }
 

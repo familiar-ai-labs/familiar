@@ -53,6 +53,7 @@ const saveSettings = (settings, options = {}) => {
     const hasUpdateLastCheckedAt = Object.prototype.hasOwnProperty.call(settings, 'updateLastCheckedAt');
     const hasRecordingHotkey = Object.prototype.hasOwnProperty.call(settings, 'recordingHotkey');
     const hasAlwaysRecordWhenActive = Object.prototype.hasOwnProperty.call(settings, 'alwaysRecordWhenActive');
+    const hasWizardCompleted = Object.prototype.hasOwnProperty.call(settings, 'wizardCompleted');
     const hasSkillInstaller = Object.prototype.hasOwnProperty.call(settings, 'skillInstaller');
     const existingStillsExtractor =
         existing && typeof existing.stills_markdown_extractor === 'object' ? existing.stills_markdown_extractor : {};
@@ -146,6 +147,12 @@ const saveSettings = (settings, options = {}) => {
         payload.alwaysRecordWhenActive = settings.alwaysRecordWhenActive === true;
     } else if (typeof existing.alwaysRecordWhenActive === 'boolean') {
         payload.alwaysRecordWhenActive = existing.alwaysRecordWhenActive;
+    }
+
+    if (hasWizardCompleted) {
+        payload.wizardCompleted = settings.wizardCompleted === true;
+    } else if (typeof existing.wizardCompleted === 'boolean') {
+        payload.wizardCompleted = existing.wizardCompleted;
     }
 
     if (hasSkillInstaller) {
