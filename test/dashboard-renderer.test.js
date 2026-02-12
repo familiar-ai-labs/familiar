@@ -562,16 +562,21 @@ test('wizard permission check granted state reveals recording toggle', async () 
   }
 })
 
-test('wizard step 3 bypasses permission flow when recording is already enabled', async () => {
+test('wizard step 3 re-checks permissions even when recording is already enabled', async () => {
+  let checkCalls = 0
   const familiar = createFamiliar({
     getSettings: async () => ({
       contextFolderPath: '/tmp/context',
       llmProviderName: 'gemini',
       llmProviderApiKey: '',
-      stillsMarkdownExtractorType: 'llm',
+      stillsMarkdownExtractorType: 'apple_vision_ocr',
       alwaysRecordWhenActive: true,
       appVersion: '0.0.22'
-    })
+    }),
+    checkScreenRecordingPermission: async () => {
+      checkCalls += 1
+      return { ok: true, permissionStatus: 'denied', granted: false }
+    }
   })
 
   const elements = createElements()
@@ -586,8 +591,18 @@ test('wizard step 3 bypasses permission flow when recording is already enabled',
     document.trigger('DOMContentLoaded')
     await flushPromises()
 
-    assert.equal(elements['wizard-check-permissions'].textContent, 'Granted')
-    assert.equal(elements['wizard-recording-toggle-section'].classList.contains('hidden'), false)
+    assert.equal(checkCalls, 0)
+
+    await elements['wizard-next'].click()
+    await flushPromises()
+    await elements['wizard-next'].click()
+    await flushPromises()
+
+    assert.equal(checkCalls, 1)
+    assert.equal(elements['wizard-check-permissions'].textContent, 'Check Permissions')
+    assert.equal(elements['wizard-check-permissions'].classList.contains('bg-red-600'), true)
+    assert.equal(elements['wizard-open-screen-recording-settings'].classList.contains('hidden'), false)
+    assert.equal(elements['wizard-recording-toggle-section'].classList.contains('hidden'), true)
   } finally {
     global.document = priorDocument
     global.window = priorWindow

@@ -12,6 +12,7 @@
     const elements = options.elements || {}
     const getState = typeof options.getState === 'function' ? options.getState : () => ({})
     const onDone = typeof options.onDone === 'function' ? options.onDone : () => {}
+    const onStepChange = typeof options.onStepChange === 'function' ? options.onStepChange : () => {}
 
     const {
       wizardSection,
@@ -112,6 +113,7 @@
       const nextStep = Math.max(1, Math.min(WIZARD_STEP_COUNT, Number(step) || 1))
       wizardStep = nextStep
       console.log('Wizard step changed', { step: wizardStep })
+      onStepChange(wizardStep)
       updateWizardUI()
     }
 

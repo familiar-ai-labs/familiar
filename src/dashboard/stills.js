@@ -70,13 +70,9 @@
       }
     }
 
-    const updateWizardPermissionControls = (alwaysEnabled) => {
-      if (alwaysEnabled) {
-        wizardPermissionState = 'granted'
-      }
-
+    const updateWizardPermissionControls = () => {
       if (wizardRecordingToggleSection) {
-        const showToggle = alwaysEnabled || wizardPermissionState === 'granted'
+        const showToggle = wizardPermissionState === 'granted'
         wizardRecordingToggleSection.classList.toggle('hidden', !showToggle)
       }
 
@@ -128,7 +124,7 @@
       }
 
       if (wizardOpenScreenRecordingSettingsButton) {
-        const showOpenSettingsButton = wizardPermissionState === 'denied' && !alwaysEnabled
+        const showOpenSettingsButton = wizardPermissionState === 'denied'
         wizardOpenScreenRecordingSettingsButton.classList.toggle('hidden', !showOpenSettingsButton)
       }
     }
@@ -215,7 +211,7 @@
         permissionElement.classList.toggle('hidden', !permissionElement.textContent)
       }
 
-      updateWizardPermissionControls(currentAlwaysRecordWhenActive)
+      updateWizardPermissionControls()
     }
 
     const handleCheckPermissions = async () => {
@@ -248,6 +244,13 @@
       } catch (error) {
         console.error('Failed to open Screen Recording settings', error)
       }
+    }
+
+    const handleWizardStepChange = (step) => {
+      if (Number(step) !== 3) {
+        return
+      }
+      void handleCheckPermissions()
     }
 
     const startStatusPoller = () => {
@@ -343,6 +346,7 @@
 
     return {
       handleSectionChange,
+      handleWizardStepChange,
       updateStillsUI,
       updateRecordingUI: updateStillsUI
     }

@@ -240,6 +240,8 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
     }
     if (isWizard) {
       state.updateWizardUI()
+      const wizardStep = callIfAvailable(apis.wizardApi, 'getWizardStep')
+      callIfAvailable(apis.recordingApi, 'handleWizardStepChange', wizardStep)
     }
     callIfAvailable(apis.recordingApi, 'handleSectionChange', nextSection)
 
@@ -288,7 +290,10 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
       wizardStepConnectors
     },
     getState: state.getWizardState,
-    onDone: handleWizardDone
+    onDone: handleWizardDone,
+    onStepChange: (step) => {
+      callIfAvailable(apis.recordingApi, 'handleWizardStepChange', step)
+    }
   })
 
   function handleSectionNavClick(targetElement) {

@@ -8,7 +8,8 @@
     return targetWindow.FamiliarWizard.createWizard({
       elements: options.elements,
       getState: options.getState,
-      onDone: options.onDone
+      onDone: options.onDone,
+      onStepChange: options.onStepChange
     })
   }
 
