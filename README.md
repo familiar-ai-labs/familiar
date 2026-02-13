@@ -2,9 +2,7 @@
    <img src="./src/icon.png" width="96" alt="Familiar icon" />
 </p>
 
----
-
-# Familiar Desktop App
+<h1 align="center">Familiar</h1>
 
 Familiar is a local-first macOS menu bar app that helps your AI stay up to date with what matters in your work.
 
