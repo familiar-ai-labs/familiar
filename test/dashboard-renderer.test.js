@@ -139,7 +139,14 @@ const createFamiliar = (overrides = {}) => ({
   openScreenRecordingSettings: async () => ({ ok: true }),
   pickContextFolder: async () => ({ canceled: true }),
   saveSettings: async () => ({ ok: true }),
-  getScreenStillsStatus: async () => ({ ok: true, state: 'armed', isRecording: false, manualPaused: false }),
+  getScreenStillsStatus: async () => ({
+    ok: true,
+    state: 'armed',
+    isRecording: false,
+    manualPaused: false,
+    permissionStatus: 'granted',
+    permissionGranted: true
+  }),
   startScreenStills: async () => ({ ok: true, state: 'recording', isRecording: true, manualPaused: false }),
   pauseScreenStills: async () => ({ ok: true, state: 'armed', isRecording: false, manualPaused: true }),
   stopScreenStills: async () => ({ ok: true, state: 'armed', isRecording: false, manualPaused: false }),
@@ -885,6 +892,50 @@ test('stills action button pauses and resumes when paused', async () => {
     assert.equal(startCalls.length, 1)
     assert.equal(elements['sidebar-recording-status'].textContent, 'Recording')
     assert.equal(elements['sidebar-recording-action'].textContent, 'Pause (10 min)')
+  } finally {
+    global.document = priorDocument
+    global.window = priorWindow
+  }
+})
+
+test('stills sidebar shows permission needed and red status dot', async () => {
+  const familiar = createFamiliar({
+    getSettings: async () => ({
+      contextFolderPath: '/tmp/context',
+      llmProviderName: 'gemini',
+      llmApiKey: '',
+      stillsMarkdownExtractorType: 'apple_vision_ocr',
+      alwaysRecordWhenActive: true,
+      wizardCompleted: true
+    }),
+    getScreenStillsStatus: async () => ({
+      ok: true,
+      state: 'armed',
+      isRecording: false,
+      manualPaused: false,
+      permissionStatus: 'denied',
+      permissionGranted: false
+    })
+  })
+
+  const elements = createElements()
+  const document = new TestDocument(elements)
+  const priorDocument = global.document
+  const priorWindow = global.window
+  global.document = document
+  global.window = { familiar }
+
+  try {
+    loadRenderer()
+    document.trigger('DOMContentLoaded')
+    await flushPromises()
+
+    await elements['recording-nav'].click()
+    await flushPromises()
+
+    assert.equal(elements['sidebar-recording-status'].textContent, 'Permission needed')
+    assert.equal(elements['sidebar-recording-dot'].classList.contains('bg-red-500'), true)
+    assert.equal(elements['sidebar-recording-permission'].classList.contains('hidden'), true)
   } finally {
     global.document = priorDocument
     global.window = priorWindow

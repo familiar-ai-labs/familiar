@@ -13,6 +13,7 @@ const {
 const { initializeAutoUpdater, scheduleDailyUpdateCheck } = require('./updates');
 const { createScreenStillsController } = require('./screen-stills');
 const { createPresenceMonitor } = require('./screen-capture/presence');
+const { getScreenRecordingPermissionStatus } = require('./screen-capture/permissions');
 
 const trayIconPath = path.join(__dirname, 'icon.png');
 
@@ -145,6 +146,21 @@ const handleRecordingToggleAction = async () => {
     return startScreenStills();
 };
 
+const getScreenStillsStatusPayload = () => {
+    const state = screenStillsController?.getState?.() || { state: 'disabled', manualPaused: false };
+    const isRecording = state.state === 'recording' || state.state === 'idleGrace';
+    const permissionStatus = getScreenRecordingPermissionStatus();
+
+    return {
+        ok: true,
+        state: state.state,
+        isRecording,
+        manualPaused: state.manualPaused,
+        permissionStatus,
+        permissionGranted: permissionStatus === 'granted'
+    };
+};
+
 if (process.platform === 'linux' && (isE2E || isCI)) {
     console.log('Applying Linux CI/E2E Electron flags');
     app.disableHardwareAcceleration();
@@ -245,33 +261,41 @@ registerIpcHandlers({ onSettingsSaved: updateScreenCaptureFromSettings });
 
 ipcMain.handle('screenStills:getStatus', () => {
     if (!screenStillsController) {
-        return { ok: false, state: 'disabled', isRecording: false };
+        const permissionStatus = getScreenRecordingPermissionStatus();
+        return {
+            ok: false,
+            state: 'disabled',
+            isRecording: false,
+            permissionStatus,
+            permissionGranted: permissionStatus === 'granted'
+        };
     }
-    const state = screenStillsController.getState();
-    const isRecording = state.state === 'recording' || state.state === 'idleGrace';
-    return { ok: true, state: state.state, isRecording, manualPaused: state.manualPaused };
+    return getScreenStillsStatusPayload();
 });
 
 ipcMain.handle('screenStills:start', async () => {
     const result = await startScreenStills();
-    const state = screenStillsController?.getState?.() || { state: 'disabled', manualPaused: false };
-    const isRecording = state.state === 'recording' || state.state === 'idleGrace';
-    return { ...result, state: state.state, isRecording, manualPaused: state.manualPaused };
+    return {
+        ...result,
+        ...getScreenStillsStatusPayload()
+    };
 });
 
 ipcMain.handle('screenStills:pause', async () => {
     const result = await pauseScreenStills();
-    const state = screenStillsController?.getState?.() || { state: 'disabled', manualPaused: false };
-    const isRecording = state.state === 'recording' || state.state === 'idleGrace';
-    return { ...result, state: state.state, isRecording, manualPaused: state.manualPaused };
+    return {
+        ...result,
+        ...getScreenStillsStatusPayload()
+    };
 });
 
 ipcMain.handle('screenStills:stop', async () => {
     console.warn('screenStills:stop called; treating as pause');
     const result = await pauseScreenStills();
-    const state = screenStillsController?.getState?.() || { state: 'disabled', manualPaused: false };
-    const isRecording = state.state === 'recording' || state.state === 'idleGrace';
-    return { ...result, state: state.state, isRecording, manualPaused: state.manualPaused };
+    return {
+        ...result,
+        ...getScreenStillsStatusPayload()
+    };
 });
 
 ipcMain.handle('screenStills:simulateIdle', (_event, payload = {}) => {

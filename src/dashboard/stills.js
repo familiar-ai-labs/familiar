@@ -46,6 +46,8 @@
 
     let currentScreenStillsState = 'disabled'
     let currentScreenStillsPaused = false
+    let currentScreenStillsPermissionGranted = true
+    let currentScreenStillsPermissionStatus = 'granted'
     let statusPoller = null
     let wizardPermissionState = 'idle'
     let isCheckingPermission = false
@@ -55,6 +57,13 @@
 
     const buildStillsPath = (contextFolderPath) =>
       contextFolderPath ? `${contextFolderPath}/familiar/stills` : ''
+
+    const shouldShowPermissionIssue = () =>
+      currentScreenStillsState !== 'recording' &&
+      currentScreenStillsState !== 'idleGrace' &&
+      (!currentScreenStillsPermissionGranted ||
+        (currentScreenStillsPermissionStatus !== 'granted' &&
+          currentScreenStillsPermissionStatus !== 'unavailable'))
 
     const updateSidebarStatus = (alwaysEnabled) => {
       if (!sidebarRecordingStatus && !sidebarRecordingDot) {
@@ -69,6 +78,9 @@
         if (currentScreenStillsPaused) {
           label = 'Paused'
           dotClass = 'bg-amber-500'
+        } else if (shouldShowPermissionIssue()) {
+          label = 'Permission needed'
+          dotClass = 'bg-red-500'
         } else if (isCaptureActive()) {
           label = 'Recording'
           dotClass = 'bg-emerald-500'
@@ -82,7 +94,12 @@
         sidebarRecordingStatus.textContent = label
       }
       if (sidebarRecordingDot) {
-        sidebarRecordingDot.classList.remove('bg-zinc-400', 'bg-emerald-500', 'bg-amber-500')
+        sidebarRecordingDot.classList.remove(
+          'bg-zinc-400',
+          'bg-emerald-500',
+          'bg-amber-500',
+          'bg-red-500'
+        )
         sidebarRecordingDot.classList.add(dotClass)
       }
       if (sidebarRecordingToggleTrack) {
@@ -162,9 +179,17 @@
         if (result && result.ok) {
           currentScreenStillsState = result.state || 'disabled'
           currentScreenStillsPaused = Boolean(result.manualPaused)
+          currentScreenStillsPermissionStatus = typeof result.permissionStatus === 'string'
+            ? result.permissionStatus
+            : currentScreenStillsPermissionStatus
+          currentScreenStillsPermissionGranted = typeof result.permissionGranted === 'boolean'
+            ? result.permissionGranted
+            : currentScreenStillsPermissionStatus === 'granted'
         } else {
           currentScreenStillsState = 'disabled'
           currentScreenStillsPaused = false
+          currentScreenStillsPermissionStatus = 'granted'
+          currentScreenStillsPermissionGranted = true
         }
       } catch (error) {
         console.error('Failed to load stills status', error)
@@ -232,7 +257,7 @@
       const permissionElement = sidebarRecordingPermission || recordingPermission
       if (permissionElement) {
         permissionElement.textContent = ''
-        permissionElement.classList.toggle('hidden', !permissionElement.textContent)
+        permissionElement.classList.add('hidden')
       }
 
       updatePermissionControls()
