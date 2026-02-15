@@ -28,6 +28,7 @@
       permissionRecordingToggleSections = [],
       wizardCheckPermissionsButton,
       wizardOpenScreenRecordingSettingsButton,
+      wizardOpenScreenRecordingSettingsNotes,
       wizardRecordingToggleSection
     } = elements
 
@@ -45,6 +46,9 @@
     const allOpenScreenRecordingSettingsButtons = [
       ...toArray(openScreenRecordingSettingsButtons),
       ...toArray(wizardOpenScreenRecordingSettingsButton)
+    ]
+    const allOpenScreenRecordingSettingsNotes = [
+      ...toArray(wizardOpenScreenRecordingSettingsNotes)
     ]
     const allPermissionRecordingToggleSections = [
       ...toArray(permissionRecordingToggleSections),
@@ -150,6 +154,10 @@
 
       for (const button of allOpenScreenRecordingSettingsButtons) {
         button.classList.toggle('hidden', !showOpenSettingsButton)
+      }
+
+      for (const note of allOpenScreenRecordingSettingsNotes) {
+        note.classList.toggle('hidden', !showOpenSettingsButton)
       }
     }
 

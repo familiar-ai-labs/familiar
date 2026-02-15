@@ -1,8 +1,6 @@
 const { ipcRenderer } = require('electron');
 const fs = require('node:fs');
 
-const START_TIMEOUT_MS = 8000;
-
 let currentCapture = null;
 
 function sendStatus(requestId, status, payload = {}) {
@@ -14,11 +12,6 @@ function sendStatus(requestId, status, payload = {}) {
 }
 
 function cleanupCapture() {
-  if (currentCapture?.stream) {
-    currentCapture.stream.getTracks().forEach(function (track) {
-      track.stop();
-    });
-  }
   currentCapture = null;
 }
 
@@ -35,38 +28,17 @@ function resolveMimeType(format) {
   return 'image/webp';
 }
 
-function waitForVideoReady(video) {
-  if (video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0) {
-    return Promise.resolve();
+function createCanvas(width, height) {
+  const captureWidth = Math.max(1, Math.round(Number(width)));
+  const captureHeight = Math.max(1, Math.round(Number(height)));
+  const canvas = document.createElement('canvas');
+  canvas.width = captureWidth;
+  canvas.height = captureHeight;
+  const ctx = canvas.getContext('2d', { willReadFrequently: false });
+  if (!ctx) {
+    throw new Error('Failed to create capture canvas.');
   }
-
-  return new Promise(function (resolve, reject) {
-    const timeout = setTimeout(function () {
-      cleanup();
-      reject(new Error('Timed out preparing capture.'));
-    }, START_TIMEOUT_MS);
-
-    function cleanup() {
-      clearTimeout(timeout);
-      video.removeEventListener('loadedmetadata', handleReady);
-      video.removeEventListener('loadeddata', handleReady);
-      video.removeEventListener('error', handleError);
-    }
-
-    function handleReady() {
-      cleanup();
-      resolve();
-    }
-
-    function handleError() {
-      cleanup();
-      reject(new Error('Failed to load capture stream.'));
-    }
-
-    video.addEventListener('loadedmetadata', handleReady);
-    video.addEventListener('loadeddata', handleReady);
-    video.addEventListener('error', handleError);
-  });
+  return { canvas, ctx, captureWidth, captureHeight };
 }
 
 function canvasToBuffer(canvas, format) {
@@ -86,6 +58,144 @@ function canvasToBuffer(canvas, format) {
   });
 }
 
+function normalizeThumbnailBytes(thumbnailBytes) {
+  if (!thumbnailBytes) {
+    return null;
+  }
+  if (thumbnailBytes instanceof ArrayBuffer) {
+    return new Uint8Array(thumbnailBytes);
+  }
+  if (ArrayBuffer.isView(thumbnailBytes)) {
+    return new Uint8Array(
+      thumbnailBytes.buffer,
+      thumbnailBytes.byteOffset,
+      thumbnailBytes.byteLength
+    );
+  }
+  if (Array.isArray(thumbnailBytes)) {
+    return new Uint8Array(thumbnailBytes);
+  }
+  if (thumbnailBytes && thumbnailBytes.type === 'Buffer' && Array.isArray(thumbnailBytes.data)) {
+    return new Uint8Array(thumbnailBytes.data);
+  }
+  return null;
+}
+
+function looksLikePng(thumbnailBytes) {
+  if (!(thumbnailBytes instanceof Uint8Array) || thumbnailBytes.length < 8) {
+    return false;
+  }
+  return (
+    thumbnailBytes[0] === 0x89 &&
+    thumbnailBytes[1] === 0x50 &&
+    thumbnailBytes[2] === 0x4e &&
+    thumbnailBytes[3] === 0x47 &&
+    thumbnailBytes[4] === 0x0d &&
+    thumbnailBytes[5] === 0x0a &&
+    thumbnailBytes[6] === 0x1a &&
+    thumbnailBytes[7] === 0x0a
+  );
+}
+
+function normalizeDataUrl(dataUrl) {
+  if (typeof dataUrl !== 'string') {
+    return null;
+  }
+
+  const fixed = dataUrl.trim().replace(';base6,', ';base64,');
+  const match = /^data:image\/([^;]+);base64,([A-Za-z0-9+/=\s]*)$/i.exec(fixed);
+  if (!match) {
+    return null;
+  }
+
+  const mime = match[1].toLowerCase();
+  const base64Payload = match[2].replace(/\s/g, '');
+  if (!base64Payload) {
+    return null;
+  }
+
+  return `data:image/${mime};base64,${base64Payload}`;
+}
+
+function decodeImageFromBlob(blob) {
+  if (typeof createImageBitmap === 'function') {
+    return createImageBitmap(blob)
+      .then(function (bitmap) {
+        return bitmap;
+      })
+      .catch(function (error) {
+        return Promise.reject(new Error(error?.message || 'Failed to decode capture thumbnail.'));
+      });
+  }
+
+  return new Promise(function (resolve, reject) {
+    const objectUrl = URL.createObjectURL(blob);
+    const image = new Image();
+    image.onload = function () {
+      URL.revokeObjectURL(objectUrl);
+      resolve(image);
+    };
+    image.onerror = function () {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error(`Failed to decode capture thumbnail (${blob.size} bytes).`));
+    };
+    image.src = objectUrl;
+  });
+}
+
+function decodeCaptureThumbnailFromDataUrl(dataUrl) {
+  const normalizedDataUrl = normalizeDataUrl(dataUrl);
+  if (!normalizedDataUrl) {
+    return Promise.reject(new Error('Unsupported capture thumbnail format.'));
+  }
+
+  return new Promise(function (resolve, reject) {
+    const image = new Image();
+    image.onload = function () {
+      resolve(image);
+    };
+    image.onerror = function () {
+      reject(new Error(`Failed to decode capture thumbnail (${normalizedDataUrl.substring(0, 20)}).`));
+    };
+    image.src = normalizedDataUrl;
+  });
+}
+
+function decodeCaptureThumbnailFromBytes(thumbnailBytes) {
+  const normalizedBytes = normalizeThumbnailBytes(thumbnailBytes);
+  if (!normalizedBytes || !normalizedBytes.byteLength) {
+    return Promise.reject(new Error('Unsupported capture thumbnail bytes.'));
+  }
+  if (!looksLikePng(normalizedBytes)) {
+    return Promise.reject(new Error('Capture thumbnail bytes are not valid PNG.'));
+  }
+  const blob = new Blob([normalizedBytes], { type: 'image/png' });
+  return decodeImageFromBlob(blob);
+}
+
+function decodeCaptureThumbnail(payload) {
+  if (typeof payload === 'string') {
+    return decodeCaptureThumbnailFromDataUrl(payload);
+  }
+  return decodeCaptureThumbnailFromBytes(payload);
+}
+
+function applyCaptureDimensions(width, height) {
+  if (!currentCapture) {
+    return;
+  }
+
+  const captureWidth = Math.max(1, Math.round(Number(width)));
+  const captureHeight = Math.max(1, Math.round(Number(height)));
+  if (currentCapture.captureWidth !== captureWidth || currentCapture.captureHeight !== captureHeight) {
+    const created = createCanvas(captureWidth, captureHeight);
+    currentCapture.canvas = created.canvas;
+    currentCapture.ctx = created.ctx;
+    currentCapture.captureWidth = created.captureWidth;
+    currentCapture.captureHeight = created.captureHeight;
+  }
+}
+
 async function handleStart(_event, payload) {
   const requestId = payload?.requestId;
   if (!requestId) {
@@ -93,8 +203,7 @@ async function handleStart(_event, payload) {
   }
 
   if (currentCapture) {
-    sendStatus(requestId, 'error', { message: 'Capture already in progress.' });
-    return;
+    cleanupCapture();
   }
 
   try {
@@ -104,50 +213,13 @@ async function handleStart(_event, payload) {
       throw new Error('Missing capture parameters.');
     }
 
-    const stream = await Promise.race([
-      navigator.mediaDevices.getUserMedia({
-        audio: false,
-        video: {
-          mandatory: {
-            chromeMediaSource: 'desktop',
-            chromeMediaSourceId: sourceId,
-            minWidth: captureWidth,
-            maxWidth: captureWidth,
-            minHeight: captureHeight,
-            maxHeight: captureHeight,
-            minFrameRate: 1,
-            maxFrameRate: 1
-          }
-        }
-      }),
-      new Promise(function (_resolve, reject) {
-        setTimeout(function () {
-          reject(new Error('Timed out starting capture. Check Screen Recording permission.'));
-        }, START_TIMEOUT_MS);
-      })
-    ]);
-
-    const video = document.createElement('video');
-    video.srcObject = stream;
-    video.muted = true;
-    video.playsInline = true;
-
-    await video.play();
-    await waitForVideoReady(video);
-
-    const canvas = document.createElement('canvas');
-    canvas.width = captureWidth;
-    canvas.height = captureHeight;
-    const ctx = canvas.getContext('2d', { willReadFrequently: false });
-    if (!ctx) {
-      throw new Error('Failed to create capture canvas.');
-    }
-
+    const created = createCanvas(captureWidth, captureHeight);
     currentCapture = {
-      stream,
-      video,
-      canvas,
-      ctx,
+      sourceId,
+      captureWidth: created.captureWidth,
+      captureHeight: created.captureHeight,
+      canvas: created.canvas,
+      ctx: created.ctx,
       format: format || 'webp',
       captureInProgress: false
     };
@@ -165,7 +237,7 @@ async function handleCapture(_event, payload) {
     return;
   }
 
-  if (!currentCapture?.ctx || !currentCapture?.canvas || !currentCapture?.video) {
+  if (!currentCapture?.ctx || !currentCapture?.canvas) {
     sendStatus(requestId, 'error', { message: 'Capture is not active.' });
     return;
   }
@@ -181,11 +253,48 @@ async function handleCapture(_event, payload) {
     return;
   }
 
+  const thumbnailBytes = payload?.thumbnailPng;
+  const thumbnailDataUrl = payload?.thumbnailDataUrl;
+  if (
+    !thumbnailBytes &&
+    !thumbnailDataUrl
+  ) {
+    sendStatus(requestId, 'error', { message: 'Missing capture thumbnail data.' });
+    return;
+  }
+
+  const nextWidth = payload?.captureWidth || currentCapture.captureWidth;
+  const nextHeight = payload?.captureHeight || currentCapture.captureHeight;
+
   currentCapture.captureInProgress = true;
   try {
-    const { ctx, canvas, video, format } = currentCapture;
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const buffer = await canvasToBuffer(canvas, format);
+    applyCaptureDimensions(nextWidth, nextHeight);
+    if (!currentCapture?.ctx || !currentCapture?.canvas) {
+      throw new Error('Capture is not active.');
+    }
+
+    const format = payload?.format || currentCapture.format;
+    currentCapture.format = format || 'webp';
+
+    let image = null;
+    if (thumbnailBytes) {
+      try {
+        image = await decodeCaptureThumbnailFromBytes(thumbnailBytes);
+      } catch (decodeError) {
+        if (!thumbnailDataUrl) {
+          throw decodeError;
+        }
+      }
+    }
+
+    if (!image) {
+      image = await decodeCaptureThumbnail(thumbnailDataUrl);
+    }
+
+    currentCapture.ctx.clearRect(0, 0, currentCapture.canvas.width, currentCapture.canvas.height);
+    currentCapture.ctx.drawImage(image, 0, 0, currentCapture.canvas.width, currentCapture.canvas.height);
+
+    const buffer = await canvasToBuffer(currentCapture.canvas, currentCapture.format);
     await fs.promises.writeFile(filePath, buffer);
     sendStatus(requestId, 'captured', { filePath });
   } catch (error) {

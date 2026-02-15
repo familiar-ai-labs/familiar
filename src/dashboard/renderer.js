@@ -182,6 +182,9 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
   const recordingOpenFolderButton = document.getElementById('recording-open-folder')
   const permissionCheckButtons = selectAll('[data-action="check-permissions"]')
   const openScreenRecordingSettingsButtons = selectAll('[data-action="open-screen-recording-settings"]')
+  const wizardOpenScreenRecordingSettingsNotes = [
+    document.getElementById('wizard-open-screen-recording-settings-note')
+  ].filter(Boolean)
   const permissionRecordingToggleSections = selectAll('[data-role="permission-recording-toggle-section"]')
   const appVersionLabel = document.getElementById('app-version')
 
@@ -444,6 +447,7 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
       recordingOpenFolderButton,
       permissionCheckButtons,
       openScreenRecordingSettingsButtons,
+      wizardOpenScreenRecordingSettingsNotes,
       permissionRecordingToggleSections
     },
     familiar,

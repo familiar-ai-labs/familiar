@@ -85,12 +85,18 @@ const findManifestPath = (stillsRoot) => {
   return fs.existsSync(candidate) ? candidate : ''
 }
 
-const waitForManifestPath = async (stillsRoot) => {
+const waitForManifestPath = async (stillsRoot, options = {}) => {
+  const timeoutMs = Number.isFinite(options.timeoutMs) ? options.timeoutMs : 5000
   let manifestPath = ''
-  await expect.poll(() => {
-    manifestPath = findManifestPath(stillsRoot)
-    return manifestPath
-  }).toBeTruthy()
+  await expect
+    .poll(
+      () => {
+        manifestPath = findManifestPath(stillsRoot)
+        return manifestPath
+      },
+      { timeout: timeoutMs }
+    )
+    .toBeTruthy()
   return manifestPath
 }
 
@@ -110,6 +116,29 @@ const waitForRecordingStopped = async (window) => {
     .toBeFalsy()
 }
 
+const waitForRecordingState = async (window, expectedState, options = {}) => {
+  const timeoutMs = Number.isFinite(options.timeoutMs) ? options.timeoutMs : 5000
+  await expect
+    .poll(async () => {
+      const status = await window.evaluate(() => window.familiar.getScreenStillsStatus())
+      return status?.state || ''
+    }, { timeout: timeoutMs })
+    .toBe(expectedState)
+}
+
+const assertImageHeader = (capturePath) => {
+  const header = fs.readFileSync(capturePath).slice(0, 12)
+  expect(header.length).toBeGreaterThanOrEqual(12)
+
+  const magic = header.slice(0, 4).toString('ascii')
+  if (magic === 'fami') {
+    return
+  }
+
+  expect(magic).toBe('RIFF')
+  expect(header.slice(8, 12).toString('ascii')).toBe('WEBP')
+}
+
 const assertCaptureFiles = (manifestPath, manifest, options = {}) => {
   const requireNonEmptyCount = Number.isFinite(options.requireNonEmptyCount)
     ? options.requireNonEmptyCount
@@ -120,9 +149,44 @@ const assertCaptureFiles = (manifestPath, manifest, options = {}) => {
     const size = fs.statSync(capturePath).size
     if (index < requireNonEmptyCount) {
       expect(size).toBeGreaterThan(0)
+      assertImageHeader(capturePath)
     }
   })
 }
+
+const setWindowBackdrop = async (window, options = {}) => {
+  const backgroundColor = options.backgroundColor || '#000000'
+  const marker = typeof options.marker === 'string' ? options.marker : ''
+  await window.evaluate(
+    ({ backgroundColor, marker }) => {
+      const overlayId = '__familiar-e2e-capture-marker'
+      let overlay = document.getElementById(overlayId)
+      if (!overlay) {
+        overlay = document.createElement('div')
+        overlay.id = overlayId
+        overlay.style.position = 'fixed'
+        overlay.style.inset = '0'
+        overlay.style.display = 'flex'
+        overlay.style.alignItems = 'center'
+        overlay.style.justifyContent = 'center'
+        overlay.style.pointerEvents = 'none'
+        overlay.style.zIndex = '999999'
+        overlay.style.color = '#ffffff'
+        overlay.style.fontSize = '200px'
+        overlay.style.fontWeight = 'bold'
+        overlay.style.textShadow = '0 0 20px rgba(0,0,0,0.5)'
+        document.body.appendChild(overlay)
+      }
+
+      overlay.style.background = backgroundColor
+      overlay.textContent = marker
+    },
+    { backgroundColor, marker }
+  )
+}
+
+const readCaptureBuffer = (manifestPath, capture) =>
+  fs.readFileSync(path.join(path.dirname(manifestPath), capture.file))
 
 test('stills save captures to the stills folder', async () => {
   const contextPath = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-context-stills-'))
@@ -159,6 +223,108 @@ test('stills save captures to the stills folder', async () => {
     const manifest = readManifest(manifestPath)
     expect(manifest.captures.length).toBeGreaterThan(0)
     assertCaptureFiles(manifestPath, manifest)
+  } finally {
+    await electronApp.close()
+  }
+})
+
+if (process.platform === 'darwin') {
+  test('stills capture output changes when screen content changes', async () => {
+    const intervalMs = 500
+    const contextPath = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-context-stills-real-'))
+    const settingsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-settings-e2e-'))
+
+    const electronApp = await launchApp({
+      contextPath,
+      settingsDir,
+      env: {
+        FAMILIAR_E2E_FAKE_SCREEN_CAPTURE: '0',
+        FAMILIAR_E2E_STILLS_INTERVAL_MS: String(intervalMs)
+      }
+    })
+
+    try {
+      const window = await electronApp.firstWindow()
+      await window.waitForLoadState('domcontentloaded')
+
+      await ensureRecordingPrereqs(window)
+      await setIdleSeconds(electronApp, 0)
+      await setContextFolder(window)
+      await enableRecordingToggle(window)
+      await setWindowBackdrop(window, { backgroundColor: '#111111', marker: 'A' })
+
+      const recordingAction = window.locator('#sidebar-recording-action')
+      await expect(recordingAction).toBeEnabled()
+      await recordingAction.click()
+      await expect(window.locator('#sidebar-recording-status')).toHaveText('Recording')
+
+      const stillsRoot = getStillsRoot(contextPath)
+      const manifestPath = await waitForManifestPath(stillsRoot)
+      await waitForCaptureCount(manifestPath, 1)
+
+      await setWindowBackdrop(window, { backgroundColor: '#ef3b3b', marker: 'B' })
+      await waitForCaptureCount(manifestPath, 2)
+
+      const manifest = readManifest(manifestPath)
+      expect(manifest.captures.length).toBeGreaterThanOrEqual(2)
+
+      const firstCapture = readCaptureBuffer(manifestPath, manifest.captures[0])
+      const secondCapture = readCaptureBuffer(manifestPath, manifest.captures[1])
+      assertImageHeader(path.join(path.dirname(manifestPath), manifest.captures[0].file))
+      assertImageHeader(path.join(path.dirname(manifestPath), manifest.captures[1].file))
+      expect(firstCapture.equals(secondCapture)).toBe(false)
+      expect(firstCapture.length).toBeGreaterThan(0)
+      expect(secondCapture.length).toBeGreaterThan(0)
+
+      await recordingAction.click()
+      await expect(window.locator('#sidebar-recording-status')).toHaveText('Paused')
+      await expect(recordingAction).toHaveText('Resume')
+    } finally {
+      await electronApp.close()
+    }
+  })
+}
+
+test('stills capture fails when real capture thumbnail payload is corrupted', async () => {
+  const contextPath = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-context-stills-real-'))
+  const settingsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-settings-e2e-'))
+
+  const electronApp = await launchApp({
+    contextPath,
+    settingsDir,
+    env: {
+      FAMILIAR_E2E_FAKE_SCREEN_CAPTURE: '0',
+      FAMILIAR_E2E_CORRUPT_THUMBNAIL_DATA_URL: '1',
+      FAMILIAR_E2E_STILLS_INTERVAL_MS: '600'
+    }
+  })
+
+  try {
+    const window = await electronApp.firstWindow()
+    await window.waitForLoadState('domcontentloaded')
+
+    await ensureRecordingPrereqs(window)
+    await setContextFolder(window)
+    await enableRecordingToggle(window)
+
+    const recordingAction = window.locator('#sidebar-recording-action')
+    await expect(recordingAction).toBeEnabled()
+    await recordingAction.click()
+    const stillsRoot = getStillsRoot(contextPath)
+    await waitForRecordingState(window, 'armed')
+    let manifestPath = ''
+    try {
+      manifestPath = await waitForManifestPath(stillsRoot, { timeoutMs: 1200 })
+    } catch (_error) {
+      manifestPath = ''
+    }
+    if (manifestPath) {
+      const manifest = readManifest(manifestPath)
+      expect(manifest.captures.length).toBe(0)
+      expect(manifest.stopReason).toBe('start_failed')
+    }
+
+    await expect(window.locator('#sidebar-recording-status')).toHaveText('Idle')
   } finally {
     await electronApp.close()
   }

@@ -17,6 +17,22 @@ const START_TIMEOUT_MS = 10000;
 const STOP_TIMEOUT_MS = 10000;
 const IS_E2E = process.env.FAMILIAR_E2E === '1';
 const IS_E2E_FAKE_CAPTURE = IS_E2E && process.env.FAMILIAR_E2E_FAKE_SCREEN_CAPTURE !== '0';
+const FORCE_CORRUPT_THUMBNAIL_DATA_URL =
+  IS_E2E && process.env.FAMILIAR_E2E_CORRUPT_THUMBNAIL_DATA_URL === '1';
+const CORRUPT_THUMBNAIL_DATA_URL = 'data:image/png;base64,@@@';
+const CORRUPT_THUMBNAIL_PNG = Buffer.from('not-a-png', 'utf8');
+
+function possiblyCorruptThumbnailPayload(thumbnailPayload = {}) {
+  if (!FORCE_CORRUPT_THUMBNAIL_DATA_URL) {
+    return thumbnailPayload;
+  }
+
+  return {
+    ...thumbnailPayload,
+    thumbnailDataUrl: CORRUPT_THUMBNAIL_DATA_URL,
+    thumbnailPng: CORRUPT_THUMBNAIL_PNG
+  };
+}
 
 function createFakeCaptureFile(filePath) {
   fs.writeFileSync(filePath, Buffer.from('familiar-e2e-screen-capture-placeholder', 'utf-8'));
@@ -25,6 +41,42 @@ function createFakeCaptureFile(filePath) {
 function ensureEven(value) {
   const rounded = Math.max(2, Math.round(value));
   return rounded % 2 === 0 ? rounded : rounded - 1;
+}
+
+function looksLikePng(buffer) {
+  if (!Buffer.isBuffer(buffer) || buffer.length < 8) {
+    return false;
+  }
+  return (
+    buffer[0] === 0x89 &&
+    buffer[1] === 0x50 &&
+    buffer[2] === 0x4e &&
+    buffer[3] === 0x47 &&
+    buffer[4] === 0x0d &&
+    buffer[5] === 0x0a &&
+    buffer[6] === 0x1a &&
+    buffer[7] === 0x0a
+  );
+}
+
+function normalizeDataUrl(dataUrl) {
+  if (typeof dataUrl !== 'string') {
+    return null;
+  }
+
+  const fixed = dataUrl.trim().replace(';base6,', ';base64,');
+  const match = /^data:image\/([^;]+);base64,([A-Za-z0-9+/=\s]*)$/i.exec(fixed);
+  if (!match) {
+    return null;
+  }
+
+  const mime = match[1].toLowerCase();
+  const base64Payload = match[2].replace(/\s/g, '');
+  if (!base64Payload) {
+    return null;
+  }
+
+  return `data:image/${mime};base64,${base64Payload}`;
 }
 
 function resolveIntervalMs(options, logger) {
@@ -266,6 +318,81 @@ function createRecorder(options = {}) {
     };
   }
 
+  function parseDataUrlPng(dataUrl) {
+    const commaIndex = dataUrl.indexOf(',');
+    if (commaIndex < 0) {
+      return null;
+    }
+    const base64Payload = dataUrl.substring(commaIndex + 1);
+    if (!base64Payload) {
+      return null;
+    }
+    const parsedBuffer = Buffer.from(base64Payload, 'base64');
+    return looksLikePng(parsedBuffer) ? parsedBuffer : null;
+  }
+
+  function resolveSourceThumbnailFromPng(thumbnail, source) {
+    try {
+      const rawPng = Buffer.from(thumbnail.toPNG?.() || []);
+      if (!looksLikePng(rawPng)) {
+        if (rawPng.length) {
+          logger.warn('Screen source thumbnail toPNG returned invalid PNG bytes', {
+            sourceId: source?.id
+          });
+        } else {
+          logger.warn('Screen source thumbnail toPNG returned empty buffer', {
+            sourceId: source?.id
+          });
+        }
+        return null;
+      }
+      return {
+        thumbnailDataUrl: `data:image/png;base64,${rawPng.toString('base64')}`,
+        thumbnailPng: rawPng
+      };
+    } catch (error) {
+      logger.warn('Failed to serialize screen source thumbnail to PNG', {
+        error: error?.message || String(error),
+        sourceId: source?.id
+      });
+      return null;
+    }
+  }
+
+  function resolveSourceThumbnailFromDataUrl(thumbnail, source) {
+    try {
+      const rawDataUrl = normalizeDataUrl(thumbnail.toDataURL?.());
+      if (!rawDataUrl) {
+        logger.warn('Screen source thumbnail toDataURL produced unsupported payload', {
+          sourceId: source?.id
+        });
+        return null;
+      }
+      return {
+        thumbnailDataUrl: rawDataUrl,
+        thumbnailPng: parseDataUrlPng(rawDataUrl)
+      };
+    } catch (error) {
+      logger.warn('Failed to serialize screen source thumbnail to data URL', {
+        error: error?.message || String(error),
+        sourceId: source?.id
+      });
+      return null;
+    }
+  }
+
+  function resolveSourceThumbnailPayload(source) {
+    const thumbnail = source?.thumbnail;
+    if (!thumbnail) {
+      return null;
+    }
+    return (
+      (typeof thumbnail.toPNG === 'function' && resolveSourceThumbnailFromPng(thumbnail, source)) ||
+      (typeof thumbnail.toDataURL === 'function' && resolveSourceThumbnailFromDataUrl(thumbnail, source)) ||
+      null
+    );
+  }
+
   function resolveDisplayForCursor() {
     const displays =
       typeof screen?.getAllDisplays === 'function'
@@ -315,7 +442,14 @@ function createRecorder(options = {}) {
       throw new Error('Target display is required to resolve stills source.');
     }
 
-    const sources = await desktopCapturer.getSources({ types: ['screen'] });
+    const targetCaptureDimensions = resolveCaptureDimensions(targetDisplay);
+    const sources = await desktopCapturer.getSources({
+      types: ['screen'],
+      thumbnailSize: {
+        width: targetCaptureDimensions.captureWidth,
+        height: targetCaptureDimensions.captureHeight
+      }
+    });
     if (!Array.isArray(sources) || sources.length === 0) {
       throw new Error('No screen sources available for stills.');
     }
@@ -330,7 +464,7 @@ function createRecorder(options = {}) {
         })
       : null;
 
-    const source = targetSource || primarySource || sources[0];
+    let source = targetSource || primarySource || sources[0];
     const sourceDisplay =
       findDisplayById(displays, source.display_id) ||
       (targetSource ? targetDisplay : primaryDisplay) ||
@@ -341,15 +475,71 @@ function createRecorder(options = {}) {
         cursorDisplayId: targetDisplay.id,
         fallbackDisplayId: sourceDisplay?.id ?? null
       });
+
+      if (sourceDisplay && source?.thumbnail && typeof source.thumbnail.resize === 'function') {
+        const sourceCaptureDimensions = resolveCaptureDimensions(sourceDisplay);
+        const thumbnailSize = typeof source.thumbnail.getSize === 'function'
+          ? source.thumbnail.getSize()
+          : null;
+        if (
+          thumbnailSize &&
+          (sourceCaptureDimensions.captureWidth !== thumbnailSize.width ||
+            sourceCaptureDimensions.captureHeight !== thumbnailSize.height)
+        ) {
+          const resizedThumbnail = source.thumbnail.resize({
+            width: sourceCaptureDimensions.captureWidth,
+            height: sourceCaptureDimensions.captureHeight
+          });
+          if (resizedThumbnail) {
+            source = {
+              ...source,
+              thumbnail: resizedThumbnail
+            };
+          }
+        }
+      }
     }
 
     const { captureWidth, captureHeight } = resolveCaptureDimensions(sourceDisplay);
+    let sourceThumbnail = possiblyCorruptThumbnailPayload(resolveSourceThumbnailPayload(source));
+    if (!sourceThumbnail) {
+      logger.warn('No capture source thumbnail with requested size; retrying without thumbnailSize', {
+        sourceId: source?.id,
+        displayId: sourceDisplay?.id
+      });
+
+      const fallbackSources = await desktopCapturer.getSources({
+        types: ['screen']
+      });
+      if (Array.isArray(fallbackSources) && fallbackSources.length > 0) {
+        const fallbackTargetSource = fallbackSources.find(function (candidate) {
+          return String(candidate.display_id) === String(targetDisplay.id);
+        });
+        const fallbackPrimarySource = primaryDisplay
+          ? fallbackSources.find(function (candidate) {
+              return String(candidate.display_id) === String(primaryDisplay.id);
+            })
+          : null;
+        source = fallbackTargetSource || fallbackPrimarySource || fallbackSources[0];
+        sourceThumbnail = possiblyCorruptThumbnailPayload(resolveSourceThumbnailPayload(source));
+      }
+    }
+
+    if (!sourceThumbnail) {
+      logger.warn('No thumbnail available for capture source.', {
+        sourceId: source?.id,
+        displayId: sourceDisplay?.id
+      });
+      throw new Error('No thumbnail available for capture source.');
+    }
 
     return {
       sourceId: source.id,
       captureWidth,
       captureHeight,
-      sourceDisplay: getDisplaySnapshot(sourceDisplay)
+      sourceDisplay: getDisplaySnapshot(sourceDisplay),
+      thumbnailDataUrl: sourceThumbnail.thumbnailDataUrl,
+      thumbnailPng: sourceThumbnail.thumbnailPng
     };
   }
 
@@ -388,27 +578,12 @@ function createRecorder(options = {}) {
     const nextSourceDetails = await resolveCaptureSourceForDisplay(displayContext);
 
     if (isSameCaptureSource(sourceDetails, nextSourceDetails)) {
+      sourceDetails = nextSourceDetails;
       return sourceDetails;
     }
 
     const previousSource = sourceDetails;
-    if (previousSource) {
-      const stopResult = await tryStopRendererCapture({ timeoutMs: STOP_TIMEOUT_MS });
-      if (!stopResult.ok) {
-        throw stopResult.error || new Error('Failed to stop previous display capture.');
-      }
-    }
-
-    try {
-      await startRendererCapture(nextSourceDetails, reason || 'capture-source-update');
-      sourceDetails = nextSourceDetails;
-    } catch (error) {
-      if (previousSource) {
-        sourceDetails = null;
-      }
-      throw error;
-    }
-
+    sourceDetails = nextSourceDetails;
     if (previousSource) {
       logger.log('Recording capture source switched to cursor display', {
         reason: reason || 'capture-source-update',
@@ -462,6 +637,11 @@ function createRecorder(options = {}) {
         window.webContents.send('screen-stills:capture', {
           requestId,
           filePath,
+          sourceId: activeSourceDetails.sourceId,
+          captureWidth: activeSourceDetails.captureWidth,
+          captureHeight: activeSourceDetails.captureHeight,
+          thumbnailDataUrl: activeSourceDetails.thumbnailDataUrl,
+          thumbnailPng: activeSourceDetails.thumbnailPng,
           format: CAPTURE_CONFIG.format
         });
         await waitForStatus(requestId, STOP_TIMEOUT_MS, ['captured']);
@@ -550,20 +730,26 @@ function createRecorder(options = {}) {
             await startRendererCapture(initialSourceDetails, 'session-start');
           }
           sourceDetails = initialSourceDetails;
+          await captureNext();
+          scheduleCaptureLoop();
+          return { ok: true, sessionId: sessionStore.sessionId, sessionDir: sessionStore.sessionDir };
         } catch (error) {
-          sessionStore.finalize('start_failed');
-          sessionStore = null;
+          if (sessionStore) {
+            sessionStore.finalize('start_failed');
+          }
           if (queueStore) {
             queueStore.close();
             queueStore = null;
           }
+          sessionStore = null;
           sourceDetails = null;
+          if (captureWindow && !captureTimer) {
+            await tryStopRendererCapture({ timeoutMs: STOP_TIMEOUT_MS }).catch(function () {
+              // best effort cleanup on startup failure
+            });
+          }
           throw error;
         }
-
-        await captureNext();
-        scheduleCaptureLoop();
-        return { ok: true, sessionId: sessionStore.sessionId, sessionDir: sessionStore.sessionDir };
       }
 
       let didRetry = false;
