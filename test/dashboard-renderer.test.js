@@ -581,9 +581,9 @@ test('wizard permission check is click-driven and denied state shows settings sh
 
     assert.equal(checkCalls, 1)
     assert.equal(elements['wizard-check-permissions'].textContent, 'Check Permissions')
-    assert.equal(elements['wizard-check-permissions'].classList.contains('bg-red-600'), true)
+    assert.equal(elements['wizard-check-permissions'].classList.contains('border-indigo-600'), true)
     assert.equal(elements['permissions-check-permissions'].textContent, 'Check Permissions')
-    assert.equal(elements['permissions-check-permissions'].classList.contains('bg-red-600'), true)
+    assert.equal(elements['permissions-check-permissions'].classList.contains('border-indigo-600'), true)
     assert.equal(elements['wizard-open-screen-recording-settings'].classList.contains('hidden'), false)
     assert.equal(elements['permissions-open-screen-recording-settings'].classList.contains('hidden'), false)
     assert.equal(elements['wizard-recording-toggle-section'].classList.contains('hidden'), true)
@@ -623,9 +623,9 @@ test('wizard permission check granted state reveals recording toggle', async () 
 
     assert.equal(checkCalls, 1)
     assert.equal(elements['wizard-check-permissions'].textContent, 'Granted')
-    assert.equal(elements['wizard-check-permissions'].classList.contains('bg-emerald-600'), true)
+    assert.equal(elements['wizard-check-permissions'].classList.contains('border-emerald-600'), true)
     assert.equal(elements['permissions-check-permissions'].textContent, 'Granted')
-    assert.equal(elements['permissions-check-permissions'].classList.contains('bg-emerald-600'), true)
+    assert.equal(elements['permissions-check-permissions'].classList.contains('border-emerald-600'), true)
     assert.equal(elements['wizard-open-screen-recording-settings'].classList.contains('hidden'), true)
     assert.equal(elements['permissions-open-screen-recording-settings'].classList.contains('hidden'), true)
     assert.equal(elements['wizard-recording-toggle-section'].classList.contains('hidden'), false)
@@ -783,7 +783,7 @@ test('completed wizard can navigate to Permissions and Install Skill sections', 
   }
 })
 
-test('wizard step 2 re-checks permissions even when recording is already enabled', async () => {
+test('wizard step 2 does not auto-check permissions when recording is already enabled', async () => {
   let checkCalls = 0
   const familiar = createFamiliar({
     getSettings: async () => ({
@@ -817,13 +817,13 @@ test('wizard step 2 re-checks permissions even when recording is already enabled
     await elements['wizard-next'].click()
     await flushPromises()
 
-    assert.equal(checkCalls, 1)
+    assert.equal(checkCalls, 0)
     assert.equal(elements['wizard-check-permissions'].textContent, 'Check Permissions')
-    assert.equal(elements['wizard-check-permissions'].classList.contains('bg-red-600'), true)
+    assert.equal(elements['wizard-check-permissions'].classList.contains('border-indigo-600'), true)
     assert.equal(elements['permissions-check-permissions'].textContent, 'Check Permissions')
-    assert.equal(elements['permissions-check-permissions'].classList.contains('bg-red-600'), true)
-    assert.equal(elements['wizard-open-screen-recording-settings'].classList.contains('hidden'), false)
-    assert.equal(elements['permissions-open-screen-recording-settings'].classList.contains('hidden'), false)
+    assert.equal(elements['permissions-check-permissions'].classList.contains('border-indigo-600'), true)
+    assert.equal(elements['wizard-open-screen-recording-settings'].classList.contains('hidden'), true)
+    assert.equal(elements['permissions-open-screen-recording-settings'].classList.contains('hidden'), true)
     assert.equal(elements['wizard-recording-toggle-section'].classList.contains('hidden'), true)
     assert.equal(elements['permissions-recording-toggle-section'].classList.contains('hidden'), true)
   } finally {

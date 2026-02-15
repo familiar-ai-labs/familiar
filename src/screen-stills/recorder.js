@@ -492,7 +492,7 @@ function createRecorder(options = {}) {
     }
   }
 
-  async function start({ contextFolderPath } = {}) {
+  async function start({ contextFolderPath, skipPermissionCheck = false } = {}) {
     if (startInProgress) {
       return startInProgress;
     }
@@ -510,7 +510,7 @@ function createRecorder(options = {}) {
       if (!contextFolderPath) {
         throw new Error('Context folder path missing for recording.');
       }
-      if (!isScreenRecordingPermissionGranted()) {
+      if (!skipPermissionCheck && !isScreenRecordingPermissionGranted()) {
         throw new Error('Screen Recording permission is not granted. Enable Familiar in System Settings \u2192 Privacy & Security \u2192 Screen Recording.');
       }
 

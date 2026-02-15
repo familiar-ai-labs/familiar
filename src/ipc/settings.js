@@ -1,13 +1,99 @@
 const { app, BrowserWindow, dialog, ipcMain } = require('electron');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
 const { loadSettings, saveSettings, validateContextFolderPath } = require('../settings');
 const {
   getScreenRecordingPermissionStatus,
-  requestScreenRecordingPermission,
   openScreenRecordingSettings
 } = require('../screen-capture/permissions');
 const { resolveHarnessSkillPath } = require('../skills/installer');
+const { createRecorder } = require('../screen-stills/recorder');
 
 let onSettingsSaved = null;
+const PROBE_RECORDER_WINDOW_NAME = 'familiar-permission-probe-';
+const PERMISSION_PROBE_TIMEOUT_MS = 12_000;
+let permissionProbeRecorder = null;
+
+const readPermissionProbeRecorder = () => {
+  if (!permissionProbeRecorder) {
+    permissionProbeRecorder = createRecorder({ logger: console });
+  }
+  return permissionProbeRecorder;
+};
+
+const toPermissionProbeResult = (permissionStatus, message = null) => ({
+  permissionStatus,
+  granted: permissionStatus === 'granted',
+  ok: permissionStatus === 'granted',
+  message
+});
+
+async function runPermissionProbe() {
+  const permissionStatus = getScreenRecordingPermissionStatus();
+  if (permissionStatus === 'unavailable') {
+    return {
+      ok: false,
+      permissionStatus,
+      granted: false,
+      message: 'Screen Recording permissions are not applicable on this platform.'
+    };
+  }
+
+  const probeFolder = fs.mkdtempSync(path.join(os.tmpdir(), PROBE_RECORDER_WINDOW_NAME));
+  const recorder = readPermissionProbeRecorder();
+
+  let started = false;
+  try {
+    const startedResult = await recorder.start({
+      contextFolderPath: probeFolder,
+      skipPermissionCheck: true
+    });
+    if (!startedResult || startedResult.ok === false) {
+      const status = getScreenRecordingPermissionStatus();
+      return {
+        ...toPermissionProbeResult(status, startedResult?.message || 'Dummy recording did not start.'),
+        ok: false
+      };
+    }
+    started = true;
+    await recorder.stop({ reason: 'permission-check' });
+    started = false;
+    return {
+      ...toPermissionProbeResult('granted'),
+      ok: true
+    };
+  } catch (error) {
+    const status = getScreenRecordingPermissionStatus();
+    return {
+      ...toPermissionProbeResult(status, error?.message || 'Dummy recording failed.'),
+      ok: status === 'granted'
+    };
+  } finally {
+    if (started) {
+      let cleanupTimer = null;
+      try {
+        await Promise.race([
+          recorder.stop({ reason: 'permission-check-cleanup' }),
+          new Promise((_, reject) => {
+            cleanupTimer = setTimeout(() => reject(new Error('Dummy recording stop timeout.')), PERMISSION_PROBE_TIMEOUT_MS);
+          })
+        ]);
+      } catch (error) {
+        console.error('Failed to stop permission probe recorder', { message: error?.message || String(error) });
+      } finally {
+        if (cleanupTimer) {
+          clearTimeout(cleanupTimer);
+        }
+      }
+    }
+    try {
+      fs.rmSync(probeFolder, { recursive: true, force: true });
+    } catch (error) {
+      console.error('Failed to clean permission probe folder', { message: error?.message || String(error) });
+    }
+  }
+}
 
 function readAppVersion() {
     try {
@@ -257,7 +343,7 @@ function handleCheckScreenRecordingPermission() {
 }
 
 async function handleRequestScreenRecordingPermission() {
-    const result = await requestScreenRecordingPermission();
+    const result = await runPermissionProbe();
     if (result?.ok === true) {
         const permissionStatus = result.permissionStatus;
         const granted = result.granted === true;

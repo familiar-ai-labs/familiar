@@ -114,14 +114,14 @@
         button.classList.remove(
           'bg-indigo-600',
           'hover:bg-indigo-700',
+          'text-indigo-600',
+          'hover:text-indigo-700',
           'border-indigo-600',
           'hover:border-indigo-700',
-          'bg-red-600',
-          'hover:bg-red-700',
-          'border-red-600',
-          'hover:border-red-700',
           'bg-emerald-600',
           'hover:bg-emerald-700',
+          'text-emerald-600',
+          'hover:text-emerald-700',
           'border-emerald-600',
           'hover:border-emerald-700'
         )
@@ -130,24 +130,16 @@
         } else {
           if (wizardPermissionState === 'granted') {
             button.classList.add(
-              'bg-emerald-600',
-              'hover:bg-emerald-700',
+              'text-emerald-600',
+              'hover:text-emerald-700',
               'border-emerald-600',
               'hover:border-emerald-700'
             )
             button.textContent = 'Granted'
-          } else if (wizardPermissionState === 'denied') {
-            button.classList.add(
-              'bg-red-600',
-              'hover:bg-red-700',
-              'border-red-600',
-              'hover:border-red-700'
-            )
-            button.textContent = 'Check Permissions'
           } else {
             button.classList.add(
-              'bg-indigo-600',
-              'hover:bg-indigo-700',
+              'text-indigo-600',
+              'hover:text-indigo-700',
               'border-indigo-600',
               'hover:border-indigo-700'
             )
@@ -283,24 +275,6 @@
       }
     }
 
-    const handleCheckPermissionsState = async () => {
-      if (!familiar.checkScreenRecordingPermission || isCheckingPermission) {
-        return
-      }
-      isCheckingPermission = true
-      updateStillsUI()
-      try {
-        const result = await familiar.checkScreenRecordingPermission()
-        wizardPermissionState = result?.permissionStatus === 'granted' ? 'granted' : 'denied'
-      } catch (error) {
-        console.error('Failed to check Screen Recording permission', error)
-        wizardPermissionState = 'denied'
-      } finally {
-        isCheckingPermission = false
-        updateStillsUI()
-      }
-    }
-
     const handleOpenScreenRecordingSettings = async () => {
       if (!familiar.openScreenRecordingSettings) {
         return
@@ -315,12 +289,6 @@
       }
     }
 
-    const handleWizardStepChange = (step) => {
-      if (Number(step) !== 2) {
-        return
-      }
-      void handleCheckPermissionsState()
-    }
 
     const startStatusPoller = () => {
       if (statusPoller) {
@@ -415,7 +383,6 @@
 
     return {
       handleSectionChange,
-      handleWizardStepChange,
       updateStillsUI,
       updateRecordingUI: updateStillsUI
     }
