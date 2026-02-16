@@ -11,7 +11,8 @@ const path = require('node:path');
 const { registerIpcHandlers } = require('./ipc');
 const { showWindow } = require('./utils/window');
 const { ensureHomebrewPath } = require('./utils/path');
-const { loadSettings } = require('./settings');
+const { loadSettings, saveSettings } = require('./settings');
+const { buildTrayMenuTemplate } = require('./menu');
 const { initLogging } = require('./logger');
 const { showToast } = require('./toast');
 const {
@@ -85,13 +86,13 @@ const handleStillsError = ({ message, willRetry, retryDelayMs, attempt } = {}) =
 
     // If the controller is automatically retrying, only toast once to avoid spam.
     if (willRetry === true && Number.isFinite(attempt) && attempt > 1) {
-        console.warn('Recording issue (retrying)', { message, retryDelayMs, attempt });
+        console.warn('Capturing issue (retrying)', { message, retryDelayMs, attempt });
         return;
     }
 
-    console.warn('Recording issue', { message });
+    console.warn('Capturing issue', { message });
     showToast({
-        title: 'Recording issue',
+        title: 'Capturing issue',
         body: willRetry === true && Number.isFinite(retryDelayMs)
             ? `${message}\nRetrying in ${Math.round(retryDelayMs / 1000)}s...`
             : message,
@@ -107,13 +108,13 @@ const startScreenStills = async () => {
     try {
         const result = await screenStillsController.manualStart();
         if (result && result.ok === false) {
-            handleStillsError({ message: result.message || 'Failed to start recording.' });
+            handleStillsError({ message: result.message || 'Failed to start capturing.' });
         }
         return result;
     } catch (error) {
-        console.error('Failed to start recording', error);
-        handleStillsError({ message: 'Failed to start recording.' });
-        return { ok: false, message: 'Failed to start recording.' };
+        console.error('Failed to start capturing', error);
+        handleStillsError({ message: 'Failed to start capturing.' });
+        return { ok: false, message: 'Failed to start capturing.' };
     }
 };
 
@@ -124,13 +125,19 @@ const pauseScreenStills = async () => {
     try {
         const result = await screenStillsController.manualPause();
         if (result && result.ok === false) {
-            handleStillsError({ message: result.message || 'Failed to pause recording.' });
+            handleStillsError({ message: result.message || 'Failed to pause capturing.' });
         }
         return result;
     } catch (error) {
-        console.error('Failed to pause recording', error);
-        handleStillsError({ message: 'Failed to pause recording.' });
-        return { ok: false, message: 'Failed to pause recording.' };
+        console.error('Failed to pause capturing', error);
+        handleStillsError({ message: 'Failed to pause capturing.' });
+        return { ok: false, message: 'Failed to pause capturing.' };
+    }
+};
+
+const refreshTrayMenu = () => {
+    if (trayMenuController && typeof trayMenuController.refreshTrayMenuFromSettings === 'function') {
+        trayMenuController.refreshTrayMenuFromSettings();
     }
 };
 
@@ -144,14 +151,35 @@ const handleRecordingToggleAction = async () => {
     const isPaused = state.manualPaused === true;
 
     if (isPaused) {
-        return startScreenStills();
+        const result = await startScreenStills();
+        refreshTrayMenu();
+        return result;
     }
 
     if (isRecording) {
-        return pauseScreenStills();
+        const result = await pauseScreenStills();
+        refreshTrayMenu();
+        return result;
     }
 
-    return startScreenStills();
+    if (state.enabled !== true) {
+        try {
+            saveSettings({ alwaysRecordWhenActive: true });
+            updateScreenCaptureFromSettings();
+            if (settingsWindow && !settingsWindow.isDestroyed()) {
+                settingsWindow.webContents.send('settings:alwaysRecordWhenActiveChanged', {
+                    enabled: true
+                });
+            }
+        } catch (error) {
+            console.error('Failed to enable capturing from tray action', error);
+            return { ok: false, message: 'Failed to enable capturing.' };
+        }
+    }
+
+    const result = await startScreenStills();
+    refreshTrayMenu();
+    return result;
 };
 
 const getCurrentScreenStillsState = () => {
@@ -182,6 +210,27 @@ const getScreenStillsStatusPayload = () => {
         permissionStatus: state.permissionStatus,
         permissionGranted: state.permissionGranted
     };
+};
+
+const getTrayRecordingActionLabel = () => {
+    if (!trayHandlers) {
+        return '';
+    }
+    const recordingState = getCurrentScreenStillsState();
+    const template = buildTrayMenuTemplate({
+        ...trayHandlers,
+        recordingPaused: recordingState.manualPaused === true,
+        recordingState,
+    });
+    return template && template[0] && typeof template[0].label === 'string'
+        ? template[0].label
+        : '';
+};
+
+const runCaptureActionAndRefreshTray = async (action) => {
+    const result = await action();
+    refreshTrayMenu();
+    return result;
 };
 
 if (process.platform === 'linux' && (isE2E || isCI)) {
@@ -337,7 +386,7 @@ ipcMain.handle('screenStills:getStatus', () => {
 });
 
 ipcMain.handle('screenStills:start', async () => {
-    const result = await startScreenStills();
+    const result = await runCaptureActionAndRefreshTray(startScreenStills);
     return {
         ...result,
         ...getScreenStillsStatusPayload()
@@ -345,7 +394,7 @@ ipcMain.handle('screenStills:start', async () => {
 });
 
 ipcMain.handle('screenStills:pause', async () => {
-    const result = await pauseScreenStills();
+    const result = await runCaptureActionAndRefreshTray(pauseScreenStills);
     return {
         ...result,
         ...getScreenStillsStatusPayload()
@@ -354,7 +403,7 @@ ipcMain.handle('screenStills:pause', async () => {
 
 ipcMain.handle('screenStills:stop', async () => {
     console.warn('screenStills:stop called; treating as pause');
-    const result = await pauseScreenStills();
+    const result = await runCaptureActionAndRefreshTray(pauseScreenStills);
     return {
         ...result,
         ...getScreenStillsStatusPayload()
@@ -370,6 +419,29 @@ ipcMain.handle('screenStills:simulateIdle', (_event, payload = {}) => {
         screenStillsController.simulateIdle(idleSeconds);
     }
     return { ok: true };
+});
+
+ipcMain.handle('e2e:tray:getRecordingLabel', () => {
+    if (!isE2E) {
+        return { ok: false, message: 'Tray E2E action is only available in E2E mode.' };
+    }
+    return {
+        ok: true,
+        label: getTrayRecordingActionLabel()
+    };
+});
+
+ipcMain.handle('e2e:tray:clickRecordingAction', async () => {
+    if (!isE2E) {
+        return { ok: false, message: 'Tray E2E action is only available in E2E mode.' };
+    }
+    const actionResult = await handleRecordingToggleAction();
+    return {
+        ok: true,
+        actionResult,
+        label: getTrayRecordingActionLabel(),
+        status: getScreenStillsStatusPayload()
+    };
 });
 
 app.whenReady().then(() => {

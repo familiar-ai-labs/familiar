@@ -13,11 +13,25 @@ test('buildTrayMenuTemplate returns the expected items', () => {
     const labels = template.filter((item) => item.label).map((item) => item.label);
 
     assert.deepEqual(labels, [
-        'Start Recording',
+        'Start Capturing',
         'Settings',
         'Quit',
     ]);
     assert.equal(template[2].type, 'separator');
+});
+
+test('buildTrayMenuTemplate uses recording label while active', () => {
+    const recordingState = { state: 'recording', manualPaused: false };
+    const template = buildTrayMenuTemplate({
+        onRecordingPause: () => {},
+        onOpenSettings: () => {},
+        onQuit: () => {},
+        recordingState
+    });
+
+    const recordingItem = template.find((item) => item.label === 'Capturing (click to pause)');
+
+    assert.ok(recordingItem);
 });
 
 test('settings click does not trigger quit', () => {
@@ -80,7 +94,7 @@ test('recording item click does not trigger settings', () => {
         onQuit: () => {},
     });
 
-    const recordingItem = template.find((item) => item.label === 'Start Recording');
+    const recordingItem = template.find((item) => item.label === 'Start Capturing');
     assert.ok(recordingItem);
 
     recordingItem.click();
@@ -89,15 +103,36 @@ test('recording item click does not trigger settings', () => {
     assert.equal(openSettingsCalls, 0);
 });
 
-test('buildTrayMenuTemplate uses resume label when paused', () => {
+test('buildTrayMenuTemplate uses minute pause label while paused', () => {
     const template = buildTrayMenuTemplate({
         onRecordingPause: () => {},
         onOpenSettings: () => {},
         onQuit: () => {},
         recordingPaused: true,
+        recordingState: {
+            manualPaused: true,
+            pauseRemainingMs: 61000
+        }
     });
 
-    const recordingItem = template.find((item) => item.label === 'Resume Recording');
+    const recordingItem = template.find((item) => item.label === 'Paused for 2m (click to resume)');
+
+    assert.ok(recordingItem);
+});
+
+test('buildTrayMenuTemplate keeps paused label at 1m when remaining time is below one minute', () => {
+    const template = buildTrayMenuTemplate({
+        onRecordingPause: () => {},
+        onOpenSettings: () => {},
+        onQuit: () => {},
+        recordingPaused: true,
+        recordingState: {
+            manualPaused: true,
+            pauseRemainingMs: 0
+        }
+    });
+
+    const recordingItem = template.find((item) => item.label === 'Paused for 1m (click to resume)');
 
     assert.ok(recordingItem);
 });

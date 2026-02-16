@@ -222,6 +222,15 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
     apis
   })
 
+  if (typeof familiar.onAlwaysRecordWhenActiveChanged === 'function') {
+    familiar.onAlwaysRecordWhenActiveChanged((payload) => {
+      if (!payload || typeof payload.enabled !== 'boolean') {
+        return
+      }
+      state.setAlwaysRecordWhenActiveValue(payload.enabled)
+    })
+  }
+
   const SECTION_META = {
     wizard: {
       title: 'Setup Wizard',
@@ -236,7 +245,7 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
       subtitle: 'Check for new versions and download when available.'
     },
     recording: {
-      title: 'Recording',
+      title: 'Capturing',
       subtitle: 'Choose whether processing runs in the cloud or locally.'
     },
     'install-skill': {
@@ -448,7 +457,8 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
       permissionRecordingToggleSections
     },
     familiar,
-    getState: state.getRecordingState
+    getState: state.getRecordingState,
+    setAlwaysRecordWhenActiveValue: state.setAlwaysRecordWhenActiveValue
   })
 
   apis.processingEngineApi = runBootstrapProcessingEngine({
