@@ -182,8 +182,9 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
   const recordingOpenFolderButton = document.getElementById('recording-open-folder')
   const permissionCheckButtons = selectAll('[data-action="check-permissions"]')
   const openScreenRecordingSettingsButtons = selectAll('[data-action="open-screen-recording-settings"]')
-  const wizardOpenScreenRecordingSettingsNotes = [
-    document.getElementById('wizard-open-screen-recording-settings-note')
+  const openScreenRecordingSettingsNotes = [
+    document.getElementById('wizard-open-screen-recording-settings-note'),
+    ...selectAll('[data-open-screen-recording-settings-note]')
   ].filter(Boolean)
   const permissionRecordingToggleSections = selectAll('[data-role="permission-recording-toggle-section"]')
   const appVersionLabel = document.getElementById('app-version')
@@ -237,10 +238,6 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
     recording: {
       title: 'Recording',
       subtitle: 'Choose whether processing runs in the cloud or locally.'
-    },
-    permissions: {
-      title: 'Permissions',
-      subtitle: 'Check Screen Recording access and enable capture while active.'
     },
     'install-skill': {
       title: 'Install Skill',
@@ -447,7 +444,7 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
       recordingOpenFolderButton,
       permissionCheckButtons,
       openScreenRecordingSettingsButtons,
-      wizardOpenScreenRecordingSettingsNotes,
+      openScreenRecordingSettingsNotes,
       permissionRecordingToggleSections
     },
     familiar,

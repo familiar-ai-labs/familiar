@@ -226,13 +226,11 @@ const createElements = () => {
     'section-wizard': new TestElement(),
     'section-updates': new TestElement(),
     'section-recording': new TestElement(),
-    'section-permissions': new TestElement(),
     'section-install-skill': new TestElement(),
     'general-nav': new TestElement(),
     'wizard-nav': new TestElement(),
     'updates-nav': new TestElement(),
     'recording-nav': new TestElement(),
-    'permissions-nav': new TestElement(),
     'install-skill-nav': new TestElement()
   }
 
@@ -307,8 +305,6 @@ const createElements = () => {
   elements['updates-nav'].dataset.sectionTarget = 'updates'
   elements['section-recording'].dataset.sectionPane = 'recording'
   elements['recording-nav'].dataset.sectionTarget = 'recording'
-  elements['section-permissions'].dataset.sectionPane = 'permissions'
-  elements['permissions-nav'].dataset.sectionTarget = 'permissions'
   elements['section-install-skill'].dataset.sectionPane = 'install-skill'
   elements['install-skill-nav'].dataset.sectionTarget = 'install-skill'
 
@@ -745,7 +741,7 @@ test('cannot navigate back to wizard after wizard completion', async () => {
   }
 })
 
-test('completed wizard can navigate to Permissions and Install Skill sections', async () => {
+test('completed wizard can navigate to Install Skill section', async () => {
   const familiar = createFamiliar({
     getSettings: async () => ({
       contextFolderPath: '',
@@ -769,10 +765,6 @@ test('completed wizard can navigate to Permissions and Install Skill sections', 
     loadRenderer()
     document.trigger('DOMContentLoaded')
     await flushPromises()
-
-    await elements['permissions-nav'].click()
-    await flushPromises()
-    assert.equal(elements['section-title'].textContent, 'Permissions')
 
     await elements['install-skill-nav'].click()
     await flushPromises()

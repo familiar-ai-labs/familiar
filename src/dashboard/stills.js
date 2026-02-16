@@ -26,10 +26,7 @@
       permissionCheckButtons = [],
       openScreenRecordingSettingsButtons = [],
       permissionRecordingToggleSections = [],
-      wizardCheckPermissionsButton,
-      wizardOpenScreenRecordingSettingsButton,
-      wizardOpenScreenRecordingSettingsNotes,
-      wizardRecordingToggleSection
+      openScreenRecordingSettingsNotes = []
     } = elements
 
     const toArray = (value) => {
@@ -40,19 +37,16 @@
     }
 
     const allPermissionCheckButtons = [
-      ...toArray(permissionCheckButtons),
-      ...toArray(wizardCheckPermissionsButton)
+      ...toArray(permissionCheckButtons)
     ]
     const allOpenScreenRecordingSettingsButtons = [
-      ...toArray(openScreenRecordingSettingsButtons),
-      ...toArray(wizardOpenScreenRecordingSettingsButton)
+      ...toArray(openScreenRecordingSettingsButtons)
     ]
     const allOpenScreenRecordingSettingsNotes = [
-      ...toArray(wizardOpenScreenRecordingSettingsNotes)
+      ...toArray(openScreenRecordingSettingsNotes)
     ]
     const allPermissionRecordingToggleSections = [
-      ...toArray(permissionRecordingToggleSections),
-      ...toArray(wizardRecordingToggleSection)
+      ...toArray(permissionRecordingToggleSections)
     ]
 
     let currentScreenStillsState = 'disabled'

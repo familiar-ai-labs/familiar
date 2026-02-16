@@ -45,7 +45,7 @@
       ...toArray(skillInstallPaths),
       ...toArray(skillInstallPath)
     ]
-    const allSkillCursorRestartNotes = [
+    const allSkillInstallCursorRestartNotes = [
       ...toArray(skillCursorRestartNotes),
       ...toArray(skillCursorRestartNote)
     ]
@@ -55,16 +55,17 @@
 
     const setStatus = (message) => setMessage(allSkillInstallStatuses, message)
     const setError = (message) => setMessage(allSkillInstallErrors, message)
-    const setPath = (message) => {
+    const setInstallPath = (pathValue) => {
+      const value = pathValue || ''
       for (const pathElement of allSkillInstallPaths) {
-        const value = message || ''
         pathElement.textContent = value ? `Install path: ${value}` : ''
         pathElement.classList.toggle('hidden', !value)
       }
     }
+    const clearInstallPath = () => setInstallPath('')
     const setCursorRestartNoteVisibility = (harness) => {
       const shouldShow = harness === 'cursor'
-      for (const note of allSkillCursorRestartNotes) {
+      for (const note of allSkillInstallCursorRestartNotes) {
         note.classList.toggle('hidden', !shouldShow)
       }
     }
@@ -101,7 +102,7 @@
     const checkInstallStatus = async (harness) => {
       setCursorRestartNoteVisibility(harness)
       if (!isReady || !harness) {
-        setPath('')
+        clearInstallPath()
         return { ok: false }
       }
 
@@ -109,24 +110,30 @@
       try {
         const result = await familiar.getSkillInstallStatus({ harness })
         if (result && result.ok) {
-          setPath(result.path || '')
-          setSkillInstalled(Boolean(result.installed))
           if (result.installed && result.path) {
+            clearInstallPath()
             setStatus(`Installed at ${result.path}`)
+            setSkillInstalled(true)
+          } else if (result.installed) {
+            clearInstallPath()
+            setStatus('Installed.')
+            setSkillInstalled(true)
           } else {
+            setInstallPath(result.path || '')
             setStatus('')
+            setSkillInstalled(false)
           }
           return { ok: true, installed: Boolean(result.installed), path: result.path || '' }
         }
-        setPath('')
+        clearInstallPath()
         setSkillInstalled(false)
         setStatus('')
-        setPath(result?.path || '')
+        setInstallPath(result?.path || '')
         setError(result?.message || 'Failed to check skill installation.')
         return { ok: false, path: result?.path || '' }
       } catch (error) {
         console.error('Failed to check skill status', error)
-        setPath('')
+        clearInstallPath()
         setSkillInstalled(false)
         setStatus('')
         setError('Failed to check skill installation.')
@@ -141,7 +148,7 @@
       const harness = event?.target?.value || ''
       setCursorRestartNoteVisibility(harness)
       clearMessages()
-      setPath('')
+      clearInstallPath()
       setSkillInstalled(false)
       setSkillHarness(harness)
       updateInstallButtonState()
@@ -171,26 +178,26 @@
       }
 
       clearMessages()
+      clearInstallPath()
       setStatus('Installing...')
       setSkillInstalled(false)
       updateInstallButtonState()
 
       try {
         const result = await familiar.installSkill({ harness: currentSkillHarness })
-	        if (result && result.ok) {
-	          setSkillInstalled(true)
-	          if (result.path) {
-	            setPath(result.path)
-	            setStatus(`Installed at ${result.path}`)
+        if (result && result.ok) {
+          setSkillInstalled(true)
+          if (result.path) {
+            setStatus(`Installed at ${result.path}`)
           } else {
             setStatus('Installed.')
-	          }
-	          console.log('Skill installed', { harness: currentSkillHarness, path: result.path })
-	          await persistSkillInstaller({ harness: currentSkillHarness, installPath: result.path || '' })
-	          return
-	        }
-	        setSkillInstalled(false)
-	        setStatus('')
+          }
+          console.log('Skill installed', { harness: currentSkillHarness, path: result.path })
+          await persistSkillInstaller({ harness: currentSkillHarness, installPath: result.path || '' })
+          return
+        }
+        setSkillInstalled(false)
+        setStatus('')
         setError(result?.message || 'Failed to install skill.')
       } catch (error) {
         console.error('Failed to install skill', error)

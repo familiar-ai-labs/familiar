@@ -48,6 +48,18 @@ class TestInput {
   }
 }
 
+const setMessage = (elements, message) => {
+  const targets = Array.isArray(elements) ? elements : [elements]
+  const value = message || ''
+  for (const element of targets) {
+    if (!element) {
+      continue
+    }
+    element.textContent = value
+    element.classList.toggle('hidden', !value)
+  }
+}
+
 const loadWizardSkillModule = () => {
   const modulePath = path.join(__dirname, '..', 'src', 'dashboard', 'wizard-skill.js')
   const resolvedPath = require.resolve(modulePath)
@@ -55,7 +67,7 @@ const loadWizardSkillModule = () => {
   return require(modulePath)
 }
 
-const createHarness = ({ currentSkillHarness = '' } = {}) => {
+const createHarness = ({ currentSkillHarness = '', getStatus, installResult } = {}) => {
   const state = { currentSkillHarness }
   const claude = new TestInput('claude')
   const codex = new TestInput('codex')
@@ -66,14 +78,28 @@ const createHarness = ({ currentSkillHarness = '' } = {}) => {
   const settingsCursor = new TestInput('cursor')
   const wizardSkillCursorRestartNote = { classList: new ClassList() }
   const settingsSkillCursorRestartNote = { classList: new ClassList() }
+  const wizardSkillPath = { classList: new ClassList(), textContent: '' }
+  const settingsSkillPath = { classList: new ClassList(), textContent: '' }
+  const wizardSkillStatus = { classList: new ClassList(), textContent: '' }
+  const settingsSkillStatus = { classList: new ClassList(), textContent: '' }
 
   const familiar = {
-    getSkillInstallStatus: async () => ({ ok: true, installed: false, path: '' }),
-    installSkill: async () => ({ ok: true, path: '/tmp/skills/familiar' })
+    getSkillInstallStatus: async () => {
+      if (typeof getStatus === 'function') {
+        return getStatus()
+      }
+      return { ok: true, installed: false, path: '' }
+    },
+    installSkill: async () => {
+      if (installResult) {
+        return installResult
+      }
+      return { ok: true, path: '/tmp/skills/familiar' }
+    }
   }
 
   const registry = loadWizardSkillModule()
-  registry.createWizardSkill({
+  const api = registry.createWizardSkill({
     elements: {
       skillHarnessInputs: [
         claude,
@@ -89,8 +115,12 @@ const createHarness = ({ currentSkillHarness = '' } = {}) => {
         { disabled: false, addEventListener: () => {} }
       ],
       skillInstallPaths: [
-        { classList: new ClassList(), textContent: '' },
-        { classList: new ClassList(), textContent: '' }
+        wizardSkillPath,
+        settingsSkillPath
+      ],
+      skillInstallStatuses: [
+        wizardSkillStatus,
+        settingsSkillStatus
       ],
       skillCursorRestartNotes: [wizardSkillCursorRestartNote, settingsSkillCursorRestartNote]
     },
@@ -100,7 +130,7 @@ const createHarness = ({ currentSkillHarness = '' } = {}) => {
       state.currentSkillHarness = harness
     },
     setSkillInstalled: () => {},
-    setMessage: () => {},
+    setMessage,
     updateWizardUI: () => {}
   })
 
@@ -112,7 +142,12 @@ const createHarness = ({ currentSkillHarness = '' } = {}) => {
     settingsCodex,
     settingsCursor,
     wizardSkillCursorRestartNote,
-    settingsSkillCursorRestartNote
+    settingsSkillCursorRestartNote,
+    wizardSkillPath,
+    settingsSkillPath,
+    wizardSkillStatus,
+    settingsSkillStatus,
+    api
   }
 }
 
@@ -172,6 +207,35 @@ test('wizard skill shows cursor restart note on init when cursor is already sele
 
     assert.equal(wizardSkillCursorRestartNote.classList.contains('hidden'), false)
     assert.equal(settingsSkillCursorRestartNote.classList.contains('hidden'), false)
+  } finally {
+    global.window = priorWindow
+  }
+})
+
+test('wizard skill shows install path until installed, then shows installed path sentence', async () => {
+  const priorWindow = global.window
+  global.window = {}
+  let statusResult = { ok: true, installed: false, path: '/tmp/.codex/skills/familiar' }
+
+  try {
+    const { codex, wizardSkillPath, wizardSkillStatus, api } = createHarness({
+      getStatus: () => statusResult
+    })
+
+    await codex.triggerChange()
+
+    assert.equal(wizardSkillPath.textContent, 'Install path: /tmp/.codex/skills/familiar')
+    assert.equal(wizardSkillPath.classList.contains('hidden'), false)
+    assert.equal(wizardSkillStatus.textContent, '')
+    assert.equal(wizardSkillStatus.classList.contains('hidden'), true)
+
+    statusResult = { ok: true, installed: true, path: '/tmp/.codex/skills/familiar' }
+    await api.checkInstallStatus('codex')
+
+    assert.equal(wizardSkillPath.textContent, '')
+    assert.equal(wizardSkillPath.classList.contains('hidden'), true)
+    assert.equal(wizardSkillStatus.textContent, 'Installed at /tmp/.codex/skills/familiar')
+    assert.equal(wizardSkillStatus.classList.contains('hidden'), false)
   } finally {
     global.window = priorWindow
   }
