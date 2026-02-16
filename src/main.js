@@ -24,8 +24,8 @@ const { getScreenRecordingPermissionStatus } = require('./screen-capture/permiss
 const { getReduceTransparencyEnabled } = require('./tray/appearance');
 const { getTrayIconPathForMenuBar } = require('./tray/icon');
 
-const trayIconPath = path.join(__dirname, 'icon.png');
-const trayIconNoWhiteBackgroundPath = path.join(__dirname, 'icon_no_white_background.png');
+const trayIconPath = path.join(__dirname, 'icon_white_owl.png');
+const trayIconBlackOwlPath = path.join(__dirname, 'icon_black_owl.png');
 
 let tray = null;
 let trayHandlers = null;
@@ -260,7 +260,7 @@ function createTray() {
                 nativeTheme
             }),
             defaultIconPath: trayIconPath,
-            reduceTransparencyIconPath: trayIconNoWhiteBackgroundPath,
+            reduceTransparencyIconPath: trayIconBlackOwlPath,
         });
 
         const trayIconBase = nativeImage.createFromPath(preferredPath);

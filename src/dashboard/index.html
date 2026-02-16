@@ -133,22 +133,6 @@
               </svg>
               Install Skill
             </button>
-            <button
-              class="sidebar-item"
-              data-section-target="updates"
-              data-active="false"
-              role="tab"
-              aria-controls="section-updates"
-              aria-selected="false"
-              type="button"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                <path d="M12 3v4m0 0 3-3m-3 3-3-3" />
-                <path d="M5 11a7 7 0 1 0 14 0" />
-                <path d="M12 19v2" />
-              </svg>
-              Updates
-            </button>
           </nav>
 
           <div class="px-3 mt-auto">
@@ -167,8 +151,8 @@
 
           <div id="settings-content" class="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-slim">
             <!-- General -->
-            <section id="section-general" data-section-pane="general" role="tabpanel" aria-label="General settings" class="flex flex-col">
-              <div class="space-y-6">
+            <section id="section-general" data-section-pane="general" role="tabpanel" aria-label="General settings" class="flex flex-col h-full">
+              <div class="space-y-6 flex-1">
                 <section class="space-y-2">
                 <div class="flex items-center justify-between">
                   <label for="context-folder-path" class="section-label">Context Folder</label>
@@ -210,17 +194,40 @@
                 </section>
               </div>
 
-              <div class="mt-6 pt-2 space-y-3">
-                <div class="flex items-center justify-end gap-3">
-                  <span id="copy-log-status" data-setting-status="copy-log-status" class="text-xs text-emerald-600 dark:text-emerald-400 hidden" aria-live="polite"></span>
-                  <span id="copy-log-error" data-setting-error="copy-log-error" class="text-xs text-red-600 dark:text-red-400 hidden" role="alert" aria-live="polite"></span>
-                  <button
-                    id="copy-debug-log"
-                    data-action="copy-debug-log"
-                    type="button"
-                    class="px-3 py-1.5 text-xs font-medium bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-md text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                    title="Copies ~/.familiar/logs/familiar.log to your clipboard"
-                  >Copy Debug Log</button>
+              <div class="mt-auto pt-4">
+                <div class="flex items-end justify-between gap-4">
+                  <div class="max-w-[60%]">
+                    <div class="flex items-center flex-wrap gap-2">
+                      <button
+                        id="updates-check"
+                        data-action="updates-check"
+                        type="button"
+                        class="px-3 py-2 text-xs font-semibold bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                      >Check for Updates</button>
+                      <span id="updates-status" data-setting-status="updates-status" class="text-xs text-emerald-600 dark:text-emerald-400 hidden" aria-live="polite"></span>
+                    </div>
+                    <div id="updates-progress" class="space-y-2 hidden" aria-live="polite">
+                      <div class="h-2 w-full rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+                        <div id="updates-progress-bar" class="h-full bg-emerald-500 transition-[width] duration-200" style="width: 0%"></div>
+                      </div>
+                      <span id="updates-progress-label" class="text-xs text-zinc-500 dark:text-zinc-400 hidden"></span>
+                    </div>
+                    <p id="updates-error" data-setting-error="updates-error" class="text-xs text-red-600 dark:text-red-400 hidden" role="alert" aria-live="polite"></p>
+                  </div>
+
+                  <div class="flex items-center justify-end gap-3">
+                    <div class="flex flex-col items-end gap-1">
+                      <span id="copy-log-status" data-setting-status="copy-log-status" class="text-xs text-emerald-600 dark:text-emerald-400 hidden" aria-live="polite"></span>
+                      <span id="copy-log-error" data-setting-error="copy-log-error" class="text-xs text-red-600 dark:text-red-400 hidden" role="alert" aria-live="polite"></span>
+                    </div>
+                    <button
+                      id="copy-debug-log"
+                      data-action="copy-debug-log"
+                      type="button"
+                      class="px-3 py-1.5 text-xs font-medium bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-md text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Copies ~/.familiar/logs/familiar.log to your clipboard"
+                    >Copy Debug Log</button>
+                  </div>
                 </div>
               </div>
 		            </section>
@@ -354,21 +361,6 @@
 
             <section id="section-install-skill" data-section-pane="install-skill" role="tabpanel" aria-label="Install skill settings" class="space-y-6 hidden">
               <div data-component-mount="install-skill" class="max-w-[360px] space-y-5"></div>
-            </section>
-
-            <!-- Updates -->
-            <section id="section-updates" data-section-pane="updates" role="tabpanel" aria-label="Updates" class="space-y-4 hidden">
-              <div class="flex flex-wrap items-center gap-2">
-                <button id="updates-check" data-action="updates-check" type="button" class="px-3 py-2 text-xs font-semibold bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">Check for Updates</button>
-                <span id="updates-status" data-setting-status="updates-status" class="text-xs text-emerald-600 dark:text-emerald-400 hidden" aria-live="polite"></span>
-              </div>
-              <div id="updates-progress" class="space-y-2 hidden" aria-live="polite">
-                <div class="h-2 w-full rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
-                  <div id="updates-progress-bar" class="h-full bg-emerald-500 transition-[width] duration-200" style="width: 0%"></div>
-                </div>
-                <span id="updates-progress-label" class="text-xs text-zinc-500 dark:text-zinc-400 hidden"></span>
-              </div>
-              <p id="updates-error" data-setting-error="updates-error" class="text-xs text-red-600 dark:text-red-400 hidden" role="alert" aria-live="polite"></p>
             </section>
 
           </div>
