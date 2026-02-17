@@ -6,6 +6,8 @@ const path = require('node:path');
 const { isScreenRecordingPermissionGranted } = require('../screen-capture/permissions');
 const { createSessionStore, recoverIncompleteSessions } = require('./session-store');
 const { createStillsQueue } = require('./stills-queue');
+const { computeDHash, isSimilarFrame, DEFAULT_DEDUP_THRESHOLD } = require('../screen-capture/frame-hash');
+const { getWindowMetadata } = require('../screen-capture/window-metadata');
 
 const CAPTURE_CONFIG = Object.freeze({
   format: 'webp',
@@ -101,6 +103,18 @@ function resolveIntervalMs(options, logger) {
 function createRecorder(options = {}) {
   const logger = options.logger || console;
   const intervalMs = resolveIntervalMs(options, logger);
+  const dedupEnabled = options.deduplicationEnabled !== false; // default on
+  const dedupThreshold = Number.isFinite(options.deduplicationThreshold)
+    ? options.deduplicationThreshold
+    : DEFAULT_DEDUP_THRESHOLD;
+  // Allow test injection of a no-op metadata provider
+  const windowMetadataProvider = typeof options._windowMetadataProvider === 'function'
+    ? options._windowMetadataProvider
+    : getWindowMetadata;
+  // excludedBundleIds: Set for O(1) lookup
+  let excludedBundleIds = new Set(
+    Array.isArray(options.excludedBundleIds) ? options.excludedBundleIds : []
+  );
 
   let captureWindow = null;
   let windowReadyPromise = null;
@@ -113,6 +127,7 @@ function createRecorder(options = {}) {
   let stopInProgress = null;
   let sourceDetails = null;
   let queueStore = null;
+  let lastSavedHash = null; // dHash of the most recently saved frame
 
   function isCaptureAlreadyInProgressError(error) {
     const message = error?.message || '';
@@ -533,13 +548,17 @@ function createRecorder(options = {}) {
       throw new Error('No thumbnail available for capture source.');
     }
 
+    // Compute perceptual hash while NativeImage is still in scope (before serialisation)
+    const thumbnailHash = source?.thumbnail ? computeDHash(source.thumbnail) : null;
+
     return {
       sourceId: source.id,
       captureWidth,
       captureHeight,
       sourceDisplay: getDisplaySnapshot(sourceDisplay),
       thumbnailDataUrl: sourceThumbnail.thumbnailDataUrl,
-      thumbnailPng: sourceThumbnail.thumbnailPng
+      thumbnailPng: sourceThumbnail.thumbnailPng,
+      thumbnailHash
     };
   }
 
@@ -633,6 +652,28 @@ function createRecorder(options = {}) {
       if (!IS_E2E_FAKE_CAPTURE) {
         const requestId = randomUUID();
         const activeSourceDetails = await ensureCaptureSource('capture-tick');
+
+        // Skip duplicate frames: if the new frame is visually identical to the
+        // last saved frame, discard it rather than writing to disk and enqueueing.
+        if (dedupEnabled && isSimilarFrame(lastSavedHash, activeSourceDetails.thumbnailHash, dedupThreshold)) {
+          logger.log('Skipping duplicate still: frame unchanged');
+          return;
+        }
+
+        // Fetch window metadata BEFORE writing the file so we can apply
+        // app exclusion without wasting disk I/O on a file we'll delete.
+        // windowMetadataProvider is injectable for tests (defaults to getWindowMetadata).
+        const windowMetadata = await windowMetadataProvider().catch(
+          () => ({ appBundleId: null, appName: null, windowTitle: null, url: null })
+        );
+
+        // App exclusion: skip writing the file entirely if the frontmost
+        // app is in the user's blocked-apps list.
+        if (windowMetadata?.appBundleId && excludedBundleIds.has(windowMetadata.appBundleId)) {
+          logger.log('Skipping excluded app capture', { bundleId: windowMetadata.appBundleId });
+          return;
+        }
+
         const window = await ensureWindowReady();
         window.webContents.send('screen-stills:capture', {
           requestId,
@@ -645,7 +686,11 @@ function createRecorder(options = {}) {
           format: CAPTURE_CONFIG.format
         });
         await waitForStatus(requestId, STOP_TIMEOUT_MS, ['captured']);
+
+        // Update last-saved hash ONLY after a confirmed write
+        lastSavedHash = activeSourceDetails.thumbnailHash;
         sourceDetails = activeSourceDetails || sourceDetails;
+        activeSourceDetails._windowMetadata = windowMetadata;
       } else {
         createFakeCaptureFile(filePath);
       }
@@ -660,7 +705,8 @@ function createRecorder(options = {}) {
             queueStore.enqueueCapture({
               imagePath: filePath,
               sessionId: sessionStore.sessionId,
-              capturedAt: nextCapture.capturedAt
+              capturedAt: nextCapture.capturedAt,
+              windowMetadata: sourceDetails?._windowMetadata || null
             });
           } catch (error) {
             logger.error('Failed to enqueue still capture', { error, filePath });
@@ -806,6 +852,7 @@ function createRecorder(options = {}) {
 
       sessionStore = null;
       sourceDetails = null;
+      lastSavedHash = null; // reset dedup state for next session
       return { ok: true };
     })();
 
@@ -853,10 +900,15 @@ function createRecorder(options = {}) {
     return recoverIncompleteSessions(contextFolderPath, logger);
   }
 
+  function updateExcludedApps(bundleIds) {
+    excludedBundleIds = new Set(Array.isArray(bundleIds) ? bundleIds : []);
+  }
+
   return {
     start,
     stop,
-    recover
+    recover,
+    updateExcludedApps
   };
 }
 

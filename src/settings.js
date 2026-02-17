@@ -156,6 +156,29 @@ const saveSettings = (settings, options = {}) => {
         payload.skillInstaller = { ...existingSkillInstaller };
     }
 
+    // excludedBundleIds: array of macOS bundle IDs to never capture
+    const hasExcludedBundleIds = Object.prototype.hasOwnProperty.call(settings, 'excludedBundleIds');
+    if (hasExcludedBundleIds) {
+        const rawIds = settings.excludedBundleIds;
+        payload.excludedBundleIds = Array.isArray(rawIds)
+            ? rawIds.filter((id) => typeof id === 'string' && id.trim())
+            : [];
+    } else if (Array.isArray(existing.excludedBundleIds)) {
+        payload.excludedBundleIds = existing.excludedBundleIds;
+    }
+
+    // deduplication settings
+    const hasDeduplication = Object.prototype.hasOwnProperty.call(settings, 'deduplication');
+    if (hasDeduplication) {
+        const raw = settings.deduplication && typeof settings.deduplication === 'object' ? settings.deduplication : {};
+        payload.deduplication = {
+            enabled: raw.enabled !== false,
+            threshold: Number.isFinite(raw.threshold) ? Math.max(0, Math.min(64, raw.threshold)) : 10,
+        };
+    } else if (existing.deduplication && typeof existing.deduplication === 'object') {
+        payload.deduplication = existing.deduplication;
+    }
+
     fs.writeFileSync(settingsPath, JSON.stringify(payload, null, 2), 'utf-8');
 
     return settingsPath;

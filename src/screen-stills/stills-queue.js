@@ -36,11 +36,25 @@ const createStillsQueue = ({ contextFolderPath, logger = console } = {}) => {
       markdown_path TEXT,
       last_error TEXT,
       created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
+      updated_at TEXT NOT NULL,
+      app_bundle_id TEXT,
+      app_name TEXT,
+      window_title TEXT,
+      url TEXT
     );
     CREATE INDEX IF NOT EXISTS idx_stills_queue_status_captured
       ON stills_queue (status, captured_at);
   `)
+
+  // Migrate existing databases: add metadata columns if absent
+  const existingCols = db.prepare(`PRAGMA table_info(stills_queue)`).all().map((r) => r.name)
+  const metadataCols = { app_bundle_id: 'TEXT', app_name: 'TEXT', window_title: 'TEXT', url: 'TEXT' }
+  for (const [col, type] of Object.entries(metadataCols)) {
+    if (!existingCols.includes(col)) {
+      db.exec(`ALTER TABLE stills_queue ADD COLUMN ${col} ${type}`)
+      logger.log(`Migrated stills_queue: added column ${col}`)
+    }
+  }
 
   logger.log('Stills queue initialized', { dbPath })
 
@@ -55,8 +69,12 @@ const createStillsQueue = ({ contextFolderPath, logger = console } = {}) => {
       markdown_path,
       last_error,
       created_at,
-      updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      updated_at,
+      app_bundle_id,
+      app_name,
+      window_title,
+      url
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
 
   const pendingStmt = db.prepare(`
@@ -114,7 +132,7 @@ const createStillsQueue = ({ contextFolderPath, logger = console } = {}) => {
     WHERE status = ? AND updated_at < ?
   `)
 
-  const enqueueCapture = ({ imagePath, sessionId, capturedAt, provider, model } = {}) => {
+  const enqueueCapture = ({ imagePath, sessionId, capturedAt, provider, model, windowMetadata } = {}) => {
     if (!imagePath) {
       throw new Error('imagePath is required to enqueue still capture.')
     }
@@ -125,6 +143,7 @@ const createStillsQueue = ({ contextFolderPath, logger = console } = {}) => {
       throw new Error('capturedAt is required to enqueue still capture.')
     }
 
+    const meta = windowMetadata && typeof windowMetadata === 'object' ? windowMetadata : {}
     const now = new Date().toISOString()
     const info = insertStmt.run(
       imagePath,
@@ -136,7 +155,11 @@ const createStillsQueue = ({ contextFolderPath, logger = console } = {}) => {
       null,
       null,
       now,
-      now
+      now,
+      meta.appBundleId || null,
+      meta.appName || null,
+      meta.windowTitle || null,
+      meta.url || null
     )
 
     if (info.changes > 0) {
