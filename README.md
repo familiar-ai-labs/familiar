@@ -181,7 +181,107 @@ We're getting answers that would be impossible even for the highest-paid coach. 
 
 With Familiar, AI can.
 
-## Installation for geeks: use GitHub Releases
+
+## Community-inspired use cases
+
+## Predict
+
+> Predict what is going to happen next week and tell me how to make it 10x more impactful.
+_Credit: Juraj Mojik_
+
+### Discover
+
+> Given that you have been looking at my screen all the time, and what you know about me, what valuable questions might I ask you that make use of the fact that you've been looking at my screen and the information found there? 
+
+Or less about meta-use cases, and just pure help: 
+> Given that you have been looking at my screen all day, and what you know about me, what can you help me with?
+
+> Based on the past week, what were the most crucial design choices that we took for <X>? look for opinionated design choices that influence the usability of the app. 
+
+## Seeing connections
+
+> What two things from this week seem unrelated but might actually connect? Based on what you've seen me do 
+
+## Updates
+
+> Write my weekly status update based on what I _actually did_ this week. 
+
+## Relationships
+
+> What's every interaction I've had with this person in the last month? What's the emotional arc? What did I promise? What did they promise?
+
+> What do you see in my interactions with [person]?
+
+> Who am I not talking to enough?
+
+> Which people from my network have I not interacted with in 2+ weeks who I used to engage with regularly?
+
+> What's everything I know about [company/person] based on what's crossed my screen?
+
+## Knowledge transfer
+
+> I'm going on parental leave. Based on my last 3 months of screen history, what does my replacement need to know about each initiative?
+
+> What context does my engineering lead need from me that I keep having to repeat in meetings?
+
+> What decisions did we make this week that aren't documented anywhere?
+
+> I just had a breakthrough solving a problem. Reconstruct the exact sequence so I can document/communicate it.
+
+## Productivity
+
+> I've been bouncing between message threads and docs for two hours and my brain is soup. What are the open threads I still need to respond to?
+
+> Given everything on my plate right now, what would you cut and in what order?
+
+> What's on my to-dos that I haven't even looked at in a week?
+
+> Am I operating as fast as I could be?
+
+> What did I just do for like the last 10 minutes? Where'd that time go?
+
+> What did I friggin do today? Would you say I was effective? 
+
+> What's the thing I keep circling back to but never finishing?
+
+> Where does my deep work actually happen, and what kills it?
+
+## Focus
+
+> What did I commit to that I've forgotten based on what you've seen me do?
+
+> Am I in the right track? Am I focusing on the right things given my goals and strategy?
+
+> Are there any shadow initiatives or threads or goals I'm working on that I should make explicit
+
+## Emerging patterns
+
+> What's emerging? What am I doing more of this week compared to last week?
+
+> What's new in my world this week that wasn't there before?
+
+> When I'm procrastinating, what do I gravitate toward? What does that say about what I actually enjoy?
+
+## Recall
+
+> I was in back-to-back meetings all day. What did I commit to across all of them?
+
+> The retention number I saw on the dashboard Tuesday is different from what they're presenting right now. I know it. Show me what I saw.
+
+> The VP just asked "didn't we already decide this?" and I KNOW we did. I saw it somewhere -- Slack, a doc, maybe a comment in Jira. But I can't find it in any of those tools. Where was it?
+
+> What did I do instinctively that someone less experienced would need spelled out?
+
+> I saw something about X a few days ago, I think in a chat or maybe a webpage. Find it.
+
+> What was the exact wording someone used when they said that thing about [topic]?
+
+> Before my call with Z next week, show me everything I've seen or read about them recently.
+
+> I forgot to take a screenshot during a webinar I was running last night. Just ask Familiar to find it so I can share it.
+_Credit: Sumant Subrahmanya_
+
+## Installation: use GitHub Releases
 
 1. Open the releases page: `https://github.com/familiar-software/familiar/releases`
 2. Download the latest `.dmg`:
