@@ -167,9 +167,10 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
   const copyLogButtons = selectAll('[data-action="copy-debug-log"]')
   const copyLogErrors = selectAll('[data-setting-error="copy-log-error"]')
   const copyLogStatuses = selectAll('[data-setting-status="copy-log-status"]')
-  const deleteLast30MinutesButtons = selectAll('[data-action="storage-delete-last-30-min"]')
-  const deleteLast30MinutesErrors = selectAll('[data-setting-error="storage-delete-last-30-min-error"]')
-  const deleteLast30MinutesStatuses = selectAll('[data-setting-status="storage-delete-last-30-min-status"]')
+  const deleteFilesButtons = selectAll('[data-action="storage-delete-files"]')
+  const deleteFilesWindowSelects = selectAll('[data-setting="storage-delete-window"]')
+  const deleteFilesErrors = selectAll('[data-setting-error="storage-delete-files-error"]')
+  const deleteFilesStatuses = selectAll('[data-setting-status="storage-delete-files-status"]')
 
   const llmProviderSelects = selectAll('[data-setting="llm-provider"]')
   const llmProviderErrors = selectAll('[data-setting-error="llm-provider-error"]')
@@ -493,9 +494,10 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
       copyLogButtons,
       copyLogErrors,
       copyLogStatuses,
-      deleteLast30MinutesButtons,
-      deleteLast30MinutesErrors,
-      deleteLast30MinutesStatuses,
+      deleteFilesButtons,
+      deleteFilesWindowSelects,
+      deleteFilesErrors,
+      deleteFilesStatuses,
       llmProviderSelects,
       llmProviderErrors,
       llmKeyInputs,

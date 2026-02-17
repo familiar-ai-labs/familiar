@@ -118,7 +118,12 @@ class TestDocument {
 
 const flushPromises = () => new Promise((resolve) => setImmediate(resolve))
 
+const storageDeleteWindow = require('../src/storage/delete-window')
+
 const loadRenderer = () => {
+  if (global.window && !global.window.FamiliarStorageDeleteWindow) {
+    global.window.FamiliarStorageDeleteWindow = storageDeleteWindow
+  }
   const rendererPath = path.join(__dirname, '..', 'src', 'dashboard', 'renderer.js')
   const resolvedRendererPath = require.resolve(rendererPath)
   delete require.cache[resolvedRendererPath]
@@ -151,7 +156,7 @@ const createFamiliar = (overrides = {}) => ({
   pauseScreenStills: async () => ({ ok: true, state: 'armed', isRecording: false, manualPaused: true }),
   stopScreenStills: async () => ({ ok: true, state: 'armed', isRecording: false, manualPaused: false }),
   checkForUpdates: async () => ({ ok: true, updateInfo: null }),
-  deleteLast30MinutesAt: async () => ({ ok: true, message: 'Deleted files from the last 30 minutes' }),
+  deleteFilesAt: async () => ({ ok: true, message: 'Deleted files from 15 minutes' }),
   ...overrides
 })
 
@@ -214,9 +219,10 @@ const createElements = () => {
     'updates-progress': new TestElement(),
     'updates-progress-bar': new TestElement(),
     'updates-progress-label': new TestElement(),
-    'storage-delete-last-30-min': new TestElement(),
-    'storage-delete-last-30-min-status': new TestElement(),
-    'storage-delete-last-30-min-error': new TestElement(),
+    'storage-delete-files': new TestElement(),
+    'storage-delete-window': new TestElement(),
+    'storage-delete-files-status': new TestElement(),
+    'storage-delete-files-error': new TestElement(),
     'wizard-back': new TestElement(),
     'wizard-next': new TestElement(),
     'wizard-done': new TestElement(),
@@ -298,9 +304,11 @@ const createElements = () => {
   elements['updates-check'].dataset.action = 'updates-check'
   elements['updates-status'].dataset.settingStatus = 'updates-status'
   elements['updates-error'].dataset.settingError = 'updates-error'
-  elements['storage-delete-last-30-min'].dataset.action = 'storage-delete-last-30-min'
-  elements['storage-delete-last-30-min-status'].dataset.settingStatus = 'storage-delete-last-30-min-status'
-  elements['storage-delete-last-30-min-error'].dataset.settingError = 'storage-delete-last-30-min-error'
+  elements['storage-delete-files'].dataset.action = 'storage-delete-files'
+  elements['storage-delete-window'].dataset.setting = 'storage-delete-window'
+  elements['storage-delete-files-status'].dataset.settingStatus = 'storage-delete-files-status'
+  elements['storage-delete-files-error'].dataset.settingError = 'storage-delete-files-error'
+  elements['storage-delete-window'].value = '15m'
 
   elements['wizard-back'].dataset.action = 'wizard-back'
   elements['wizard-next'].dataset.action = 'wizard-next'
@@ -839,7 +847,8 @@ test('storage delete button is disabled when context folder is empty', async () 
     loadRenderer()
     document.trigger('DOMContentLoaded')
     await flushPromises()
-    assert.equal(elements['storage-delete-last-30-min'].disabled, true)
+    assert.equal(elements['storage-delete-files'].disabled, true)
+    assert.equal(elements['storage-delete-window'].disabled, true)
   } finally {
     global.document = priorDocument
     global.window = priorWindow
@@ -853,9 +862,9 @@ test('storage delete button triggers cleanup and shows success message', async (
       contextFolderPath: '/tmp/context',
       wizardCompleted: true
     }),
-    deleteLast30MinutesAt: async (requestedAtMs) => {
-      calls.push(requestedAtMs)
-      return { ok: true, message: 'Deleted files from the last 30 minutes' }
+    deleteFilesAt: async ({ requestedAtMs, deleteWindow }) => {
+      calls.push({ requestedAtMs, deleteWindow })
+      return { ok: true, message: 'Deleted files from 1 hour' }
     }
   })
 
@@ -871,13 +880,15 @@ test('storage delete button triggers cleanup and shows success message', async (
     document.trigger('DOMContentLoaded')
     await flushPromises()
 
-    await elements['storage-delete-last-30-min'].click()
+    elements['storage-delete-window'].value = '1h'
+    await elements['storage-delete-files'].click()
     await flushPromises()
 
     assert.equal(calls.length, 1)
-    assert.equal(typeof calls[0], 'number')
-    assert.equal(elements['storage-delete-last-30-min-status'].textContent, 'Deleted files from the last 30 minutes')
-    assert.equal(elements['storage-delete-last-30-min-error'].textContent, '')
+    assert.equal(typeof calls[0].requestedAtMs, 'number')
+    assert.equal(calls[0].deleteWindow, '1h')
+    assert.equal(elements['storage-delete-files-status'].textContent, 'Deleted files from 1 hour')
+    assert.equal(elements['storage-delete-files-error'].textContent, '')
   } finally {
     global.document = priorDocument
     global.window = priorWindow

@@ -8,9 +8,24 @@ const {
   STILLS_DIR_NAME,
   STILLS_MARKDOWN_DIR_NAME
 } = require('../const');
+const {
+  STORAGE_DELETE_WINDOW_PRESETS,
+  DEFAULT_STORAGE_DELETE_WINDOW
+} = require('../storage/delete-window');
 
-const DELETE_RECENT_WINDOW_FRAME_MS = 30 * 60 * 1000;
 const LEADING_TIMESTAMP_PATTERN = /^(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z)/;
+
+function resolveDeleteWindow(deleteWindow) {
+  const requestedWindow =
+    typeof deleteWindow === 'string' &&
+    Object.prototype.hasOwnProperty.call(STORAGE_DELETE_WINDOW_PRESETS, deleteWindow)
+      ? deleteWindow
+      : DEFAULT_STORAGE_DELETE_WINDOW;
+  return {
+    key: requestedWindow,
+    ...STORAGE_DELETE_WINDOW_PRESETS[requestedWindow]
+  };
+}
 
 function toRealPathSafe(targetPath) {
   if (typeof targetPath !== 'string' || targetPath.trim().length === 0) {
@@ -253,20 +268,24 @@ function pruneQueueRows({ contextFolderPath, stillFiles = [], markdownFiles = []
   }
 }
 
-async function handleDeleteLast30Minutes(event, payload = {}, options = {}) {
+async function handleDeleteFiles(event, payload = {}, options = {}) {
   const logger = options.logger || console;
   const showMessageBox = options.showMessageBox || dialog.showMessageBox.bind(dialog);
   const deleteFile = options.deleteFile || ((targetPath) => fs.promises.unlink(targetPath));
   const settingsLoader = options.settingsLoader || loadSettings;
   const collectFiles = options.collectFilesWithinWindow || collectFilesWithinWindow;
   const deleteIfAllowed = options.deleteFileIfAllowed || deleteFileIfAllowed;
+  const deleteWindow = resolveDeleteWindow(payload?.deleteWindow);
   const requestedAtMs = Number.isFinite(payload?.requestedAtMs)
     ? Math.floor(payload.requestedAtMs)
     : Date.now();
 
   const shouldAutoConfirmForE2E =
     process.env.FAMILIAR_E2E === '1' &&
-    process.env.FAMILIAR_E2E_AUTO_CONFIRM_DELETE_LAST_30_MIN === '1';
+    (
+      process.env.FAMILIAR_E2E_AUTO_CONFIRM_DELETE_FILES === '1' ||
+      process.env.FAMILIAR_E2E_AUTO_CONFIRM_DELETE_LAST_30_MIN === '1'
+    );
   const confirmResult = shouldAutoConfirmForE2E
     ? { response: 1 }
     : await showMessageBox(BrowserWindow.fromWebContents(event?.sender) || null, {
@@ -274,8 +293,8 @@ async function handleDeleteLast30Minutes(event, payload = {}, options = {}) {
       buttons: ['Cancel', 'Yes'],
       defaultId: 0,
       cancelId: 0,
-      title: 'Delete last 30 minutes',
-      message: 'Are you sure you want to delete files from the last 30 minutes?',
+      title: `Delete files (${deleteWindow.label})`,
+      message: `Are you sure you want to delete files from ${deleteWindow.label}?`,
       detail: 'This includes stills, stills-markdown, and clipboard mirror files.'
     });
 
@@ -303,7 +322,7 @@ async function handleDeleteLast30Minutes(event, payload = {}, options = {}) {
     FAMILIAR_BEHIND_THE_SCENES_DIR_NAME,
     STILLS_MARKDOWN_DIR_NAME
   );
-  const startMs = requestedAtMs - DELETE_RECENT_WINDOW_FRAME_MS;
+  const startMs = deleteWindow.durationMs === null ? 0 : requestedAtMs - deleteWindow.durationMs;
   const allowedRoots = [stillsRoot, stillsMarkdownRoot];
   const realStillsRoot = toRealPathSafe(stillsRoot);
   const stillFiles = collectFiles(stillsRoot, {
@@ -358,7 +377,9 @@ async function handleDeleteLast30Minutes(event, payload = {}, options = {}) {
     logger
   });
 
-  logger.log('Storage cleanup processed last 30 minutes window', {
+  logger.log('Storage cleanup processed delete window', {
+    deleteWindow: deleteWindow.key,
+    deleteWindowLabel: deleteWindow.label,
     requestedAt: new Date(requestedAtMs).toISOString(),
     windowStart: new Date(startMs).toISOString(),
     windowEnd: new Date(requestedAtMs).toISOString(),
@@ -381,19 +402,20 @@ async function handleDeleteLast30Minutes(event, payload = {}, options = {}) {
 
   return {
     ok: true,
-    message: 'Deleted files from the last 30 minutes'
+    message: `Deleted files from ${deleteWindow.label}`
   };
 }
 
 function registerStorageHandlers() {
-  ipcMain.handle('storage:deleteLast30Minutes', handleDeleteLast30Minutes);
+  ipcMain.handle('storage:deleteFiles', handleDeleteFiles);
   console.log('Storage IPC handlers registered');
 }
 
 module.exports = {
   registerStorageHandlers,
-  handleDeleteLast30Minutes,
+  handleDeleteFiles,
   parseLeadingTimestampMs,
+  resolveDeleteWindow,
   collectFilesWithinWindow,
   deleteFileIfAllowed,
   pruneManifestCaptures,

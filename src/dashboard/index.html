@@ -339,19 +339,45 @@
 
         <section id="section-storage" data-section-pane="storage" role="tabpanel" aria-label="Storage settings"
           class="space-y-6 hidden">
-          <section class="space-y-3 max-w-[420px]">
-            <h3 class="text-sm font-medium text-zinc-900 dark:text-zinc-100">Delete recent captures</h3>
-            <p class="text-xs text-zinc-500 dark:text-zinc-400">
-              Permanently deletes stills and stills-markdown files from the last 30 minutes.
-            </p>
-            <div class="flex items-center gap-3">
-              <button id="storage-delete-last-30-min" data-action="storage-delete-last-30-min" type="button"
-                class="px-3 py-2 text-xs font-semibold bg-red-600 hover:bg-red-700 border border-red-600 hover:border-red-700 rounded-lg text-white focus:outline-none transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">Delete
-                Last 30 Minutes</button>
-              <span id="storage-delete-last-30-min-status" data-setting-status="storage-delete-last-30-min-status"
+          <section class="space-y-4 max-w-[520px]">
+            <h3 class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Danger Zone</h3>
+            <div
+              class="border border-red-300 dark:border-red-900/50 rounded-lg overflow-hidden divide-y divide-red-100 dark:divide-red-900/40">
+              <div class="p-4 bg-white dark:bg-transparent space-y-3">
+                <div class="space-y-1">
+                  <h4 class="text-xs font-semibold text-zinc-900 dark:text-zinc-100">Delete recent files</h4>
+                  <p class="text-xs text-zinc-500 dark:text-zinc-400">
+                    Permanently deletes all captured files and their markdown representations from the selected time window.
+                  </p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <div class="relative">
+                    <select id="storage-delete-window" data-setting="storage-delete-window"
+                      class="appearance-none bg-zinc-50 dark:bg-white/5 hover:bg-zinc-100 dark:hover:bg-white/10 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 text-xs font-medium rounded-md py-2 pl-3 pr-8 outline-none focus:ring-2 focus:ring-red-500/20 cursor-pointer transition-all">
+                      <option value="15m">15 minutes</option>
+                      <option value="1h">1 hour</option>
+                      <option value="1d">1 day</option>
+                      <option value="7d">7 days</option>
+                      <option value="all">all time</option>
+                    </select>
+                    <svg viewBox="0 0 24 24"
+                      class="w-3.5 h-3.5 absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none"
+                      fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                      <path d="m6 9 6 6 6-6" />
+                    </svg>
+                  </div>
+                  <button id="storage-delete-files" data-action="storage-delete-files" type="button"
+                    class="px-3 py-2 text-[11px] font-medium border border-zinc-200 dark:border-white/10 text-red-600 dark:text-red-400 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-300 dark:hover:border-red-800 focus:outline-none transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                    Delete files
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div>
+              <span id="storage-delete-files-status" data-setting-status="storage-delete-files-status"
                 class="text-xs text-emerald-600 dark:text-emerald-400 hidden" aria-live="polite"></span>
             </div>
-            <p id="storage-delete-last-30-min-error" data-setting-error="storage-delete-last-30-min-error"
+            <p id="storage-delete-files-error" data-setting-error="storage-delete-files-error"
               class="text-xs text-red-600 dark:text-red-400 hidden" role="alert" aria-live="polite"></p>
           </section>
         </section>
@@ -602,6 +628,7 @@
   <script src="./wizard-skill.js"></script>
   <script src="./list-utils.js"></script>
   <script src="./updates.js"></script>
+  <script src="../storage/delete-window.js"></script>
   <script src="../recording-status-indicator.js"></script>
   <script src="./stills.js"></script>
   <script src="./settings.js"></script>

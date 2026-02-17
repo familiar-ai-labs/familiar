@@ -1,5 +1,16 @@
 (function (global) {
   const normalizeStringArray = global?.FamiliarDashboardListUtils?.normalizeStringArray
+  const storageDeleteWindow = global?.FamiliarStorageDeleteWindow
+  const {
+    STORAGE_DELETE_WINDOW_PRESETS,
+    DEFAULT_STORAGE_DELETE_WINDOW
+  } = storageDeleteWindow
+  const isAllowedDeleteWindow = (windowValue) => {
+    if (typeof windowValue !== 'string' || windowValue.length === 0) {
+      return false
+    }
+    return Object.prototype.hasOwnProperty.call(STORAGE_DELETE_WINDOW_PRESETS, windowValue)
+  }
   if (typeof normalizeStringArray !== 'function') {
     throw new Error('FamiliarDashboardListUtils.normalizeStringArray is unavailable')
   }
@@ -43,9 +54,10 @@
       copyLogButtons = [],
       copyLogErrors = [],
       copyLogStatuses = [],
-      deleteLast30MinutesButtons = [],
-      deleteLast30MinutesErrors = [],
-      deleteLast30MinutesStatuses = [],
+      deleteFilesButtons = [],
+      deleteFilesWindowSelects = [],
+      deleteFilesErrors = [],
+      deleteFilesStatuses = [],
       llmProviderSelects = [],
       llmProviderErrors = [],
       llmKeyInputs = [],
@@ -61,7 +73,7 @@
 
     const isReady = Boolean(familiar.pickContextFolder && familiar.saveSettings && familiar.getSettings)
     const canCopyLog = typeof familiar.copyCurrentLogToClipboard === 'function'
-    const canDeleteLast30Minutes = typeof familiar.deleteLast30MinutesAt === 'function'
+    const canDeleteFiles = typeof familiar.deleteFilesAt === 'function'
 
     const saveContextFolderPath = async (contextFolderPath) => {
       if (!isReady) {
@@ -89,11 +101,14 @@
       return false
     }
 
-    const updateDeleteLast30MinutesButtonState = () => {
+    const updateDeleteFilesButtonState = () => {
       const { currentContextFolderPath } = getState()
       const isEnabled = Boolean(currentContextFolderPath)
-      deleteLast30MinutesButtons.forEach((button) => {
+      deleteFilesButtons.forEach((button) => {
         button.disabled = !isEnabled
+      })
+      deleteFilesWindowSelects.forEach((select) => {
+        select.disabled = !isEnabled
       })
     }
 
@@ -259,7 +274,7 @@
         if (appVersionLabel) {
           appVersionLabel.textContent = result.appVersion || ''
         }
-        updateDeleteLast30MinutesButtonState()
+        updateDeleteFilesButtonState()
         return result
       } catch (error) {
         console.error('Failed to load settings', error)
@@ -279,17 +294,28 @@
       setMessage(stillsMarkdownExtractorErrors, message)
       setMessage(alwaysRecordWhenActiveErrors, message)
       setMessage(copyLogErrors, message)
-      setMessage(deleteLast30MinutesErrors, message)
+      setMessage(deleteFilesErrors, message)
       copyLogButtons.forEach((button) => {
         button.disabled = true
       })
-      deleteLast30MinutesButtons.forEach((button) => {
+      deleteFilesButtons.forEach((button) => {
         button.disabled = true
+      })
+      deleteFilesWindowSelects.forEach((select) => {
+        select.disabled = true
       })
       return {
         isReady,
         loadSettings
       }
+    }
+
+    if (deleteFilesWindowSelects.length > 0) {
+      deleteFilesWindowSelects.forEach((select) => {
+        if (!isAllowedDeleteWindow(select.value)) {
+          select.value = DEFAULT_STORAGE_DELETE_WINDOW
+        }
+      })
     }
 
     if (contextFolderChooseButtons.length > 0) {
@@ -304,7 +330,7 @@
               setMessage(contextFolderStatuses, '')
               const saved = await saveContextFolderPath(result.path)
               if (saved) {
-                updateDeleteLast30MinutesButtonState()
+                updateDeleteFilesButtonState()
               }
             } else if (result && result.error) {
               setMessage(contextFolderStatuses, '')
@@ -353,33 +379,43 @@
       }
     }
 
-    if (deleteLast30MinutesButtons.length > 0) {
-      if (!canDeleteLast30Minutes) {
-        setMessage(deleteLast30MinutesErrors, 'Storage cleanup unavailable. Restart the app.')
-        deleteLast30MinutesButtons.forEach((button) => {
+    if (deleteFilesButtons.length > 0) {
+      if (!canDeleteFiles) {
+        setMessage(deleteFilesErrors, 'Storage cleanup unavailable. Restart the app.')
+        deleteFilesButtons.forEach((button) => {
           button.disabled = true
         })
+        deleteFilesWindowSelects.forEach((select) => {
+          select.disabled = true
+        })
       } else {
-        updateDeleteLast30MinutesButtonState()
-        deleteLast30MinutesButtons.forEach((button) => {
+        updateDeleteFilesButtonState()
+        deleteFilesButtons.forEach((button) => {
           button.addEventListener('click', async () => {
             button.disabled = true
-            setMessage(deleteLast30MinutesStatuses, '')
-            setMessage(deleteLast30MinutesErrors, '')
+            setMessage(deleteFilesStatuses, '')
+            setMessage(deleteFilesErrors, '')
             try {
               const requestTimeMs = Date.now()
-              const result = await familiar.deleteLast30MinutesAt(requestTimeMs)
+              const selectedWindow = deleteFilesWindowSelects[0]?.value
+              const deleteWindow = isAllowedDeleteWindow(selectedWindow)
+                ? selectedWindow
+                : DEFAULT_STORAGE_DELETE_WINDOW
+              const result = await familiar.deleteFilesAt({
+                requestedAtMs: requestTimeMs,
+                deleteWindow
+              })
               if (result?.ok) {
-                setMessage(deleteLast30MinutesStatuses, result.message || 'Deleted files from the last 30 minutes')
-                console.log('Storage cleanup completed', { requestedAtMs: requestTimeMs })
+                setMessage(deleteFilesStatuses, result.message || 'Deleted files.')
+                console.log('Storage cleanup completed', { requestedAtMs: requestTimeMs, deleteWindow })
               } else if (!result?.canceled) {
-                setMessage(deleteLast30MinutesErrors, result?.message || 'Failed to delete files.')
+                setMessage(deleteFilesErrors, result?.message || 'Failed to delete files.')
               }
             } catch (error) {
               console.error('Failed to delete recent files', error)
-              setMessage(deleteLast30MinutesErrors, 'Failed to delete files.')
+              setMessage(deleteFilesErrors, 'Failed to delete files.')
             } finally {
-              updateDeleteLast30MinutesButtonState()
+              updateDeleteFilesButtonState()
             }
           })
         })

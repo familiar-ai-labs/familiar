@@ -79,7 +79,16 @@ test('collectFilesWithinWindow aborts when root is outside familiar folder', asy
   });
 });
 
-test('handleDeleteLast30Minutes deletes matching files and prunes manifest captures', async () => {
+test('resolveDeleteWindow falls back to 15m for unsupported values', async () => {
+  await withStorageModule(async ({ storageModule }) => {
+    const resolved = storageModule.resolveDeleteWindow('unknown-window');
+    assert.equal(resolved.key, '15m');
+    assert.equal(resolved.label, '15 minutes');
+    assert.equal(resolved.durationMs, 15 * 60 * 1000);
+  });
+});
+
+test('handleDeleteFiles deletes matching files and prunes manifest captures', async () => {
   await withStorageModule(async ({ storageModule }) => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-storage-ipc-'));
     const contextFolderPath = path.join(root, 'context');
@@ -123,9 +132,12 @@ test('handleDeleteLast30Minutes deletes matching files and prunes manifest captu
     );
 
     const deleted = [];
-    const result = await storageModule.handleDeleteLast30Minutes(
+    const result = await storageModule.handleDeleteFiles(
       {},
-      { requestedAtMs: Date.parse('2026-02-17T12:30:00.000Z') },
+      {
+        requestedAtMs: Date.parse('2026-02-17T12:30:00.000Z'),
+        deleteWindow: '15m'
+      },
       {
         showMessageBox: async () => ({ response: 1 }),
         deleteFile: async (filePath) => {
@@ -137,7 +149,7 @@ test('handleDeleteLast30Minutes deletes matching files and prunes manifest captu
     );
 
     assert.equal(result.ok, true);
-    assert.equal(result.message, 'Deleted files from the last 30 minutes');
+    assert.equal(result.message, 'Deleted files from 15 minutes');
     assert.equal(fs.existsSync(insideWindowStill), false);
     assert.equal(fs.existsSync(insideWindowMarkdown), false);
     assert.equal(fs.existsSync(insideWindowClipboard), false);
@@ -152,7 +164,7 @@ test('handleDeleteLast30Minutes deletes matching files and prunes manifest captu
   });
 });
 
-test('handleDeleteLast30Minutes reports a failed delete with example path', async () => {
+test('handleDeleteFiles reports a failed delete with example path', async () => {
   await withStorageModule(async ({ storageModule }) => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-storage-ipc-fail-'));
     const contextFolderPath = path.join(root, 'context');
@@ -167,9 +179,12 @@ test('handleDeleteLast30Minutes reports a failed delete with example path', asyn
     const failingFile = path.join(stillsSessionDir, '2026-02-17T12-20-00-000Z.webp');
     fs.writeFileSync(failingFile, 'inside', 'utf-8');
 
-    const result = await storageModule.handleDeleteLast30Minutes(
+    const result = await storageModule.handleDeleteFiles(
       {},
-      { requestedAtMs: Date.parse('2026-02-17T12:30:00.000Z') },
+      {
+        requestedAtMs: Date.parse('2026-02-17T12:30:00.000Z'),
+        deleteWindow: '15m'
+      },
       {
         showMessageBox: async () => ({ response: 1 }),
         deleteFile: async () => {
@@ -182,6 +197,44 @@ test('handleDeleteLast30Minutes reports a failed delete with example path', asyn
     assert.equal(result.ok, false);
     assert.match(result.message, /Could not delete all files\./);
     assert.match(result.message, new RegExp(failingFile.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+});
+
+test('handleDeleteFiles supports all-time deletion window', async () => {
+  await withStorageModule(async ({ storageModule }) => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-storage-ipc-all-'));
+    const contextFolderPath = path.join(root, 'context');
+    const stillsSessionDir = path.join(
+      contextFolderPath,
+      'familiar',
+      'stills',
+      'session-2026-02-17T12-00-00-000Z'
+    );
+    fs.mkdirSync(stillsSessionDir, { recursive: true });
+
+    const oldStill = path.join(stillsSessionDir, '2026-02-16T08-20-00-000Z.webp');
+    const recentStill = path.join(stillsSessionDir, '2026-02-17T12-20-00-000Z.webp');
+    fs.writeFileSync(oldStill, 'old', 'utf-8');
+    fs.writeFileSync(recentStill, 'recent', 'utf-8');
+
+    const result = await storageModule.handleDeleteFiles(
+      {},
+      {
+        requestedAtMs: Date.parse('2026-02-17T12:30:00.000Z'),
+        deleteWindow: 'all'
+      },
+      {
+        showMessageBox: async () => ({ response: 1 }),
+        settingsLoader: () => ({ contextFolderPath })
+      }
+    );
+
+    assert.equal(result.ok, true);
+    assert.equal(result.message, 'Deleted files from all time');
+    assert.equal(fs.existsSync(oldStill), false);
+    assert.equal(fs.existsSync(recentStill), false);
 
     fs.rmSync(root, { recursive: true, force: true });
   });
@@ -214,7 +267,7 @@ test('deleteFileIfAllowed aborts file outside familiar folder', async () => {
   });
 });
 
-test('handleDeleteLast30Minutes calls collectFilesWithinWindow with stills roots', async () => {
+test('handleDeleteFiles calls collectFilesWithinWindow with stills roots', async () => {
   await withStorageModule(async ({ storageModule }) => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-storage-collect-roots-'));
     const contextFolderPath = path.join(root, 'context');
@@ -228,9 +281,9 @@ test('handleDeleteLast30Minutes calls collectFilesWithinWindow with stills roots
     };
 
     const requestedAtMs = Date.parse('2026-02-17T12:30:00.000Z');
-    const result = await storageModule.handleDeleteLast30Minutes(
+    const result = await storageModule.handleDeleteFiles(
       {},
-      { requestedAtMs },
+      { requestedAtMs, deleteWindow: '15m' },
       {
         showMessageBox: async () => ({ response: 1 }),
         settingsLoader: () => ({ contextFolderPath }),
@@ -252,7 +305,7 @@ test('handleDeleteLast30Minutes calls collectFilesWithinWindow with stills roots
   });
 });
 
-test('handleDeleteLast30Minutes passes allowedRoots to deleteFileIfAllowed', async () => {
+test('handleDeleteFiles passes allowedRoots to deleteFileIfAllowed', async () => {
   await withStorageModule(async ({ storageModule }) => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-storage-delete-roots-'));
     const contextFolderPath = path.join(root, 'context');
@@ -269,9 +322,12 @@ test('handleDeleteLast30Minutes passes allowedRoots to deleteFileIfAllowed', asy
     fs.writeFileSync(markdownFile, 'markdown', 'utf-8');
 
     const deleteCalls = [];
-    const result = await storageModule.handleDeleteLast30Minutes(
+    const result = await storageModule.handleDeleteFiles(
       {},
-      { requestedAtMs: Date.parse('2026-02-17T12:30:00.000Z') },
+      {
+        requestedAtMs: Date.parse('2026-02-17T12:30:00.000Z'),
+        deleteWindow: '15m'
+      },
       {
         showMessageBox: async () => ({ response: 1 }),
         settingsLoader: () => ({ contextFolderPath }),

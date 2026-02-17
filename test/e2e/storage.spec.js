@@ -20,7 +20,7 @@ const createClipboardMirrorFile = (dirPath, date, content = '') => {
   return { fileName, fullPath }
 }
 
-test('delete last 30 minutes removes only recent stills and stills-markdown files', async () => {
+test('delete files with 15 minute window removes only recent stills and stills-markdown files', async () => {
   const appRoot = path.join(__dirname, '../..')
   const contextPath = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-context-storage-e2e-'))
   const settingsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-settings-storage-e2e-'))
@@ -90,7 +90,7 @@ test('delete last 30 minutes removes only recent stills and stills-markdown file
     env: {
       ...process.env,
       FAMILIAR_E2E: '1',
-      FAMILIAR_E2E_AUTO_CONFIRM_DELETE_LAST_30_MIN: '1',
+      FAMILIAR_E2E_AUTO_CONFIRM_DELETE_FILES: '1',
       FAMILIAR_E2E_CONTEXT_PATH: contextPath,
       FAMILIAR_SETTINGS_DIR: settingsDir
     }
@@ -101,11 +101,13 @@ test('delete last 30 minutes removes only recent stills and stills-markdown file
     await window.waitForLoadState('domcontentloaded')
 
     await window.getByRole('tab', { name: 'Storage' }).click()
-    const deleteButton = window.locator('#storage-delete-last-30-min')
+    const deleteWindowSelect = window.locator('#storage-delete-window')
+    await deleteWindowSelect.selectOption('15m')
+    const deleteButton = window.locator('#storage-delete-files')
     await expect(deleteButton).toBeEnabled()
     await deleteButton.click()
 
-    await expect(window.locator('#storage-delete-last-30-min-status')).toHaveText('Deleted files from the last 30 minutes')
+    await expect(window.locator('#storage-delete-files-status')).toHaveText('Deleted files from 15 minutes')
 
     await expect.poll(() => fs.existsSync(oldStill.fullPath)).toBe(true)
     await expect.poll(() => fs.existsSync(oldMarkdown.fullPath)).toBe(true)
