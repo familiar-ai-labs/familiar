@@ -138,7 +138,7 @@ function createScreenStillsController(options = {}) {
   }
 
   function getPauseRemainingMs() {
-    if (!manualPaused || !manualPauseStartedAt) {
+    if (!manualPaused || manualPauseStartedAt === null) {
       return 0;
     }
     const elapsedMs = Math.max(0, clock.now() - manualPauseStartedAt);

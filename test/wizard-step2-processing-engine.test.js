@@ -106,7 +106,8 @@ test('wizard step 3 requires skill installation', () => {
 test('wizard step 3 is complete when skill is installed', () => {
   const { wizard, wizardNextButton } = createWizardHarness({
     getState: () => ({
-      isSkillInstalled: true
+      isSkillInstalled: true,
+      currentSkillHarnesses: ['codex']
     })
   })
 
