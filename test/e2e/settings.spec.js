@@ -134,3 +134,69 @@ test('activate event reopens settings window and settings window is resizable', 
     await electronApp.close()
   }
 })
+
+test('settings window toggles app activation policy between foreground and background modes', async () => {
+  test.skip(process.platform !== 'darwin', 'Activation policy assertions are macOS-specific')
+
+  const appRoot = path.join(__dirname, '../..')
+  const contextPath = path.join(appRoot, 'test', 'fixtures', 'context')
+  const settingsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-settings-e2e-'))
+  fs.writeFileSync(
+    path.join(settingsDir, 'settings.json'),
+    JSON.stringify(
+      {
+        wizardCompleted: true
+      },
+      null,
+      2
+    )
+  )
+
+  const electronApp = await electron.launch({
+    args: ['.'],
+    cwd: appRoot,
+    env: {
+      ...process.env,
+      FAMILIAR_E2E: '1',
+      FAMILIAR_E2E_CONTEXT_PATH: contextPath,
+      FAMILIAR_SETTINGS_DIR: settingsDir
+    }
+  })
+
+  try {
+    const window = await electronApp.firstWindow()
+    await window.waitForLoadState('domcontentloaded')
+
+    const dockVisibilityApiAvailable = await electronApp.evaluate(({ app }) => {
+      return Boolean(app?.dock && typeof app.dock.isVisible === 'function')
+    })
+    test.skip(!dockVisibilityApiAvailable, 'Dock visibility API unavailable in current Electron runtime')
+
+    await expect
+      .poll(async () => electronApp.evaluate(({ app }) => app.dock.isVisible()))
+      .toBe(true)
+
+    await electronApp.evaluate(({ BrowserWindow }) => {
+      const settingsWindow = BrowserWindow.getAllWindows()[0]
+      settingsWindow?.close()
+    })
+
+    await expect
+      .poll(async () => electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.isVisible()))
+      .toBe(false)
+
+    await expect
+      .poll(async () => electronApp.evaluate(({ app }) => app.dock.isVisible()))
+      .toBe(false)
+
+    await electronApp.evaluate(({ app }) => {
+      app.emit('activate')
+    })
+
+    await expect
+      .poll(async () => electronApp.evaluate(({ app }) => app.dock.isVisible()))
+      .toBe(true)
+  } finally {
+    await electronApp.close()
+  }
+})

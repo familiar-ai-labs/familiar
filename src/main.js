@@ -27,6 +27,9 @@ const { createScreenStillsController } = require('./screen-stills');
 const { createPresenceMonitor } = require('./screen-capture/presence');
 const { getScreenRecordingPermissionStatus } = require('./screen-capture/permissions');
 const { getTrayIconPathForMenuBar } = require('./tray/icon');
+const { shouldOpenSettingsOnReady } = require('./launch-intent');
+const { APP_MODE, setAppMode } = require('./app-mode');
+const { initializeProcessOwnership } = require('./startup/ownership');
 
 const trayIconPath = path.join(__dirname, 'icon_white_owl.png');
 
@@ -85,6 +88,15 @@ const maybeE2EToast = (payload = {}) => {
 
 const isE2E = process.env.FAMILIAR_E2E === '1';
 const isCI = process.env.CI === 'true' || process.env.CI === '1';
+const { isPrimaryInstance, hasOpenSettingsLaunchArg } = initializeProcessOwnership({
+    app,
+    isE2E,
+    onSecondInstance: () => {
+        openSettingsWindow({ reason: 'second-instance' });
+    },
+    logger: console
+});
+
 const pauseDurationOverrideMs = (() => {
     const parsePauseOverride = (value) => {
         if (typeof value !== 'string' || value.trim() === '') {
@@ -115,6 +127,9 @@ const recordingOffReminderDelayMs = (() => {
 
 initLogging();
 ensureHomebrewPath({ logger: console });
+
+const enterBackgroundMode = () => setAppMode({ app, mode: APP_MODE.BACKGROUND, logger: console });
+const enterForegroundMode = () => setAppMode({ app, mode: APP_MODE.FOREGROUND, logger: console });
 
 const updateScreenCaptureFromSettings = () => {
     if (!screenStillsController) {
@@ -341,6 +356,7 @@ function createSettingsWindow() {
         if (!isQuitting && !app.isQuittingForUpdate) {
             event.preventDefault();
             window.hide();
+            enterBackgroundMode();
             console.log('Settings window hidden');
         }
     });
@@ -353,11 +369,12 @@ function createSettingsWindow() {
     return window;
 }
 
-function showSettingsWindow(options = {}) {
+function openSettingsWindow(options = {}) {
     if (!settingsWindow) {
         settingsWindow = createSettingsWindow();
     }
 
+    enterForegroundMode();
     const result = showWindow(settingsWindow, options);
     const reason = options.reason || result.reason;
     if (result.shown) {
@@ -425,7 +442,7 @@ function createTray() {
         onRecordingPause: () => {
             void handleRecordingToggleAction();
         },
-        onOpenSettings: showSettingsWindow,
+        onOpenSettings: () => openSettingsWindow({ reason: 'tray' }),
         onQuit: quitApp,
     };
 
@@ -442,150 +459,175 @@ function createTray() {
     console.log('Tray created');
 }
 
-// Register all IPC handlers
-registerIpcHandlers({ onSettingsSaved: updateScreenCaptureFromSettings });
+const registerMainProcessIpc = () => {
+    registerIpcHandlers({ onSettingsSaved: updateScreenCaptureFromSettings });
 
-ipcMain.handle('screenStills:getStatus', () => {
-    if (!screenStillsController) {
-        const state = getCurrentScreenStillsState();
-        return {
-            ok: false,
-            state: 'disabled',
-            isRecording: false,
-            enabled: state.enabled === true,
-            permissionStatus: state.permissionStatus,
-            permissionGranted: state.permissionGranted
-        };
-    }
-    return getScreenStillsStatusPayload();
-});
-
-ipcMain.handle('screenStills:start', async () => {
-    const result = await runCaptureActionAndRefreshTray(startScreenStills);
-    return {
-        ...result,
-        ...getScreenStillsStatusPayload()
-    };
-});
-
-ipcMain.handle('screenStills:pause', async () => {
-    const result = await runCaptureActionAndRefreshTray(pauseScreenStills);
-    return {
-        ...result,
-        ...getScreenStillsStatusPayload()
-    };
-});
-
-ipcMain.handle('screenStills:stop', async () => {
-    console.warn('screenStills:stop called; treating as pause');
-    const result = await runCaptureActionAndRefreshTray(pauseScreenStills);
-    return {
-        ...result,
-        ...getScreenStillsStatusPayload()
-    };
-});
-
-ipcMain.handle('screenStills:simulateIdle', (_event, payload = {}) => {
-    if (!isE2E) {
-        return { ok: false, message: 'Idle simulation is only available in E2E mode.' };
-    }
-    const idleSeconds = typeof payload.idleSeconds === 'number' ? payload.idleSeconds : undefined;
-    if (screenStillsController && typeof screenStillsController.simulateIdle === 'function') {
-        screenStillsController.simulateIdle(idleSeconds);
-    }
-    return { ok: true };
-});
-
-ipcMain.handle('e2e:toast:events', (_event, options = {}) => {
-    if (!isE2E) {
-        return { ok: false, message: 'Toast E2E API is only available in E2E mode.' };
-    }
-
-    const clear = options?.clear === true;
-    const events = [...e2eToastEvents];
-    if (clear) {
-        e2eToastEvents.length = 0;
-    }
-
-    return { ok: true, events };
-});
-
-ipcMain.handle('e2e:tray:getRecordingLabel', () => {
-    if (!isE2E) {
-        return { ok: false, message: 'Tray E2E action is only available in E2E mode.' };
-    }
-    return {
-        ok: true,
-        label: getTrayRecordingActionLabel()
-    };
-});
-
-ipcMain.handle('e2e:tray:clickRecordingAction', async () => {
-    if (!isE2E) {
-        return { ok: false, message: 'Tray E2E action is only available in E2E mode.' };
-    }
-    const actionResult = await handleRecordingToggleAction();
-    return {
-        ok: true,
-        actionResult,
-        label: getTrayRecordingActionLabel(),
-        status: getScreenStillsStatusPayload()
-    };
-});
-
-app.whenReady().then(() => {
-    if (process.platform !== 'darwin' && !isE2E) {
-        console.error('Familiar desktop app is macOS-only right now.');
-        app.quit();
-        return;
-    }
-
-    const shouldInitializeRecording = process.platform === 'darwin' || isE2E;
-    if (shouldInitializeRecording) {
-        presenceMonitor = createPresenceMonitor({ logger: console });
-        if (pauseDurationOverrideMs) {
-            console.log('Screen capture pause duration override enabled', {
-                pauseDurationMs: pauseDurationOverrideMs
-            });
+    ipcMain.handle('screenStills:getStatus', () => {
+        if (!screenStillsController) {
+            const state = getCurrentScreenStillsState();
+            return {
+                ok: false,
+                state: 'disabled',
+                isRecording: false,
+                enabled: state.enabled === true,
+                permissionStatus: state.permissionStatus,
+                permissionGranted: state.permissionGranted
+            };
         }
-        screenStillsController = createScreenStillsController({
-            logger: console,
-            onError: handleStillsError,
-            onStateTransition: handleRecordingOffReminderTransition,
-            presenceMonitor,
-            ...(pauseDurationOverrideMs ? { pauseDurationMs: pauseDurationOverrideMs } : {})
-        });
-        recordingOffReminder = createRecordingOffReminder({
-            delayMs: recordingOffReminderDelayMs,
-            showToast: maybeE2EToast
-        });
-        screenStillsController.start();
-        syncRecordingOffReminderState();
-        updateScreenCaptureFromSettings();
-    }
-
-    if (process.platform === 'darwin') {
-        app.dock?.show();
-        app.setLoginItemSettings({ openAtLogin: true, openAsHidden: true });
-
-        createTray();
-        const updateState = initializeAutoUpdater({ isE2E, isCI });
-        if (updateState.enabled) {
-            scheduleDailyUpdateCheck();
-        }
-    } else if (isE2E) {
-        console.log('E2E mode: running on non-macOS platform');
-    }
-
-    if (isE2E) {
-        console.log('E2E mode: opening settings window');
-        showSettingsWindow({ focus: false, reason: 'e2e' });
-    }
-
-    app.on('activate', () => {
-        showSettingsWindow({ reason: 'activate' });
+        return getScreenStillsStatusPayload();
     });
-});
+
+    ipcMain.handle('screenStills:start', async () => {
+        const result = await runCaptureActionAndRefreshTray(startScreenStills);
+        return {
+            ...result,
+            ...getScreenStillsStatusPayload()
+        };
+    });
+
+    ipcMain.handle('screenStills:pause', async () => {
+        const result = await runCaptureActionAndRefreshTray(pauseScreenStills);
+        return {
+            ...result,
+            ...getScreenStillsStatusPayload()
+        };
+    });
+
+    ipcMain.handle('screenStills:stop', async () => {
+        console.warn('screenStills:stop called; treating as pause');
+        const result = await runCaptureActionAndRefreshTray(pauseScreenStills);
+        return {
+            ...result,
+            ...getScreenStillsStatusPayload()
+        };
+    });
+
+    ipcMain.handle('screenStills:simulateIdle', (_event, payload = {}) => {
+        if (!isE2E) {
+            return { ok: false, message: 'Idle simulation is only available in E2E mode.' };
+        }
+        const idleSeconds = typeof payload.idleSeconds === 'number' ? payload.idleSeconds : undefined;
+        if (screenStillsController && typeof screenStillsController.simulateIdle === 'function') {
+            screenStillsController.simulateIdle(idleSeconds);
+        }
+        return { ok: true };
+    });
+
+    ipcMain.handle('e2e:toast:events', (_event, options = {}) => {
+        if (!isE2E) {
+            return { ok: false, message: 'Toast E2E API is only available in E2E mode.' };
+        }
+
+        const clear = options?.clear === true;
+        const events = [...e2eToastEvents];
+        if (clear) {
+            e2eToastEvents.length = 0;
+        }
+
+        return { ok: true, events };
+    });
+
+    ipcMain.handle('e2e:tray:getRecordingLabel', () => {
+        if (!isE2E) {
+            return { ok: false, message: 'Tray E2E action is only available in E2E mode.' };
+        }
+        return {
+            ok: true,
+            label: getTrayRecordingActionLabel()
+        };
+    });
+
+    ipcMain.handle('e2e:tray:clickRecordingAction', async () => {
+        if (!isE2E) {
+            return { ok: false, message: 'Tray E2E action is only available in E2E mode.' };
+        }
+        const actionResult = await handleRecordingToggleAction();
+        return {
+            ok: true,
+            actionResult,
+            label: getTrayRecordingActionLabel(),
+            status: getScreenStillsStatusPayload()
+        };
+    });
+};
+
+if (isPrimaryInstance) {
+    registerMainProcessIpc();
+
+    app.whenReady().then(() => {
+        if (process.platform !== 'darwin' && !isE2E) {
+            console.error('Familiar desktop app is macOS-only right now.');
+            app.quit();
+            return;
+        }
+
+        const shouldInitializeRecording = process.platform === 'darwin' || isE2E;
+        if (shouldInitializeRecording) {
+            presenceMonitor = createPresenceMonitor({ logger: console });
+            if (pauseDurationOverrideMs) {
+                console.log('Screen capture pause duration override enabled', {
+                    pauseDurationMs: pauseDurationOverrideMs
+                });
+            }
+            screenStillsController = createScreenStillsController({
+                logger: console,
+                onError: handleStillsError,
+                onStateTransition: handleRecordingOffReminderTransition,
+                presenceMonitor,
+                ...(pauseDurationOverrideMs ? { pauseDurationMs: pauseDurationOverrideMs } : {})
+            });
+            recordingOffReminder = createRecordingOffReminder({
+                delayMs: recordingOffReminderDelayMs,
+                showToast: maybeE2EToast
+            });
+            screenStillsController.start();
+            syncRecordingOffReminderState();
+            updateScreenCaptureFromSettings();
+        }
+
+        let wasOpenedAtLogin = false;
+
+        if (process.platform === 'darwin') {
+            try {
+                const loginItemSettings = app.getLoginItemSettings();
+                wasOpenedAtLogin = loginItemSettings?.wasOpenedAtLogin === true;
+            } catch (error) {
+                console.warn('Failed to read login item settings', error);
+            }
+            enterBackgroundMode();
+            app.setLoginItemSettings({ openAtLogin: true, openAsHidden: true });
+
+            createTray();
+            const updateState = initializeAutoUpdater({ isE2E, isCI });
+            if (updateState.enabled) {
+                scheduleDailyUpdateCheck();
+            }
+        } else if (isE2E) {
+            console.log('E2E mode: running on non-macOS platform');
+        }
+
+        const shouldOpenSettings = shouldOpenSettingsOnReady({
+            isE2E,
+            platform: process.platform,
+            wasOpenedAtLogin,
+            hasOpenSettingsLaunchArg
+        });
+
+        if (shouldOpenSettings) {
+            const reason = isE2E ? 'e2e' : hasOpenSettingsLaunchArg ? 'open-settings-arg' : 'launch';
+            console.log('Opening settings window on launch', {
+                reason,
+                wasOpenedAtLogin,
+                hasOpenSettingsLaunchArg
+            });
+            openSettingsWindow({ focus: isE2E ? false : true, reason });
+        }
+
+        app.on('activate', () => {
+            openSettingsWindow({ reason: 'activate' });
+        });
+    });
+}
 
 app.on('before-quit', (event) => {
     if (recordingOffReminder && typeof recordingOffReminder.stopReminder === 'function') {
