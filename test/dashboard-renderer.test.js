@@ -140,7 +140,11 @@ const createFamiliar = (overrides = {}) => ({
     alwaysRecordWhenActive: false,
     appVersion: '0.0.22'
   }),
-  checkScreenRecordingPermission: async () => ({ ok: true, permissionStatus: 'granted', granted: true }),
+  checkScreenRecordingPermission: async () => ({
+    ok: true,
+    permissionStatus: 'granted',
+    granted: true
+  }),
   openScreenRecordingSettings: async () => ({ ok: true }),
   pickContextFolder: async () => ({ canceled: true }),
   saveSettings: async () => ({ ok: true }),
@@ -152,11 +156,26 @@ const createFamiliar = (overrides = {}) => ({
     permissionStatus: 'granted',
     permissionGranted: true
   }),
-  startScreenStills: async () => ({ ok: true, state: 'recording', isRecording: true, manualPaused: false }),
-  pauseScreenStills: async () => ({ ok: true, state: 'armed', isRecording: false, manualPaused: true }),
-  stopScreenStills: async () => ({ ok: true, state: 'armed', isRecording: false, manualPaused: false }),
+  startScreenStills: async () => ({
+    ok: true,
+    state: 'recording',
+    isRecording: true,
+    manualPaused: false
+  }),
+  pauseScreenStills: async () => ({
+    ok: true,
+    state: 'armed',
+    isRecording: false,
+    manualPaused: true
+  }),
+  stopScreenStills: async () => ({
+    ok: true,
+    state: 'armed',
+    isRecording: false,
+    manualPaused: false
+  }),
   checkForUpdates: async () => ({ ok: true, updateInfo: null }),
-  deleteFilesAt: async () => ({ ok: true, message: 'Deleted files from 15 minutes' }),
+  deleteFilesAt: async () => ({ ok: true, message: 'Deleted files from last 15 minutes' }),
   ...overrides
 })
 
@@ -255,23 +274,34 @@ const createElements = () => {
   elements['llm-api-key-error'].dataset.settingError = 'llm-api-key-error'
   elements['llm-api-key-status'].dataset.settingStatus = 'llm-api-key-status'
   elements['stills-markdown-extractor'].dataset.setting = 'stills-markdown-extractor'
-  elements['stills-markdown-extractor-error'].dataset.settingError = 'stills-markdown-extractor-error'
-  elements['stills-markdown-extractor-status'].dataset.settingStatus = 'stills-markdown-extractor-status'
+  elements['stills-markdown-extractor-error'].dataset.settingError =
+    'stills-markdown-extractor-error'
+  elements['stills-markdown-extractor-status'].dataset.settingStatus =
+    'stills-markdown-extractor-status'
   elements['always-record-when-active'].dataset.setting = 'always-record-when-active'
-  elements['always-record-when-active-error'].dataset.settingError = 'always-record-when-active-error'
-  elements['always-record-when-active-status'].dataset.settingStatus = 'always-record-when-active-status'
+  elements['always-record-when-active-error'].dataset.settingError =
+    'always-record-when-active-error'
+  elements['always-record-when-active-status'].dataset.settingStatus =
+    'always-record-when-active-status'
   elements['wizard-always-record-when-active'].dataset.setting = 'always-record-when-active'
-  elements['wizard-always-record-when-active-error'].dataset.settingError = 'always-record-when-active-error'
-  elements['wizard-always-record-when-active-status'].dataset.settingStatus = 'always-record-when-active-status'
+  elements['wizard-always-record-when-active-error'].dataset.settingError =
+    'always-record-when-active-error'
+  elements['wizard-always-record-when-active-status'].dataset.settingStatus =
+    'always-record-when-active-status'
   elements['permissions-always-record-when-active'].dataset.setting = 'always-record-when-active'
-  elements['permissions-always-record-when-active-error'].dataset.settingError = 'always-record-when-active-error'
-  elements['permissions-always-record-when-active-status'].dataset.settingStatus = 'always-record-when-active-status'
+  elements['permissions-always-record-when-active-error'].dataset.settingError =
+    'always-record-when-active-error'
+  elements['permissions-always-record-when-active-status'].dataset.settingStatus =
+    'always-record-when-active-status'
   elements['wizard-check-permissions'].dataset.action = 'check-permissions'
   elements['permissions-check-permissions'].dataset.action = 'check-permissions'
-  elements['wizard-open-screen-recording-settings'].dataset.action = 'open-screen-recording-settings'
-  elements['permissions-open-screen-recording-settings'].dataset.action = 'open-screen-recording-settings'
+  elements['wizard-open-screen-recording-settings'].dataset.action =
+    'open-screen-recording-settings'
+  elements['permissions-open-screen-recording-settings'].dataset.action =
+    'open-screen-recording-settings'
   elements['wizard-recording-toggle-section'].dataset.role = 'permission-recording-toggle-section'
-  elements['permissions-recording-toggle-section'].dataset.role = 'permission-recording-toggle-section'
+  elements['permissions-recording-toggle-section'].dataset.role =
+    'permission-recording-toggle-section'
   elements['wizard-skill-install'].dataset.action = 'skill-install'
   elements['settings-skill-install'].dataset.action = 'skill-install'
   elements['wizard-skill-status'].dataset.skillInstallStatus = 'wizard'
@@ -594,11 +624,23 @@ test('wizard permission check is click-driven and denied state shows settings sh
     assert.equal(elements['wizard-check-permissions'].textContent, 'Check Permissions')
     assert.equal(elements['wizard-check-permissions'].classList.contains('border-indigo-600'), true)
     assert.equal(elements['permissions-check-permissions'].textContent, 'Check Permissions')
-    assert.equal(elements['permissions-check-permissions'].classList.contains('border-indigo-600'), true)
-    assert.equal(elements['wizard-open-screen-recording-settings'].classList.contains('hidden'), false)
-    assert.equal(elements['permissions-open-screen-recording-settings'].classList.contains('hidden'), false)
+    assert.equal(
+      elements['permissions-check-permissions'].classList.contains('border-indigo-600'),
+      true
+    )
+    assert.equal(
+      elements['wizard-open-screen-recording-settings'].classList.contains('hidden'),
+      false
+    )
+    assert.equal(
+      elements['permissions-open-screen-recording-settings'].classList.contains('hidden'),
+      false
+    )
     assert.equal(elements['wizard-recording-toggle-section'].classList.contains('hidden'), true)
-    assert.equal(elements['permissions-recording-toggle-section'].classList.contains('hidden'), true)
+    assert.equal(
+      elements['permissions-recording-toggle-section'].classList.contains('hidden'),
+      true
+    )
 
     await elements['wizard-open-screen-recording-settings'].click()
     assert.equal(openSettingsCalls, 1)
@@ -634,13 +676,28 @@ test('wizard permission check granted state reveals recording toggle', async () 
 
     assert.equal(checkCalls, 1)
     assert.equal(elements['wizard-check-permissions'].textContent, 'Granted')
-    assert.equal(elements['wizard-check-permissions'].classList.contains('border-emerald-600'), true)
+    assert.equal(
+      elements['wizard-check-permissions'].classList.contains('border-emerald-600'),
+      true
+    )
     assert.equal(elements['permissions-check-permissions'].textContent, 'Granted')
-    assert.equal(elements['permissions-check-permissions'].classList.contains('border-emerald-600'), true)
-    assert.equal(elements['wizard-open-screen-recording-settings'].classList.contains('hidden'), true)
-    assert.equal(elements['permissions-open-screen-recording-settings'].classList.contains('hidden'), true)
+    assert.equal(
+      elements['permissions-check-permissions'].classList.contains('border-emerald-600'),
+      true
+    )
+    assert.equal(
+      elements['wizard-open-screen-recording-settings'].classList.contains('hidden'),
+      true
+    )
+    assert.equal(
+      elements['permissions-open-screen-recording-settings'].classList.contains('hidden'),
+      true
+    )
     assert.equal(elements['wizard-recording-toggle-section'].classList.contains('hidden'), false)
-    assert.equal(elements['permissions-recording-toggle-section'].classList.contains('hidden'), false)
+    assert.equal(
+      elements['permissions-recording-toggle-section'].classList.contains('hidden'),
+      false
+    )
   } finally {
     global.document = priorDocument
     global.window = priorWindow
@@ -860,7 +917,7 @@ test('storage delete button triggers cleanup and shows success message', async (
     }),
     deleteFilesAt: async ({ requestedAtMs, deleteWindow }) => {
       calls.push({ requestedAtMs, deleteWindow })
-      return { ok: true, message: 'Deleted files from 1 hour' }
+      return { ok: true, message: 'Deleted files from last 1 hour' }
     }
   })
 
@@ -883,7 +940,10 @@ test('storage delete button triggers cleanup and shows success message', async (
     assert.equal(calls.length, 1)
     assert.equal(typeof calls[0].requestedAtMs, 'number')
     assert.equal(calls[0].deleteWindow, '1h')
-    assert.equal(elements['storage-delete-files-status'].textContent, 'Deleted files from 1 hour')
+    assert.equal(
+      elements['storage-delete-files-status'].textContent,
+      'Deleted files from last 1 hour'
+    )
     assert.equal(elements['storage-delete-files-error'].textContent, '')
   } finally {
     global.document = priorDocument
@@ -929,11 +989,23 @@ test('wizard step 2 does not auto-check permissions when recording is already en
     assert.equal(elements['wizard-check-permissions'].textContent, 'Check Permissions')
     assert.equal(elements['wizard-check-permissions'].classList.contains('border-indigo-600'), true)
     assert.equal(elements['permissions-check-permissions'].textContent, 'Check Permissions')
-    assert.equal(elements['permissions-check-permissions'].classList.contains('border-indigo-600'), true)
-    assert.equal(elements['wizard-open-screen-recording-settings'].classList.contains('hidden'), true)
-    assert.equal(elements['permissions-open-screen-recording-settings'].classList.contains('hidden'), true)
+    assert.equal(
+      elements['permissions-check-permissions'].classList.contains('border-indigo-600'),
+      true
+    )
+    assert.equal(
+      elements['wizard-open-screen-recording-settings'].classList.contains('hidden'),
+      true
+    )
+    assert.equal(
+      elements['permissions-open-screen-recording-settings'].classList.contains('hidden'),
+      true
+    )
     assert.equal(elements['wizard-recording-toggle-section'].classList.contains('hidden'), true)
-    assert.equal(elements['permissions-recording-toggle-section'].classList.contains('hidden'), true)
+    assert.equal(
+      elements['permissions-recording-toggle-section'].classList.contains('hidden'),
+      true
+    )
   } finally {
     global.document = priorDocument
     global.window = priorWindow
@@ -950,7 +1022,12 @@ test('stills action button starts capture when inactive', async () => {
       alwaysRecordWhenActive: true,
       wizardCompleted: true
     }),
-    getScreenStillsStatus: async () => ({ ok: true, state: 'armed', isRecording: false, manualPaused: false }),
+    getScreenStillsStatus: async () => ({
+      ok: true,
+      state: 'armed',
+      isRecording: false,
+      manualPaused: false
+    }),
     startScreenStills: async () => {
       startCalls.push(true)
       return { ok: true, state: 'recording', isRecording: true, manualPaused: false }

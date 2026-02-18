@@ -125,19 +125,66 @@
         <div>
           <h2 id="section-title" class="text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Storage
           </h2>
-          <p id="section-subtitle" class="text-xs text-zinc-500 dark:text-zinc-400">Review and manage local Familiar
-            storage.</p>
+          <p id="section-subtitle" class="text-xs text-zinc-500 dark:text-zinc-400">Review and manage local Familiar storage.</p>
         </div>
       </div>
 
       <div id="settings-content" class="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-slim">
         <section id="section-recording" data-section-pane="recording" role="tabpanel" aria-label="Capturing settings"
-          class="space-y-6 hidden">
-          <section class="space-y-2" data-processing-engine>
-            <div class="flex items-center justify-between">
-              <span id="stills-markdown-extractor-status" data-setting-status="stills-markdown-extractor-status"
-                class="text-xs text-emerald-600 dark:text-emerald-400 hidden" aria-live="polite"></span>
-            </div>
+          class="hidden flex flex-col min-h-full">
+          <div class="space-y-6">
+            <section class="space-y-2">
+              <div class="flex items-center justify-between">
+                <label class="section-label">Permissions</label>
+              </div>
+              <div class="space-y-2">
+                <div class="flex flex-wrap items-center gap-2">
+                  <button id="recording-check-permissions" data-action="check-permissions" type="button"
+                    class="px-3 py-2 text-xs font-semibold bg-transparent border border-indigo-600 hover:border-indigo-700 rounded-lg text-indigo-600 hover:text-indigo-700 focus:outline-none transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">Check
+                    Permissions</button>
+                  <button id="recording-open-screen-recording-settings" data-action="open-screen-recording-settings"
+                    type="button"
+                    class="px-3 py-2 text-xs font-semibold bg-white dark:bg-zinc-800 border border-indigo-300 dark:border-indigo-700 rounded-lg text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 focus:outline-none transition-colors cursor-pointer hidden">Enable
+                    Familiar In Screen Recording</button>
+                  <p id="recording-open-screen-recording-settings-note" data-open-screen-recording-settings-note
+                    class="text-xs font-semibold text-zinc-500 dark:text-zinc-400 hidden">After enabling capturing,
+                    restart Familiar</p>
+                </div>
+                <section id="recording-recording-toggle-section" data-role="permission-recording-toggle-section"
+                  class="space-y-2 hidden">
+                  <div class="flex items-start justify-between gap-4">
+                    <div class="space-y-1">
+                      <label for="recording-always-record-when-active" class="section-label">Capture While Active</label>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                      <input id="recording-always-record-when-active" data-setting="always-record-when-active"
+                        type="checkbox" class="sr-only peer">
+                      <div
+                        class="w-10 h-5 bg-zinc-200 dark:bg-zinc-800 rounded-full peer peer-checked:bg-emerald-500 transition-colors">
+                      </div>
+                      <div
+                        class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform peer-checked:translate-x-5">
+                      </div>
+                    </label>
+                  </div>
+                  <p id="recording-always-record-when-active-error" data-setting-error="always-record-when-active-error"
+                    class="text-xs text-red-600 dark:text-red-400 hidden" role="alert" aria-live="polite"></p>
+                  <span id="recording-always-record-when-active-status"
+                    data-setting-status="always-record-when-active-status"
+                    class="text-xs text-emerald-600 dark:text-emerald-400 hidden" aria-live="polite"></span>
+                </section>
+              </div>
+            </section>
+
+            <section class="space-y-2" data-processing-engine>
+              <div class="space-y-1">
+                <h3 class="text-sm font-medium text-zinc-900 dark:text-zinc-100">Processing</h3>
+                <p class="text-xs text-zinc-500 dark:text-zinc-400">Review and manage capturing</p>
+              </div>
+              <div class="flex items-center justify-between">
+                <span id="stills-markdown-extractor-status" data-setting-status="stills-markdown-extractor-status"
+                  class="text-xs text-emerald-600 dark:text-emerald-400 hidden" aria-live="polite"></span>
+              </div>
 
             <!-- Hidden select: persisted setting; UI is the segmented control below -->
             <select id="stills-markdown-extractor" data-setting="stills-markdown-extractor" class="hidden">
@@ -213,52 +260,19 @@
                 Apple's OCR. Local only. No API key required.
               </p>
             </div>
-          </section>
-
-          <div class="mt-6 pt-4 border-t border-zinc-200 dark:border-zinc-800 space-y-5">
-            <div class="space-y-1">
-              <h3 class="text-sm font-medium text-zinc-900 dark:text-zinc-100">Permissions</h3>
-              <p class="text-xs text-zinc-500 dark:text-zinc-400">Capturing stills while active requires Screen
-                Recording permission.</p>
-            </div>
-            <section class="space-y-2">
-              <div class="flex flex-wrap items-center gap-2">
-                <button id="recording-check-permissions" data-action="check-permissions" type="button"
-                  class="px-3 py-2 text-xs font-semibold bg-transparent border border-indigo-600 hover:border-indigo-700 rounded-lg text-indigo-600 hover:text-indigo-700 focus:outline-none transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">Check
-                  Permissions</button>
-                <button id="recording-open-screen-recording-settings" data-action="open-screen-recording-settings"
-                  type="button"
-                  class="px-3 py-2 text-xs font-semibold bg-white dark:bg-zinc-800 border border-indigo-300 dark:border-indigo-700 rounded-lg text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 focus:outline-none transition-colors cursor-pointer hidden">Enable
-                  Familiar In Screen Recording</button>
-                <p id="recording-open-screen-recording-settings-note" data-open-screen-recording-settings-note
-                  class="text-xs font-semibold text-zinc-500 dark:text-zinc-400 hidden">After enabling capturing,
-                  restart Familiar</p>
-              </div>
-            </section>
-            <section id="recording-recording-toggle-section" data-role="permission-recording-toggle-section"
-              class="space-y-2 hidden">
-              <div class="flex items-start justify-between gap-4">
-                <div class="space-y-1">
-                  <label for="recording-always-record-when-active" class="section-label">Capture While Active</label>
-                </div>
-                <label class="relative inline-flex items-center cursor-pointer">
-                  <input id="recording-always-record-when-active" data-setting="always-record-when-active"
-                    type="checkbox" class="sr-only peer">
-                  <div
-                    class="w-10 h-5 bg-zinc-200 dark:bg-zinc-800 rounded-full peer peer-checked:bg-emerald-500 transition-colors">
-                  </div>
-                  <div
-                    class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform peer-checked:translate-x-5">
-                  </div>
-                </label>
-              </div>
-              <p id="recording-always-record-when-active-error" data-setting-error="always-record-when-active-error"
-                class="text-xs text-red-600 dark:text-red-400 hidden" role="alert" aria-live="polite"></p>
-              <span id="recording-always-record-when-active-status"
-                data-setting-status="always-record-when-active-status"
-                class="text-xs text-emerald-600 dark:text-emerald-400 hidden" aria-live="polite"></span>
             </section>
           </div>
+
+          <div class="w-full border-t border-zinc-200 dark:border-zinc-800 flex flex-col items-start gap-1 mt-auto pt-4">
+            <button id="copy-debug-log" data-action="copy-debug-log" type="button"
+              class="px-3 py-1.5 text-xs font-medium bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-md text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Copies ~/.familiar/logs/familiar.log to your clipboard">Copy Debug Log</button>
+            <span id="copy-log-status" data-setting-status="copy-log-status"
+              class="text-xs text-emerald-600 dark:text-emerald-400 hidden" aria-live="polite"></span>
+            <span id="copy-log-error" data-setting-error="copy-log-error"
+              class="text-xs text-red-600 dark:text-red-400 hidden" role="alert" aria-live="polite"></span>
+          </div>
+
         </section>
 
         <section id="section-storage" data-section-pane="storage" role="tabpanel" aria-label="Storage settings"
@@ -332,17 +346,6 @@
             </div>
             <p id="storage-delete-files-error" data-setting-error="storage-delete-files-error"
               class="text-xs text-red-600 dark:text-red-400 hidden" role="alert" aria-live="polite"></p>
-            <div class="flex items-center justify-end gap-3 mt-auto pt-4">
-              <div class="flex flex-col items-end gap-1">
-                <span id="copy-log-status" data-setting-status="copy-log-status"
-                  class="text-xs text-emerald-600 dark:text-emerald-400 hidden" aria-live="polite"></span>
-                <span id="copy-log-error" data-setting-error="copy-log-error"
-                  class="text-xs text-red-600 dark:text-red-400 hidden" role="alert" aria-live="polite"></span>
-              </div>
-              <button id="copy-debug-log" data-action="copy-debug-log" type="button"
-                class="px-3 py-1.5 text-xs font-medium bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-md text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Copies ~/.familiar/logs/familiar.log to your clipboard">Copy Debug Log</button>
-            </div>
           </section>
         </section>
 

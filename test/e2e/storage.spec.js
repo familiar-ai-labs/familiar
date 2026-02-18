@@ -25,12 +25,7 @@ test('delete files with 15 minute window removes only recent stills and stills-m
   const contextPath = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-context-storage-e2e-'))
   const settingsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-settings-storage-e2e-'))
 
-  const stillsSessionDir = path.join(
-    contextPath,
-    'familiar',
-    'stills',
-    'session-e2e-stills'
-  )
+  const stillsSessionDir = path.join(contextPath, 'familiar', 'stills', 'session-e2e-stills')
   const markdownSessionDir = path.join(
     contextPath,
     'familiar',
@@ -41,15 +36,19 @@ test('delete files with 15 minute window removes only recent stills and stills-m
   fs.mkdirSync(markdownSessionDir, { recursive: true })
 
   const now = new Date()
-  const oldDate = new Date(now.getTime() - (40 * 60 * 1000))
-  const recentDate = new Date(now.getTime() - (10 * 60 * 1000))
+  const oldDate = new Date(now.getTime() - 40 * 60 * 1000)
+  const recentDate = new Date(now.getTime() - 10 * 60 * 1000)
 
   const oldStill = createCaptureFile(stillsSessionDir, oldDate, 'webp', 'old-still')
   const recentStill = createCaptureFile(stillsSessionDir, recentDate, 'webp', 'recent-still')
   const oldMarkdown = createCaptureFile(markdownSessionDir, oldDate, 'md', 'old-markdown')
   const recentMarkdown = createCaptureFile(markdownSessionDir, recentDate, 'md', 'recent-markdown')
   const oldClipboard = createClipboardMirrorFile(markdownSessionDir, oldDate, 'old-clipboard')
-  const recentClipboard = createClipboardMirrorFile(markdownSessionDir, recentDate, 'recent-clipboard')
+  const recentClipboard = createClipboardMirrorFile(
+    markdownSessionDir,
+    recentDate,
+    'recent-clipboard'
+  )
 
   fs.writeFileSync(
     path.join(stillsSessionDir, 'manifest.json'),
@@ -107,7 +106,9 @@ test('delete files with 15 minute window removes only recent stills and stills-m
     await expect(deleteButton).toBeEnabled()
     await deleteButton.click()
 
-    await expect(window.locator('#storage-delete-files-status')).toHaveText('Deleted files from 15 minutes')
+    await expect(window.locator('#storage-delete-files-status')).toHaveText(
+      'Deleted files from last 15 minutes'
+    )
 
     await expect.poll(() => fs.existsSync(oldStill.fullPath)).toBe(true)
     await expect.poll(() => fs.existsSync(oldMarkdown.fullPath)).toBe(true)
@@ -116,7 +117,9 @@ test('delete files with 15 minute window removes only recent stills and stills-m
     await expect.poll(() => fs.existsSync(recentMarkdown.fullPath)).toBe(false)
     await expect.poll(() => fs.existsSync(recentClipboard.fullPath)).toBe(false)
 
-    const manifest = JSON.parse(fs.readFileSync(path.join(stillsSessionDir, 'manifest.json'), 'utf-8'))
+    const manifest = JSON.parse(
+      fs.readFileSync(path.join(stillsSessionDir, 'manifest.json'), 'utf-8')
+    )
     expect(Array.isArray(manifest.captures)).toBe(true)
     expect(manifest.captures.length).toBe(1)
     expect(manifest.captures[0].file).toBe(oldStill.fileName)

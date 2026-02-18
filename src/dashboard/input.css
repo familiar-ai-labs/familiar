@@ -79,11 +79,11 @@
   }
 
   .skill-picker-radio {
-    @apply h-4 w-4 rounded-full border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 flex items-center justify-center;
+    @apply h-4 w-4 rounded-sm border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 flex items-center justify-center;
   }
 
   .skill-picker-radio-dot {
-    @apply h-1.5 w-1.5 rounded-full bg-white scale-0 transition-transform;
+    @apply h-2 w-2 rounded-sm bg-white scale-0 transition-transform;
   }
 
   .skill-picker-option input:checked + .skill-picker-option-card .skill-picker-radio {
