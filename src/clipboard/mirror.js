@@ -4,6 +4,17 @@ const DEFAULT_POLL_INTERVAL_MS = 500
 
 function noop() {}
 
+function isSingleWordClipboardText(text) {
+  if (typeof text !== 'string') {
+    return false
+  }
+  const trimmed = text.trim()
+  if (trimmed.length === 0) {
+    return false
+  }
+  return trimmed.split(/\s+/).length === 1
+}
+
 function createClipboardMirror (options = {}) {
   const logger = options.logger || console
   const pollIntervalMs = Number.isFinite(options.pollIntervalMs) && options.pollIntervalMs > 0
@@ -33,7 +44,7 @@ function createClipboardMirror (options = {}) {
 
   let timer = null
   let running = false
-  let lastSeenText = null
+  let lastProcessedText = null
   let contextFolderPath = ''
   let sessionId = ''
 
@@ -46,7 +57,7 @@ function createClipboardMirror (options = {}) {
       logger.log('Clipboard mirror stopped', { reason })
     }
     running = false
-    lastSeenText = null
+    lastProcessedText = null
     contextFolderPath = ''
     sessionId = ''
   }
@@ -61,8 +72,14 @@ function createClipboardMirror (options = {}) {
       return { ok: true, skipped: true, reason: 'empty' }
     }
 
-    if (text === lastSeenText) {
+    if (text === lastProcessedText) {
       return { ok: true, skipped: true, reason: 'unchanged' }
+    }
+
+    if (isSingleWordClipboardText(text)) {
+      lastProcessedText = text
+      logger.log('Clipboard mirror skipped: single-word text', { sessionId })
+      return { ok: true, skipped: true, reason: 'single-word' }
     }
 
     const directory = getClipboardMirrorDirectory(contextFolderPath, sessionId)
@@ -73,7 +90,7 @@ function createClipboardMirror (options = {}) {
 
     try {
       const { path: savedPath } = await saveImpl(text, directory, new Date())
-      lastSeenText = text
+      lastProcessedText = text
       logger.log('Clipboard mirrored', { path: savedPath, sessionId })
       return { ok: true, path: savedPath }
     } catch (error) {
