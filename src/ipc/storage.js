@@ -14,6 +14,7 @@ const {
 } = require('../storage/delete-window')
 
 const LEADING_TIMESTAMP_PATTERN = /^(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z)/
+const SESSION_ID_PATTERN = /^session-(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z)$/
 
 function resolveDeleteWindow(deleteWindow) {
   const requestedWindow =
@@ -56,6 +57,22 @@ function parseLeadingTimestampMs(fileName) {
     return null
   }
   const match = fileName.match(LEADING_TIMESTAMP_PATTERN)
+  if (!match) {
+    return null
+  }
+  const normalizedIso = match[1].replace(
+    /^(\d{4}-\d{2}-\d{2}T)(\d{2})-(\d{2})-(\d{2})-(\d{3})Z$/,
+    '$1$2:$3:$4.$5Z'
+  )
+  const parsed = Date.parse(normalizedIso)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+function parseSessionTimestampMs(sessionId) {
+  if (typeof sessionId !== 'string' || sessionId.length === 0) {
+    return null
+  }
+  const match = sessionId.match(SESSION_ID_PATTERN)
   if (!match) {
     return null
   }
@@ -180,6 +197,183 @@ async function deleteFileIfAllowed(
   return { ok: true, path: realFilePath }
 }
 
+async function deleteDirectoryIfAllowed(
+  dirPath,
+  { allowedRoots = [], deleteDirectory, logger = console } = {}
+) {
+  const realAllowedRoots = normalizeAllowedRoots(allowedRoots)
+  if (realAllowedRoots.length === 0) {
+    return { ok: false, message: 'No allowed roots configured for delete operation.' }
+  }
+  if (typeof deleteDirectory !== 'function') {
+    return { ok: false, message: 'Delete operation unavailable.' }
+  }
+
+  let stats = null
+  try {
+    stats = fs.lstatSync(dirPath)
+  } catch (error) {
+    return { ok: false, message: error?.message || 'Directory is not accessible.' }
+  }
+  if (stats.isSymbolicLink()) {
+    return { ok: false, message: 'Refusing to delete symlink.' }
+  }
+  if (!stats.isDirectory()) {
+    return { ok: false, message: 'Path is not a directory.' }
+  }
+
+  const realDirPath = toRealPathSafe(dirPath)
+  if (!realDirPath || !isWithinAnyAllowedRoot(realDirPath, realAllowedRoots)) {
+    logger.warn('Refusing to delete directory outside allowed roots', { dirPath })
+    return { ok: false, message: 'Refusing to delete directory outside Familiar storage roots.' }
+  }
+
+  await deleteDirectory(realDirPath)
+  return { ok: true, path: realDirPath }
+}
+
+function resolveNewestSessionId(sessionRoots = [], { allowedRoots = [] } = {}) {
+  const realAllowedRoots = normalizeAllowedRoots(allowedRoots)
+  let newest = null
+
+  for (const rootPath of sessionRoots) {
+    const realRootPath = toRealPathSafe(rootPath)
+    if (!realRootPath || !fs.existsSync(realRootPath)) {
+      continue
+    }
+    if (realAllowedRoots.length > 0 && !isWithinAnyAllowedRoot(realRootPath, realAllowedRoots)) {
+      continue
+    }
+
+    let entries = []
+    try {
+      entries = fs.readdirSync(realRootPath, { withFileTypes: true })
+    } catch (_error) {
+      continue
+    }
+
+    for (const entry of entries) {
+      if (!entry.isDirectory() || entry.isSymbolicLink()) {
+        continue
+      }
+      const timestampMs = parseSessionTimestampMs(entry.name)
+      if (timestampMs === null) {
+        continue
+      }
+      if (!newest || timestampMs > newest.timestampMs) {
+        newest = { sessionId: entry.name, timestampMs }
+      }
+    }
+  }
+
+  return newest ? newest.sessionId : null
+}
+
+async function deleteEmptySessionDirectories(
+  sessionRoots = [],
+  {
+    allowedRoots = [],
+    skipSessionId = null,
+    deleteDirectory,
+    deleteDirectoryIfAllowedFn,
+    logger = console
+  } = {}
+) {
+  const deletedSessionDirs = []
+  const failedSessionDirs = []
+  const realAllowedRoots = normalizeAllowedRoots(allowedRoots)
+  const guardedDirectoryDelete =
+    typeof deleteDirectoryIfAllowedFn === 'function'
+      ? deleteDirectoryIfAllowedFn
+      : deleteDirectoryIfAllowed
+
+  for (const rootPath of sessionRoots) {
+    const realRootPath = toRealPathSafe(rootPath)
+    if (!realRootPath || !fs.existsSync(realRootPath)) {
+      continue
+    }
+    if (realAllowedRoots.length > 0 && !isWithinAnyAllowedRoot(realRootPath, realAllowedRoots)) {
+      logger.warn('Skipping session cleanup root outside allowed roots', { rootPath })
+      continue
+    }
+
+    let entries = []
+    try {
+      entries = fs.readdirSync(realRootPath, { withFileTypes: true })
+    } catch (error) {
+      logger.warn('Failed to read session cleanup root', {
+        rootPath: realRootPath,
+        message: error?.message || String(error)
+      })
+      continue
+    }
+
+    for (const entry of entries) {
+      if (!entry.isDirectory() || entry.isSymbolicLink()) {
+        continue
+      }
+      if (parseSessionTimestampMs(entry.name) === null) {
+        continue
+      }
+      if (skipSessionId && entry.name === skipSessionId) {
+        continue
+      }
+
+      const sessionDirPath = path.join(realRootPath, entry.name)
+      const realSessionDirPath = toRealPathSafe(sessionDirPath)
+      if (!realSessionDirPath) {
+        continue
+      }
+      if (
+        realAllowedRoots.length > 0 &&
+        !isWithinAnyAllowedRoot(realSessionDirPath, realAllowedRoots)
+      ) {
+        logger.warn('Skipping session cleanup directory outside allowed roots', { sessionDirPath })
+        continue
+      }
+
+      let childEntries = []
+      try {
+        childEntries = fs.readdirSync(realSessionDirPath)
+      } catch (error) {
+        failedSessionDirs.push(realSessionDirPath)
+        logger.warn('Failed to inspect session directory during cleanup', {
+          sessionDirPath: realSessionDirPath,
+          message: error?.message || String(error)
+        })
+        continue
+      }
+      if (childEntries.length > 0) {
+        continue
+      }
+
+      try {
+        const deleteResult = await guardedDirectoryDelete(realSessionDirPath, {
+          allowedRoots: realAllowedRoots,
+          deleteDirectory,
+          logger
+        })
+        if (!deleteResult.ok) {
+          failedSessionDirs.push(realSessionDirPath)
+          continue
+        }
+        deletedSessionDirs.push(realSessionDirPath)
+      } catch (error) {
+        failedSessionDirs.push(realSessionDirPath)
+        logger.error('Failed to delete empty session directory during storage cleanup', {
+          sessionDirPath: realSessionDirPath,
+          message: error?.message || String(error)
+        })
+      }
+    }
+  }
+
+  return {
+    deletedSessionDirs,
+    failedSessionDirs
+  }
+}
+
 function deleteRowsByColumnIn(db, columnName, values) {
   if (!Array.isArray(values) || values.length === 0) {
     return 0
@@ -240,9 +434,12 @@ async function handleDeleteFiles(event, payload = {}, options = {}) {
   const logger = options.logger || console
   const showMessageBox = options.showMessageBox || dialog.showMessageBox.bind(dialog)
   const deleteFile = options.deleteFile || ((targetPath) => fs.promises.unlink(targetPath))
+  const deleteDirectory = options.deleteDirectory || ((targetPath) => fs.promises.rmdir(targetPath))
   const settingsLoader = options.settingsLoader || loadSettings
   const collectFiles = options.collectFilesWithinWindow || collectFilesWithinWindow
   const deleteIfAllowed = options.deleteFileIfAllowed || deleteFileIfAllowed
+  const deleteEmptySessions =
+    options.deleteEmptySessionDirectories || deleteEmptySessionDirectories
   const deleteWindow = resolveDeleteWindow(payload?.deleteWindow)
   const requestedAtMs = Number.isFinite(payload?.requestedAtMs)
     ? Math.floor(payload.requestedAtMs)
@@ -261,7 +458,7 @@ async function handleDeleteFiles(event, payload = {}, options = {}) {
         cancelId: 0,
         title: `Delete files (${deleteWindow.label})`,
         message: `Are you sure you want to delete files from ${deleteWindow.label}?`,
-        detail: 'This includes stills, stills-markdown, and clipboard mirror files.'
+        detail: 'This includes all captured context and session folders'
       })
 
   if (confirmResult?.response !== 1) {
@@ -329,6 +526,18 @@ async function handleDeleteFiles(event, payload = {}, options = {}) {
     markdownFiles,
     logger
   })
+  const newestSessionId = resolveNewestSessionId([stillsRoot, stillsMarkdownRoot], {
+    allowedRoots
+  })
+  const { deletedSessionDirs, failedSessionDirs } = await deleteEmptySessions(
+    [stillsRoot, stillsMarkdownRoot],
+    {
+      allowedRoots,
+      skipSessionId: newestSessionId,
+      deleteDirectory,
+      logger
+    }
+  )
 
   logger.log('Storage cleanup processed delete window', {
     deleteWindow: deleteWindow.key,
@@ -341,7 +550,10 @@ async function handleDeleteFiles(event, payload = {}, options = {}) {
     markdownFilesMatched: markdownFiles.length,
     deletedCount,
     failedCount: failedFiles.length,
-    removedQueueRows
+    removedQueueRows,
+    skippedNewestSessionId: newestSessionId,
+    removedSessionDirCount: deletedSessionDirs.length,
+    failedSessionDirCount: failedSessionDirs.length
   })
 
   if (failedFiles.length > 0) {
@@ -366,8 +578,12 @@ module.exports = {
   registerStorageHandlers,
   handleDeleteFiles,
   parseLeadingTimestampMs,
+  parseSessionTimestampMs,
   resolveDeleteWindow,
   collectFilesWithinWindow,
   deleteFileIfAllowed,
+  deleteDirectoryIfAllowed,
+  resolveNewestSessionId,
+  deleteEmptySessionDirectories,
   pruneQueueRows
 }

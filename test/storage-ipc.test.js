@@ -327,3 +327,231 @@ test('handleDeleteFiles passes allowedRoots to deleteFileIfAllowed', async () =>
     fs.rmSync(root, { recursive: true, force: true })
   })
 })
+
+test('handleDeleteFiles passes allowedRoots to deleteEmptySessionDirectories', async () => {
+  await withStorageModule(async ({ storageModule }) => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-storage-empty-session-roots-'))
+    const contextFolderPath = path.join(root, 'context')
+    const stillsRoot = path.join(contextFolderPath, 'familiar', 'stills')
+    const stillsMarkdownRoot = path.join(contextFolderPath, 'familiar', 'stills-markdown')
+    fs.mkdirSync(stillsRoot, { recursive: true })
+    fs.mkdirSync(stillsMarkdownRoot, { recursive: true })
+
+    const deleteEmptyCalls = []
+    const result = await storageModule.handleDeleteFiles(
+      {},
+      {
+        requestedAtMs: Date.parse('2026-02-17T12:30:00.000Z'),
+        deleteWindow: '15m'
+      },
+      {
+        showMessageBox: async () => ({ response: 1 }),
+        settingsLoader: () => ({ contextFolderPath }),
+        deleteEmptySessionDirectories: async (_sessionRoots, options = {}) => {
+          deleteEmptyCalls.push({ allowedRoots: options.allowedRoots || [] })
+          return { deletedSessionDirs: [], failedSessionDirs: [] }
+        }
+      }
+    )
+
+    assert.equal(result.ok, true)
+    assert.equal(deleteEmptyCalls.length, 1)
+    assert.deepEqual(deleteEmptyCalls[0].allowedRoots, [stillsRoot, stillsMarkdownRoot])
+
+    fs.rmSync(root, { recursive: true, force: true })
+  })
+})
+
+test('parseSessionTimestampMs parses session folder name', async () => {
+  await withStorageModule(async ({ storageModule }) => {
+    const parsed = storageModule.parseSessionTimestampMs('session-2026-02-17T12-30-45-123Z')
+    assert.equal(parsed, Date.parse('2026-02-17T12:30:45.123Z'))
+  })
+})
+
+test('resolveNewestSessionId resolves newest session across roots', async () => {
+  await withStorageModule(async ({ storageModule }) => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-storage-newest-session-'))
+    const stillsRoot = path.join(root, 'context', 'familiar', 'stills')
+    const markdownRoot = path.join(root, 'context', 'familiar', 'stills-markdown')
+    fs.mkdirSync(path.join(stillsRoot, 'session-2026-02-17T12-00-00-000Z'), { recursive: true })
+    fs.mkdirSync(path.join(markdownRoot, 'session-2026-02-17T12-10-00-000Z'), { recursive: true })
+
+    const newest = storageModule.resolveNewestSessionId([stillsRoot, markdownRoot], {
+      allowedRoots: [stillsRoot, markdownRoot]
+    })
+
+    assert.equal(newest, 'session-2026-02-17T12-10-00-000Z')
+    fs.rmSync(root, { recursive: true, force: true })
+  })
+})
+
+test('deleteEmptySessionDirectories removes empty old sessions but keeps newest and non-empty', async () => {
+  await withStorageModule(async ({ storageModule }) => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-storage-session-delete-'))
+    const stillsRoot = path.join(root, 'context', 'familiar', 'stills')
+    const markdownRoot = path.join(root, 'context', 'familiar', 'stills-markdown')
+    const oldEmptySession = path.join(stillsRoot, 'session-2026-02-17T11-00-00-000Z')
+    const newestEmptySession = path.join(markdownRoot, 'session-2026-02-17T12-00-00-000Z')
+    const nonEmptySession = path.join(stillsRoot, 'session-2026-02-17T10-00-00-000Z')
+
+    fs.mkdirSync(oldEmptySession, { recursive: true })
+    fs.mkdirSync(newestEmptySession, { recursive: true })
+    fs.mkdirSync(nonEmptySession, { recursive: true })
+    fs.writeFileSync(path.join(nonEmptySession, '2026-02-17T10-00-01-000Z.webp'), 'x', 'utf-8')
+
+    const result = await storageModule.deleteEmptySessionDirectories([stillsRoot, markdownRoot], {
+      allowedRoots: [stillsRoot, markdownRoot],
+      skipSessionId: 'session-2026-02-17T12-00-00-000Z',
+      deleteDirectory: async (dirPath) => {
+        fs.rmdirSync(dirPath)
+      }
+    })
+
+    assert.equal(fs.existsSync(oldEmptySession), false)
+    assert.equal(fs.existsSync(newestEmptySession), true)
+    assert.equal(fs.existsSync(nonEmptySession), true)
+    assert.equal(result.deletedSessionDirs.length, 1)
+    assert.equal(result.failedSessionDirs.length, 0)
+
+    fs.rmSync(root, { recursive: true, force: true })
+  })
+})
+
+test('deleteDirectoryIfAllowed aborts directory outside familiar folder', async () => {
+  await withStorageModule(async ({ storageModule }) => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-storage-dir-guard-'))
+    const familiarRoot = path.join(root, 'context', 'familiar')
+    const outsideRoot = path.join(root, 'outside')
+    fs.mkdirSync(familiarRoot, { recursive: true })
+    fs.mkdirSync(outsideRoot, { recursive: true })
+
+    let deleteCalls = 0
+    const result = await storageModule.deleteDirectoryIfAllowed(outsideRoot, {
+      allowedRoots: [familiarRoot],
+      deleteDirectory: async () => {
+        deleteCalls += 1
+      }
+    })
+
+    assert.equal(result.ok, false)
+    assert.equal(deleteCalls, 0)
+    assert.match(result.message, /outside Familiar storage roots/i)
+
+    fs.rmSync(root, { recursive: true, force: true })
+  })
+})
+
+test('deleteEmptySessionDirectories ignores roots outside allowed roots', async () => {
+  await withStorageModule(async ({ storageModule }) => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-storage-session-roots-'))
+    const allowedRoot = path.join(root, 'context', 'familiar', 'stills')
+    const outsideRoot = path.join(root, 'outside', 'stills')
+    const outsideSession = path.join(outsideRoot, 'session-2026-02-17T12-00-00-000Z')
+    fs.mkdirSync(allowedRoot, { recursive: true })
+    fs.mkdirSync(outsideSession, { recursive: true })
+
+    const deletedPaths = []
+    await storageModule.deleteEmptySessionDirectories([outsideRoot], {
+      allowedRoots: [allowedRoot],
+      deleteDirectory: async (dirPath) => {
+        deletedPaths.push(dirPath)
+      }
+    })
+
+    assert.equal(deletedPaths.length, 0)
+    assert.equal(fs.existsSync(outsideSession), true)
+
+    fs.rmSync(root, { recursive: true, force: true })
+  })
+})
+
+test('deleteEmptySessionDirectories passes allowedRoots to deleteDirectoryIfAllowed', async () => {
+  await withStorageModule(async ({ storageModule }) => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-storage-dir-allowed-roots-'))
+    const stillsRoot = path.join(root, 'context', 'familiar', 'stills')
+    const sessionDir = path.join(stillsRoot, 'session-2026-02-17T11-00-00-000Z')
+    fs.mkdirSync(sessionDir, { recursive: true })
+
+    const calls = []
+    const realStillsRoot = fs.realpathSync(stillsRoot)
+    const result = await storageModule.deleteEmptySessionDirectories([stillsRoot], {
+      allowedRoots: [stillsRoot],
+      deleteDirectoryIfAllowedFn: async (dirPath, options = {}) => {
+        calls.push({ dirPath, allowedRoots: options.allowedRoots || [] })
+        return { ok: true, path: dirPath }
+      }
+    })
+
+    assert.ok(result)
+    assert.equal(calls.length, 1)
+    assert.deepEqual(calls[0].allowedRoots, [realStillsRoot])
+
+    fs.rmSync(root, { recursive: true, force: true })
+  })
+})
+
+test('handleDeleteFiles removes emptied old session directories with default directory delete implementation', async () => {
+  await withStorageModule(async ({ storageModule }) => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-storage-ipc-empty-session-'))
+    const contextFolderPath = path.join(root, 'context')
+    const oldStillsSessionDir = path.join(
+      contextFolderPath,
+      'familiar',
+      'stills',
+      'session-2026-02-17T11-00-00-000Z'
+    )
+    const newestStillsSessionDir = path.join(
+      contextFolderPath,
+      'familiar',
+      'stills',
+      'session-2026-02-17T12-00-00-000Z'
+    )
+    const oldMarkdownSessionDir = path.join(
+      contextFolderPath,
+      'familiar',
+      'stills-markdown',
+      'session-2026-02-17T11-00-00-000Z'
+    )
+    const newestMarkdownSessionDir = path.join(
+      contextFolderPath,
+      'familiar',
+      'stills-markdown',
+      'session-2026-02-17T12-00-00-000Z'
+    )
+    fs.mkdirSync(oldStillsSessionDir, { recursive: true })
+    fs.mkdirSync(newestStillsSessionDir, { recursive: true })
+    fs.mkdirSync(oldMarkdownSessionDir, { recursive: true })
+    fs.mkdirSync(newestMarkdownSessionDir, { recursive: true })
+
+    fs.writeFileSync(path.join(oldStillsSessionDir, '2026-02-17T12-20-00-000Z.webp'), 'recent', 'utf-8')
+    fs.writeFileSync(path.join(oldMarkdownSessionDir, '2026-02-17T12-20-00-000Z.md'), 'recent-md', 'utf-8')
+    fs.writeFileSync(
+      path.join(oldMarkdownSessionDir, '2026-02-17T12-21-00-000Z.clipboard.txt'),
+      'recent-clip',
+      'utf-8'
+    )
+    fs.writeFileSync(path.join(newestStillsSessionDir, '2026-02-17T12-00-00-000Z.webp'), 'keep', 'utf-8')
+    fs.writeFileSync(path.join(newestMarkdownSessionDir, '2026-02-17T12-00-00-000Z.md'), 'keep-md', 'utf-8')
+
+    const result = await storageModule.handleDeleteFiles(
+      {},
+      {
+        requestedAtMs: Date.parse('2026-02-17T12:30:00.000Z'),
+        deleteWindow: '15m'
+      },
+      {
+        showMessageBox: async () => ({ response: 1 }),
+        settingsLoader: () => ({ contextFolderPath })
+      }
+    )
+
+    assert.equal(result.ok, true)
+    assert.equal(fs.existsSync(oldStillsSessionDir), false)
+    assert.equal(fs.existsSync(oldMarkdownSessionDir), false)
+    assert.equal(fs.existsSync(newestStillsSessionDir), true)
+    assert.equal(fs.existsSync(newestMarkdownSessionDir), true)
+
+    fs.rmSync(root, { recursive: true, force: true })
+  })
+})

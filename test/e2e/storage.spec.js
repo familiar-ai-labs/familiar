@@ -25,27 +25,46 @@ test('delete files with 15 minute window removes only recent stills and stills-m
   const contextPath = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-context-storage-e2e-'))
   const settingsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-settings-storage-e2e-'))
 
-  const stillsSessionDir = path.join(contextPath, 'familiar', 'stills', 'session-e2e-stills')
-  const markdownSessionDir = path.join(
+  const oldStillsSessionDir = path.join(
+    contextPath,
+    'familiar',
+    'stills',
+    'session-2026-02-17T11-00-00-000Z'
+  )
+  const newestStillsSessionDir = path.join(
+    contextPath,
+    'familiar',
+    'stills',
+    'session-2026-02-17T12-00-00-000Z'
+  )
+  const oldMarkdownSessionDir = path.join(
     contextPath,
     'familiar',
     'stills-markdown',
-    'session-e2e-markdown'
+    'session-2026-02-17T11-00-00-000Z'
   )
-  fs.mkdirSync(stillsSessionDir, { recursive: true })
-  fs.mkdirSync(markdownSessionDir, { recursive: true })
+  const newestMarkdownSessionDir = path.join(
+    contextPath,
+    'familiar',
+    'stills-markdown',
+    'session-2026-02-17T12-00-00-000Z'
+  )
+  fs.mkdirSync(oldStillsSessionDir, { recursive: true })
+  fs.mkdirSync(newestStillsSessionDir, { recursive: true })
+  fs.mkdirSync(oldMarkdownSessionDir, { recursive: true })
+  fs.mkdirSync(newestMarkdownSessionDir, { recursive: true })
 
   const now = new Date()
   const oldDate = new Date(now.getTime() - 40 * 60 * 1000)
   const recentDate = new Date(now.getTime() - 10 * 60 * 1000)
 
-  const oldStill = createCaptureFile(stillsSessionDir, oldDate, 'webp', 'old-still')
-  const recentStill = createCaptureFile(stillsSessionDir, recentDate, 'webp', 'recent-still')
-  const oldMarkdown = createCaptureFile(markdownSessionDir, oldDate, 'md', 'old-markdown')
-  const recentMarkdown = createCaptureFile(markdownSessionDir, recentDate, 'md', 'recent-markdown')
-  const oldClipboard = createClipboardMirrorFile(markdownSessionDir, oldDate, 'old-clipboard')
+  const oldStill = createCaptureFile(newestStillsSessionDir, oldDate, 'webp', 'old-still')
+  const recentStill = createCaptureFile(oldStillsSessionDir, recentDate, 'webp', 'recent-still')
+  const oldMarkdown = createCaptureFile(newestMarkdownSessionDir, oldDate, 'md', 'old-markdown')
+  const recentMarkdown = createCaptureFile(oldMarkdownSessionDir, recentDate, 'md', 'recent-markdown')
+  const oldClipboard = createClipboardMirrorFile(newestMarkdownSessionDir, oldDate, 'old-clipboard')
   const recentClipboard = createClipboardMirrorFile(
-    markdownSessionDir,
+    oldMarkdownSessionDir,
     recentDate,
     'recent-clipboard'
   )
@@ -101,7 +120,10 @@ test('delete files with 15 minute window removes only recent stills and stills-m
     await expect.poll(() => fs.existsSync(recentStill.fullPath)).toBe(false)
     await expect.poll(() => fs.existsSync(recentMarkdown.fullPath)).toBe(false)
     await expect.poll(() => fs.existsSync(recentClipboard.fullPath)).toBe(false)
-
+    await expect.poll(() => fs.existsSync(oldStillsSessionDir)).toBe(false)
+    await expect.poll(() => fs.existsSync(oldMarkdownSessionDir)).toBe(false)
+    await expect.poll(() => fs.existsSync(newestStillsSessionDir)).toBe(true)
+    await expect.poll(() => fs.existsSync(newestMarkdownSessionDir)).toBe(true)
   } finally {
     await electronApp.close()
   }
