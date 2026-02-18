@@ -85,7 +85,7 @@ test('resolveDeleteWindow falls back to 15m for unsupported values', async () =>
   })
 })
 
-test('handleDeleteFiles deletes matching files and prunes manifest captures', async () => {
+test('handleDeleteFiles deletes matching files inside the selected window', async () => {
   await withStorageModule(async ({ storageModule }) => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-storage-ipc-'))
     const contextFolderPath = path.join(root, 'context')
@@ -116,21 +116,6 @@ test('handleDeleteFiles deletes matching files and prunes manifest captures', as
     fs.writeFileSync(outsideWindowStill, 'outside', 'utf-8')
     fs.writeFileSync(insideWindowMarkdown, 'md', 'utf-8')
     fs.writeFileSync(insideWindowClipboard, 'clip', 'utf-8')
-    fs.writeFileSync(
-      path.join(stillsSessionDir, 'manifest.json'),
-      JSON.stringify(
-        {
-          captures: [
-            { file: path.basename(insideWindowStill), capturedAt: '2026-02-17T12:20:00.000Z' },
-            { file: path.basename(outsideWindowStill), capturedAt: '2026-02-17T11:20:00.000Z' }
-          ]
-        },
-        null,
-        2
-      ),
-      'utf-8'
-    )
-
     const deleted = []
     const result = await storageModule.handleDeleteFiles(
       {},
@@ -155,12 +140,6 @@ test('handleDeleteFiles deletes matching files and prunes manifest captures', as
     assert.equal(fs.existsSync(insideWindowClipboard), false)
     assert.equal(fs.existsSync(outsideWindowStill), true)
     assert.equal(deleted.length, 3)
-
-    const manifest = JSON.parse(
-      fs.readFileSync(path.join(stillsSessionDir, 'manifest.json'), 'utf-8')
-    )
-    assert.equal(manifest.captures.length, 1)
-    assert.equal(manifest.captures[0].file, path.basename(outsideWindowStill))
 
     fs.rmSync(root, { recursive: true, force: true })
   })

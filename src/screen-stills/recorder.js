@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const { isScreenRecordingPermissionGranted } = require('../screen-capture/permissions');
-const { createSessionStore, recoverIncompleteSessions } = require('./session-store');
+const { createSessionStore } = require('./session-store');
 const { createStillsQueue } = require('./stills-queue');
 
 const CAPTURE_CONFIG = Object.freeze({
@@ -649,22 +649,15 @@ function createRecorder(options = {}) {
       } else {
         createFakeCaptureFile(filePath);
       }
-      if (sessionStore) {
-        sessionStore.addCapture({
-          fileName: nextCapture.fileName,
-          capturedAt: nextCapture.capturedAt,
-          displayId: sourceDetails?.sourceDisplay?.id
-        });
-        if (queueStore) {
-          try {
-            queueStore.enqueueCapture({
-              imagePath: filePath,
-              sessionId: sessionStore.sessionId,
-              capturedAt: nextCapture.capturedAt
-            });
-          } catch (error) {
-            logger.error('Failed to enqueue still capture', { error, filePath });
-          }
+      if (sessionStore && queueStore) {
+        try {
+          queueStore.enqueueCapture({
+            imagePath: filePath,
+            sessionId: sessionStore.sessionId,
+            capturedAt: nextCapture.capturedAt
+          });
+        } catch (error) {
+          logger.error('Failed to enqueue still capture', { error, filePath });
         }
       }
     } finally {
@@ -709,17 +702,9 @@ function createRecorder(options = {}) {
               }
             }
           : await resolveCaptureSourceForDisplay(resolveDisplayForCursor());
-        recoverIncompleteSessions(contextFolderPath, logger);
-
-        const appVersion = typeof app?.getVersion === 'function' ? app.getVersion() : null;
         sessionStore = createSessionStore({
           contextFolderPath,
-          intervalSeconds: intervalMs / 1000,
-          scale: CAPTURE_CONFIG.scale,
-          format: CAPTURE_CONFIG.format,
-          sourceDisplay: initialSourceDetails.sourceDisplay,
-          appVersion,
-          logger
+          format: CAPTURE_CONFIG.format
         });
         queueStore = createStillsQueue({ contextFolderPath, logger });
 
@@ -734,9 +719,6 @@ function createRecorder(options = {}) {
           scheduleCaptureLoop();
           return { ok: true, sessionId: sessionStore.sessionId, sessionDir: sessionStore.sessionDir };
         } catch (error) {
-          if (sessionStore) {
-            sessionStore.finalize('start_failed');
-          }
           if (queueStore) {
             queueStore.close();
             queueStore = null;
@@ -791,9 +773,6 @@ function createRecorder(options = {}) {
         logger.error('Failed to stop recording capture', stopResult.error || stopResult);
       }
 
-      if (sessionStore) {
-        sessionStore.finalize(stopReason);
-      }
       if (queueStore) {
         queueStore.close();
         queueStore = null;
@@ -849,14 +828,9 @@ function createRecorder(options = {}) {
     logger.warn('IPC unavailable; recording status listener not registered');
   }
 
-  function recover(contextFolderPath) {
-    return recoverIncompleteSessions(contextFolderPath, logger);
-  }
-
   return {
     start,
-    stop,
-    recover
+    stop
   };
 }
 

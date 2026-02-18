@@ -4,13 +4,7 @@ const fs = require('node:fs')
 const os = require('node:os')
 const path = require('node:path')
 
-const {
-  createSessionStore,
-  recoverIncompleteSessions
-} = require('../src/screen-stills/session-store')
-
-const readManifest = (manifestPath) =>
-  JSON.parse(fs.readFileSync(manifestPath, 'utf-8'))
+const { createSessionStore } = require('../src/screen-stills/session-store')
 
 const makeTempContext = () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-context-'))
@@ -18,52 +12,17 @@ const makeTempContext = () => {
   return root
 }
 
-test('stills session store writes manifest and captures', () => {
+test('stills session store creates a timestamped session directory and capture filename', () => {
   const contextFolderPath = makeTempContext()
   const store = createSessionStore({
     contextFolderPath,
-    intervalSeconds: 2,
-    scale: 0.5,
-    format: 'webp',
-    sourceDisplay: { id: 1 },
-    appVersion: '0.0.0'
+    format: 'webp'
   })
+
+  assert.equal(store.sessionId.startsWith('session-'), true)
+  assert.equal(fs.existsSync(store.sessionDir), true)
 
   const first = store.nextCaptureFile(new Date('2025-01-01T00:00:00.000Z'))
-  store.addCapture({
-    fileName: first.fileName,
-    capturedAt: first.capturedAt,
-    displayId: 1
-  })
-  store.finalize('idle')
-
-  const manifest = readManifest(store.manifestPath)
-  assert.equal(manifest.format, 'webp')
-  assert.equal(manifest.scale, 0.5)
-  assert.equal(manifest.intervalSeconds, 2)
-  assert.equal(manifest.captures.length, 1)
-  assert.equal(manifest.captures[0].file, first.fileName)
-  assert.equal(manifest.captures[0].displayId, 1)
-  assert.equal(manifest.stopReason, 'idle')
-  assert.ok(manifest.endedAt)
-})
-
-test('recoverIncompleteSessions finalizes unfinished stills manifests', () => {
-  const contextFolderPath = makeTempContext()
-  const stillsRoot = path.join(contextFolderPath, 'familiar', 'stills', 'session-test')
-  fs.mkdirSync(stillsRoot, { recursive: true })
-
-  const manifestPath = path.join(stillsRoot, 'manifest.json')
-  fs.writeFileSync(
-    manifestPath,
-    JSON.stringify({ version: 1, startedAt: '2025-01-01T00:00:00.000Z', captures: [] }, null, 2),
-    'utf-8'
-  )
-
-  const updated = recoverIncompleteSessions(contextFolderPath)
-  assert.equal(updated, 1)
-
-  const manifest = readManifest(manifestPath)
-  assert.equal(manifest.stopReason, 'crash')
-  assert.ok(manifest.endedAt)
+  assert.equal(first.fileName, '2025-01-01T00-00-00-000Z.webp')
+  assert.equal(first.capturedAt, '2025-01-01T00:00:00.000Z')
 })

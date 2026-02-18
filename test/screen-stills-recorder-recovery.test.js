@@ -156,15 +156,12 @@ test('recorder.start force-resets and retries once when renderer reports capture
     }
     if (request === './session-store') {
       return {
-        recoverIncompleteSessions: () => {},
         createSessionStore: ({ contextFolderPath }) => {
           const sessionId = 'session-test';
           return {
             sessionId,
             sessionDir: `${contextFolderPath}/familiar/stills/${sessionId}`,
-            nextCaptureFile: (capturedAt) => ({ fileName: 'capture.webp', capturedAt }),
-            addCapture: () => {},
-            finalize: () => {}
+            nextCaptureFile: (capturedAt) => ({ fileName: 'capture.webp', capturedAt })
           };
         }
       };
@@ -345,15 +342,12 @@ test('recorder.start recreates the capture window when force-stop fails, then re
     }
     if (request === './session-store') {
       return {
-        recoverIncompleteSessions: () => {},
         createSessionStore: ({ contextFolderPath }) => {
           const sessionId = `session-test-${Math.random().toString(16).slice(2)}`;
           return {
             sessionId,
             sessionDir: `${contextFolderPath}/familiar/stills/${sessionId}`,
-            nextCaptureFile: (capturedAt) => ({ fileName: 'capture.webp', capturedAt }),
-            addCapture: () => {},
-            finalize: () => {}
+            nextCaptureFile: (capturedAt) => ({ fileName: 'capture.webp', capturedAt })
           };
         }
       };
@@ -513,15 +507,12 @@ test('recorder resolves capture thumbnail from data URL when toPNG is not PNG', 
     }
     if (request === './session-store') {
       return {
-        recoverIncompleteSessions: () => {},
         createSessionStore: ({ contextFolderPath }) => {
           const sessionId = 'session-test';
           return {
             sessionId,
             sessionDir: `${contextFolderPath}/familiar/stills/${sessionId}`,
-            nextCaptureFile: (capturedAt) => ({ fileName: 'capture.webp', capturedAt }),
-            addCapture: () => {},
-            finalize: () => {}
+            nextCaptureFile: (capturedAt) => ({ fileName: 'capture.webp', capturedAt })
           };
         }
       };
@@ -652,15 +643,12 @@ test('recorder fails to start when source thumbnail is unavailable', async () =>
     }
     if (request === './session-store') {
       return {
-        recoverIncompleteSessions: () => {},
         createSessionStore: ({ contextFolderPath }) => {
           const sessionId = 'session-test';
           return {
             sessionId,
             sessionDir: `${contextFolderPath}/familiar/stills/${sessionId}`,
-            nextCaptureFile: (capturedAt) => ({ fileName: 'capture.webp', capturedAt }),
-            addCapture: () => {},
-            finalize: () => {}
+            nextCaptureFile: (capturedAt) => ({ fileName: 'capture.webp', capturedAt })
           };
         }
       };
@@ -806,15 +794,12 @@ test('recorder fails when thumbnail resize throws and does not start', async () 
     }
     if (request === './session-store') {
       return {
-        recoverIncompleteSessions: () => {},
         createSessionStore: ({ contextFolderPath }) => {
           const sessionId = 'session-test';
           return {
             sessionId,
             sessionDir: `${contextFolderPath}/familiar/stills/${sessionId}`,
-            nextCaptureFile: (capturedAt) => ({ fileName: 'capture.webp', capturedAt }),
-            addCapture: () => {},
-            finalize: () => {}
+            nextCaptureFile: (capturedAt) => ({ fileName: 'capture.webp', capturedAt })
           };
         }
       };
@@ -859,7 +844,6 @@ test('recorder follows cursor display and switches capture source between monito
   let captureCalls = 0;
   let getSourcesCalls = 0;
   let cursorPoint = { x: 100, y: 100 };
-  const captureDisplayIds = [];
   const displays = [
     { id: 1, bounds: { x: 0, y: 0, width: 1000, height: 800 }, scaleFactor: 1 },
     { id: 2, bounds: { x: 1000, y: 0, width: 1000, height: 800 }, scaleFactor: 1 }
@@ -963,7 +947,6 @@ test('recorder follows cursor display and switches capture source between monito
     }
     if (request === './session-store') {
       return {
-        recoverIncompleteSessions: () => {},
         createSessionStore: ({ contextFolderPath }) => {
           const sessionId = 'session-test';
           return {
@@ -972,11 +955,7 @@ test('recorder follows cursor display and switches capture source between monito
             nextCaptureFile: (capturedAt) => ({
               fileName: `${Date.now()}.webp`,
               capturedAt
-            }),
-            addCapture: ({ displayId }) => {
-              captureDisplayIds.push(displayId);
-            },
-            finalize: () => {}
+            })
           };
         }
       };
@@ -1019,8 +998,6 @@ test('recorder follows cursor display and switches capture source between monito
 
     assert.equal(sourceIds[0], 'screen:1');
     assert.equal(sourceIds.includes('screen:2'), true);
-    assert.equal(captureDisplayIds.includes(1), true);
-    assert.equal(captureDisplayIds.includes(2), true);
     assert.equal(hasThumbnailPayloads, true);
     assert.equal(hasThumbnailBinaryPayloads, true);
     assert.equal(stopCalls >= 1, true);
@@ -1142,7 +1119,6 @@ test('recorder refreshes capture thumbnail payload when source stays the same', 
     }
     if (request === './session-store') {
       return {
-        recoverIncompleteSessions: () => {},
         createSessionStore: ({ contextFolderPath }) => {
           const sessionId = 'session-test';
           return {
@@ -1151,9 +1127,7 @@ test('recorder refreshes capture thumbnail payload when source stays the same', 
             nextCaptureFile: (capturedAt) => ({
               fileName: `${Date.now()}.webp`,
               capturedAt
-            }),
-            addCapture: () => {},
-            finalize: () => {}
+            })
           };
         }
       };
@@ -1202,7 +1176,6 @@ test('recorder falls back to primary display source when cursor display source i
   const ipcMain = new EventEmitter();
   const sendCalls = [];
   const logs = [];
-  const captureDisplayIds = [];
   let getSourcesCalls = 0;
   const displays = [
     { id: 1, bounds: { x: 0, y: 0, width: 1000, height: 800 }, scaleFactor: 1 },
@@ -1291,17 +1264,12 @@ test('recorder falls back to primary display source when cursor display source i
     }
     if (request === './session-store') {
       return {
-        recoverIncompleteSessions: () => {},
         createSessionStore: ({ contextFolderPath }) => {
           const sessionId = 'session-test';
           return {
             sessionId,
             sessionDir: `${contextFolderPath}/familiar/stills/${sessionId}`,
-            nextCaptureFile: (capturedAt) => ({ fileName: 'capture.webp', capturedAt }),
-            addCapture: ({ displayId }) => {
-              captureDisplayIds.push(displayId);
-            },
-            finalize: () => {}
+            nextCaptureFile: (capturedAt) => ({ fileName: 'capture.webp', capturedAt })
           };
         }
       };
@@ -1333,7 +1301,6 @@ test('recorder falls back to primary display source when cursor display source i
 
     const firstStart = sendCalls.find((call) => call.channel === 'screen-stills:start');
     assert.equal(firstStart?.payload?.sourceId, 'screen:1');
-    assert.equal(captureDisplayIds[0], 1);
     const hasThumbnailBinaryPayload = sendCalls.some((call) =>
       call.channel === 'screen-stills:capture' &&
       call.payload?.thumbnailPng != null

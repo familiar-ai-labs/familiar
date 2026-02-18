@@ -412,10 +412,6 @@ function createScreenStillsController(options = {}) {
       return;
     }
 
-    if (recorder && typeof recorder.recover === 'function') {
-      recorder.recover(settings.contextFolderPath);
-    }
-
     setState(STATES.ARMED, { reason: 'enabled' });
     ensurePresenceRunning();
     markdownWorker.start({ contextFolderPath: settings.contextFolderPath });

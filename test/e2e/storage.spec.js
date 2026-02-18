@@ -51,21 +51,6 @@ test('delete files with 15 minute window removes only recent stills and stills-m
   )
 
   fs.writeFileSync(
-    path.join(stillsSessionDir, 'manifest.json'),
-    JSON.stringify(
-      {
-        captures: [
-          { file: oldStill.fileName, capturedAt: oldDate.toISOString() },
-          { file: recentStill.fileName, capturedAt: recentDate.toISOString() }
-        ]
-      },
-      null,
-      2
-    ),
-    'utf-8'
-  )
-
-  fs.writeFileSync(
     path.join(settingsDir, 'settings.json'),
     JSON.stringify(
       {
@@ -117,12 +102,6 @@ test('delete files with 15 minute window removes only recent stills and stills-m
     await expect.poll(() => fs.existsSync(recentMarkdown.fullPath)).toBe(false)
     await expect.poll(() => fs.existsSync(recentClipboard.fullPath)).toBe(false)
 
-    const manifest = JSON.parse(
-      fs.readFileSync(path.join(stillsSessionDir, 'manifest.json'), 'utf-8')
-    )
-    expect(Array.isArray(manifest.captures)).toBe(true)
-    expect(manifest.captures.length).toBe(1)
-    expect(manifest.captures[0].file).toBe(oldStill.fileName)
   } finally {
     await electronApp.close()
   }

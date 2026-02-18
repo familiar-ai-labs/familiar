@@ -72,7 +72,7 @@ const setIdleSeconds = async (electronApp, idleSeconds) => {
 const getStillsRoot = (contextPath) =>
   path.join(contextPath, FAMILIAR_BEHIND_THE_SCENES_DIR_NAME, STILLS_DIR_NAME)
 
-const findManifestPath = (stillsRoot) => {
+const findSessionDir = (stillsRoot) => {
   if (!fs.existsSync(stillsRoot)) {
     return ''
   }
@@ -80,30 +80,36 @@ const findManifestPath = (stillsRoot) => {
   if (sessions.length === 0) {
     return ''
   }
-  const candidate = path.join(stillsRoot, sessions[0], 'manifest.json')
-  return fs.existsSync(candidate) ? candidate : ''
+  return path.join(stillsRoot, sessions[0])
 }
 
-const waitForManifestPath = async (stillsRoot, options = {}) => {
+const listCaptureFiles = (sessionDir) => {
+  if (!sessionDir || !fs.existsSync(sessionDir)) {
+    return []
+  }
+  return fs
+    .readdirSync(sessionDir)
+    .filter((entry) => /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z\.(webp|png|jpg|jpeg)$/i.test(entry))
+    .sort()
+}
+
+const waitForSessionDir = async (stillsRoot, options = {}) => {
   const timeoutMs = Number.isFinite(options.timeoutMs) ? options.timeoutMs : 5000
-  let manifestPath = ''
+  let sessionDir = ''
   await expect
     .poll(
       () => {
-        manifestPath = findManifestPath(stillsRoot)
-        return manifestPath
+        sessionDir = findSessionDir(stillsRoot)
+        return sessionDir
       },
       { timeout: timeoutMs }
     )
     .toBeTruthy()
-  return manifestPath
+  return sessionDir
 }
 
-const readManifest = (manifestPath) =>
-  JSON.parse(fs.readFileSync(manifestPath, 'utf-8'))
-
-const waitForCaptureCount = async (manifestPath, minimumCount) => {
-  await expect.poll(() => readManifest(manifestPath).captures.length).toBeGreaterThanOrEqual(minimumCount)
+const waitForCaptureCount = async (sessionDir, minimumCount) => {
+  await expect.poll(() => listCaptureFiles(sessionDir).length).toBeGreaterThanOrEqual(minimumCount)
 }
 
 const waitForRecordingStopped = async (window) => {
@@ -138,12 +144,12 @@ const assertImageHeader = (capturePath) => {
   expect(header.slice(8, 12).toString('ascii')).toBe('WEBP')
 }
 
-const assertCaptureFiles = (manifestPath, manifest, options = {}) => {
+const assertCaptureFiles = (sessionDir, captureFiles, options = {}) => {
   const requireNonEmptyCount = Number.isFinite(options.requireNonEmptyCount)
     ? options.requireNonEmptyCount
-    : manifest.captures.length
-  manifest.captures.forEach((capture, index) => {
-    const capturePath = path.join(path.dirname(manifestPath), capture.file)
+    : captureFiles.length
+  captureFiles.forEach((captureFileName, index) => {
+    const capturePath = path.join(sessionDir, captureFileName)
     expect(fs.existsSync(capturePath)).toBe(true)
     const size = fs.statSync(capturePath).size
     if (index < requireNonEmptyCount) {
@@ -184,8 +190,8 @@ const setWindowBackdrop = async (window, options = {}) => {
   )
 }
 
-const readCaptureBuffer = (manifestPath, capture) =>
-  fs.readFileSync(path.join(path.dirname(manifestPath), capture.file))
+const readCaptureBuffer = (sessionDir, captureFileName) =>
+  fs.readFileSync(path.join(sessionDir, captureFileName))
 
 test('stills save captures to the stills folder', async () => {
   const contextPath = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-context-stills-'))
@@ -212,16 +218,16 @@ test('stills save captures to the stills folder', async () => {
     await expect(recordingAction).toHaveText('Pause (10 min)')
 
     const stillsRoot = getStillsRoot(contextPath)
-    const manifestPath = await waitForManifestPath(stillsRoot)
-    await waitForCaptureCount(manifestPath, 1)
+    const sessionDir = await waitForSessionDir(stillsRoot)
+    await waitForCaptureCount(sessionDir, 1)
 
     await recordingAction.click()
     await expect(window.locator('#sidebar-recording-status')).toHaveText('Paused')
     await expect(recordingAction).toHaveText('Resume')
 
-    const manifest = readManifest(manifestPath)
-    expect(manifest.captures.length).toBeGreaterThan(0)
-    assertCaptureFiles(manifestPath, manifest)
+    const captureFiles = listCaptureFiles(sessionDir)
+    expect(captureFiles.length).toBeGreaterThan(0)
+    assertCaptureFiles(sessionDir, captureFiles)
   } finally {
     await electronApp.close()
   }
@@ -258,19 +264,19 @@ if (process.platform === 'darwin') {
       await expect(window.locator('#sidebar-recording-status')).toHaveText('Capturing')
 
       const stillsRoot = getStillsRoot(contextPath)
-      const manifestPath = await waitForManifestPath(stillsRoot)
-      await waitForCaptureCount(manifestPath, 1)
+      const sessionDir = await waitForSessionDir(stillsRoot)
+      await waitForCaptureCount(sessionDir, 1)
 
       await setWindowBackdrop(window, { backgroundColor: '#ef3b3b', marker: 'B' })
-      await waitForCaptureCount(manifestPath, 2)
+      await waitForCaptureCount(sessionDir, 2)
 
-      const manifest = readManifest(manifestPath)
-      expect(manifest.captures.length).toBeGreaterThanOrEqual(2)
+      const captureFiles = listCaptureFiles(sessionDir)
+      expect(captureFiles.length).toBeGreaterThanOrEqual(2)
 
-      const firstCapture = readCaptureBuffer(manifestPath, manifest.captures[0])
-      const secondCapture = readCaptureBuffer(manifestPath, manifest.captures[1])
-      assertImageHeader(path.join(path.dirname(manifestPath), manifest.captures[0].file))
-      assertImageHeader(path.join(path.dirname(manifestPath), manifest.captures[1].file))
+      const firstCapture = readCaptureBuffer(sessionDir, captureFiles[0])
+      const secondCapture = readCaptureBuffer(sessionDir, captureFiles[1])
+      assertImageHeader(path.join(sessionDir, captureFiles[0]))
+      assertImageHeader(path.join(sessionDir, captureFiles[1]))
       expect(firstCapture.equals(secondCapture)).toBe(false)
       expect(firstCapture.length).toBeGreaterThan(0)
       expect(secondCapture.length).toBeGreaterThan(0)
@@ -311,16 +317,15 @@ test('stills capture fails when real capture thumbnail payload is corrupted', as
     await recordingAction.click()
     const stillsRoot = getStillsRoot(contextPath)
     await waitForRecordingState(window, 'armed')
-    let manifestPath = ''
+    let sessionDir = ''
     try {
-      manifestPath = await waitForManifestPath(stillsRoot, { timeoutMs: 1200 })
+      sessionDir = await waitForSessionDir(stillsRoot, { timeoutMs: 1200 })
     } catch (_error) {
-      manifestPath = ''
+      sessionDir = ''
     }
-    if (manifestPath) {
-      const manifest = readManifest(manifestPath)
-      expect(manifest.captures.length).toBe(0)
-      expect(manifest.stopReason).toBe('start_failed')
+    if (sessionDir) {
+      const captureFiles = listCaptureFiles(sessionDir)
+      expect(captureFiles.length).toBe(0)
     }
 
     await expect(window.locator('#sidebar-recording-status')).toHaveText('Idle')
@@ -351,8 +356,8 @@ test('stills start while recording is active', async () => {
     await expect(recordingAction).toHaveText('Pause (10 min)')
 
     const stillsRoot = getStillsRoot(contextPath)
-    const manifestPath = await waitForManifestPath(stillsRoot)
-    await waitForCaptureCount(manifestPath, 1)
+    const sessionDir = await waitForSessionDir(stillsRoot)
+    await waitForCaptureCount(sessionDir, 1)
 
     await expect
       .poll(async () => {
@@ -361,9 +366,9 @@ test('stills start while recording is active', async () => {
       })
       .toBeTruthy()
 
-    const manifest = readManifest(manifestPath)
-    expect(manifest.captures.length).toBeGreaterThan(0)
-    assertCaptureFiles(manifestPath, manifest, { requireNonEmptyCount: 1 })
+    const captureFiles = listCaptureFiles(sessionDir)
+    expect(captureFiles.length).toBeGreaterThan(0)
+    assertCaptureFiles(sessionDir, captureFiles, { requireNonEmptyCount: 1 })
 
     await recordingAction.click()
     await expect(window.locator('#sidebar-recording-status')).toHaveText('Paused')
@@ -402,25 +407,25 @@ test('stills capture repeatedly based on the interval', async () => {
     await expect(recordingAction).toHaveText('Pause (10 min)')
 
     const stillsRoot = getStillsRoot(contextPath)
-    const manifestPath = await waitForManifestPath(stillsRoot)
+    const sessionDir = await waitForSessionDir(stillsRoot)
 
-    await waitForCaptureCount(manifestPath, 2)
+    await waitForCaptureCount(sessionDir, 2)
 
     await recordingAction.click()
     await expect(window.locator('#sidebar-recording-status')).toHaveText('Paused')
     await expect(recordingAction).toHaveText('Resume')
 
-    await waitForCaptureCount(manifestPath, 2)
+    await waitForCaptureCount(sessionDir, 2)
 
-    const manifest = readManifest(manifestPath)
-    expect(manifest.captures.length).toBeGreaterThanOrEqual(2)
-    assertCaptureFiles(manifestPath, manifest, { requireNonEmptyCount: 2 })
+    const captureFiles = listCaptureFiles(sessionDir)
+    expect(captureFiles.length).toBeGreaterThanOrEqual(2)
+    assertCaptureFiles(sessionDir, captureFiles, { requireNonEmptyCount: 2 })
   } finally {
     await electronApp.close()
   }
 })
 
-test('stills stop and save the manifest when the user goes idle', async () => {
+test('stills stop when the user goes idle', async () => {
   const contextPath = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-context-stills-'))
   const settingsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-settings-e2e-'))
 
@@ -443,16 +448,15 @@ test('stills stop and save the manifest when the user goes idle', async () => {
     await expect(window.locator('#sidebar-recording-status')).toHaveText('Capturing')
 
     const stillsRoot = getStillsRoot(contextPath)
-    const manifestPath = await waitForManifestPath(stillsRoot)
-    await waitForCaptureCount(manifestPath, 1)
+    const sessionDir = await waitForSessionDir(stillsRoot)
+    await waitForCaptureCount(sessionDir, 1)
 
     await window.evaluate(() => window.familiar.simulateStillsIdle({ idleSeconds: 9999 }))
     await waitForRecordingStopped(window)
 
-    const manifest = readManifest(manifestPath)
-    expect(manifest.stopReason).toBe('idle')
-    expect(manifest.captures.length).toBeGreaterThanOrEqual(1)
-    assertCaptureFiles(manifestPath, manifest)
+    const captureFiles = listCaptureFiles(sessionDir)
+    expect(captureFiles.length).toBeGreaterThanOrEqual(1)
+    assertCaptureFiles(sessionDir, captureFiles)
   } finally {
     await electronApp.close()
   }

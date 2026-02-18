@@ -180,47 +180,6 @@ async function deleteFileIfAllowed(
   return { ok: true, path: realFilePath }
 }
 
-function pruneManifestCaptures(sessionToDeletedFiles, logger = console) {
-  let removedCaptureEntries = 0
-  let updatedManifests = 0
-
-  for (const [sessionDir, deletedFileNames] of sessionToDeletedFiles.entries()) {
-    const manifestPath = path.join(sessionDir, 'manifest.json')
-    if (!fs.existsSync(manifestPath)) {
-      continue
-    }
-
-    try {
-      const rawManifest = fs.readFileSync(manifestPath, 'utf-8')
-      const manifest = JSON.parse(rawManifest)
-      const captures = Array.isArray(manifest?.captures) ? manifest.captures : []
-      const nextCaptures = captures.filter((capture) => {
-        if (!capture || typeof capture.file !== 'string') {
-          return true
-        }
-        return !deletedFileNames.has(capture.file)
-      })
-
-      const removed = captures.length - nextCaptures.length
-      if (removed <= 0) {
-        continue
-      }
-
-      manifest.captures = nextCaptures
-      fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), 'utf-8')
-      removedCaptureEntries += removed
-      updatedManifests += 1
-    } catch (error) {
-      logger.error('Failed to update stills manifest after storage cleanup', {
-        manifestPath,
-        message: error?.message || String(error)
-      })
-    }
-  }
-
-  return { removedCaptureEntries, updatedManifests }
-}
-
 function deleteRowsByColumnIn(db, columnName, values) {
   if (!Array.isArray(values) || values.length === 0) {
     return 0
@@ -330,7 +289,6 @@ async function handleDeleteFiles(event, payload = {}, options = {}) {
   )
   const startMs = deleteWindow.durationMs === null ? 0 : requestedAtMs - deleteWindow.durationMs
   const allowedRoots = [stillsRoot, stillsMarkdownRoot]
-  const realStillsRoot = toRealPathSafe(stillsRoot)
   const stillFiles = collectFiles(stillsRoot, {
     startMs,
     endMs: requestedAtMs,
@@ -347,7 +305,6 @@ async function handleDeleteFiles(event, payload = {}, options = {}) {
 
   let deletedCount = 0
   const failedFiles = []
-  const sessionToDeletedFiles = new Map()
 
   for (const filePath of candidateFiles) {
     try {
@@ -357,16 +314,6 @@ async function handleDeleteFiles(event, payload = {}, options = {}) {
         continue
       }
       deletedCount += 1
-      if (
-        realStillsRoot &&
-        (deleteResult.path === realStillsRoot ||
-          deleteResult.path.startsWith(`${realStillsRoot}${path.sep}`))
-      ) {
-        const sessionDir = path.dirname(deleteResult.path)
-        const deleted = sessionToDeletedFiles.get(sessionDir) || new Set()
-        deleted.add(path.basename(deleteResult.path))
-        sessionToDeletedFiles.set(sessionDir, deleted)
-      }
     } catch (error) {
       failedFiles.push(filePath)
       logger.error('Failed to delete file during storage cleanup', {
@@ -376,10 +323,6 @@ async function handleDeleteFiles(event, payload = {}, options = {}) {
     }
   }
 
-  const { removedCaptureEntries, updatedManifests } = pruneManifestCaptures(
-    sessionToDeletedFiles,
-    logger
-  )
   const { removedQueueRows } = pruneQueueRows({
     contextFolderPath,
     stillFiles,
@@ -398,8 +341,6 @@ async function handleDeleteFiles(event, payload = {}, options = {}) {
     markdownFilesMatched: markdownFiles.length,
     deletedCount,
     failedCount: failedFiles.length,
-    removedCaptureEntries,
-    updatedManifests,
     removedQueueRows
   })
 
@@ -428,6 +369,5 @@ module.exports = {
   resolveDeleteWindow,
   collectFilesWithinWindow,
   deleteFileIfAllowed,
-  pruneManifestCaptures,
   pruneQueueRows
 }
