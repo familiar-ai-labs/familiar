@@ -577,6 +577,9 @@ function registerStorageHandlers() {
 module.exports = {
   registerStorageHandlers,
   handleDeleteFiles,
+  toRealPathSafe,
+  normalizeAllowedRoots,
+  isWithinAnyAllowedRoot,
   parseLeadingTimestampMs,
   parseSessionTimestampMs,
   resolveDeleteWindow,

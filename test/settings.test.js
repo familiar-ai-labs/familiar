@@ -175,6 +175,47 @@ test('saveSettings preserves updateLastCheckedAt when updating other settings', 
   assert.equal(loaded.contextFolderPath, contextDir)
 })
 
+test('saveSettings persists storage auto cleanup retention days', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-settings-'))
+  const settingsDir = path.join(tempRoot, 'settings')
+
+  saveSettings({ storageAutoCleanupRetentionDays: 2 }, { settingsDir })
+  const loaded = loadSettings({ settingsDir })
+  assert.equal(loaded.storageAutoCleanupRetentionDays, 2)
+})
+
+test('saveSettings normalizes invalid storage auto cleanup retention days to 2', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-settings-'))
+  const settingsDir = path.join(tempRoot, 'settings')
+
+  saveSettings({ storageAutoCleanupRetentionDays: 9 }, { settingsDir })
+  const loaded = loadSettings({ settingsDir })
+  assert.equal(loaded.storageAutoCleanupRetentionDays, 2)
+})
+
+test('saveSettings preserves storage auto cleanup retention days when updating other settings', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-settings-'))
+  const settingsDir = path.join(tempRoot, 'settings')
+  const contextDir = path.join(tempRoot, 'context')
+  fs.mkdirSync(contextDir)
+
+  saveSettings({ storageAutoCleanupRetentionDays: 2 }, { settingsDir })
+  saveSettings({ contextFolderPath: contextDir }, { settingsDir })
+  const loaded = loadSettings({ settingsDir })
+  assert.equal(loaded.storageAutoCleanupRetentionDays, 2)
+  assert.equal(loaded.contextFolderPath, contextDir)
+})
+
+test('saveSettings persists storage auto cleanup last run timestamp', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-settings-'))
+  const settingsDir = path.join(tempRoot, 'settings')
+  const expected = Date.parse('2026-02-20T11:00:00.000Z')
+
+  saveSettings({ storageAutoCleanupLastRunAt: expected }, { settingsDir })
+  const loaded = loadSettings({ settingsDir })
+  assert.equal(loaded.storageAutoCleanupLastRunAt, expected)
+})
+
 test('saveSettings persists alwaysRecordWhenActive', () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-settings-'))
   const settingsDir = path.join(tempRoot, 'settings')

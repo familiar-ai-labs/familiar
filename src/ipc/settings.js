@@ -10,6 +10,7 @@ const {
 } = require('../screen-capture/permissions');
 const { resolveHarnessSkillPath } = require('../skills/installer');
 const { createRecorder } = require('../screen-stills/recorder');
+const { resolveAutoCleanupRetentionDays } = require('../storage/auto-cleanup-retention');
 
 let onSettingsSaved = null;
 const PROBE_RECORDER_WINDOW_NAME = 'familiar-permission-probe-';
@@ -161,6 +162,9 @@ function handleGetSettings() {
             return 'apple_vision_ocr';
         })();
         const alwaysRecordWhenActive = settings.alwaysRecordWhenActive === true;
+        const storageAutoCleanupRetentionDays = resolveAutoCleanupRetentionDays(
+            settings.storageAutoCleanupRetentionDays
+        );
         const wizardCompleted = settings.wizardCompleted === true;
         const skillInstallerHarness = normalizeSkillInstallerHarnesses(settings?.skillInstaller || {});
         const skillInstallerInstallPath = normalizeSkillInstallerPaths(settings?.skillInstaller || {}, skillInstallerHarness);
@@ -184,6 +188,7 @@ function handleGetSettings() {
             llmProviderApiKey,
             stillsMarkdownExtractorType,
             alwaysRecordWhenActive,
+            storageAutoCleanupRetentionDays,
             wizardCompleted,
             skillInstaller: {
                 harness: skillInstallerHarness,
@@ -200,6 +205,7 @@ function handleGetSettings() {
             llmProviderApiKey: '',
             stillsMarkdownExtractorType: 'apple_vision_ocr',
             alwaysRecordWhenActive: false,
+            storageAutoCleanupRetentionDays: resolveAutoCleanupRetentionDays(undefined),
             wizardCompleted: false,
             skillInstaller: { harness: [], installPath: [] },
             appVersion
@@ -213,6 +219,7 @@ function handleSaveSettings(_event, payload) {
     const hasLlmProviderName = Object.prototype.hasOwnProperty.call(payload || {}, 'llmProviderName');
     const hasStillsMarkdownExtractorType = Object.prototype.hasOwnProperty.call(payload || {}, 'stillsMarkdownExtractorType');
     const hasAlwaysRecordWhenActive = Object.prototype.hasOwnProperty.call(payload || {}, 'alwaysRecordWhenActive');
+    const hasStorageAutoCleanupRetentionDays = Object.prototype.hasOwnProperty.call(payload || {}, 'storageAutoCleanupRetentionDays');
     const hasWizardCompleted = Object.prototype.hasOwnProperty.call(payload || {}, 'wizardCompleted');
     const hasSkillInstaller = Object.prototype.hasOwnProperty.call(payload || {}, 'skillInstaller');
     const settingsPayload = {};
@@ -223,6 +230,7 @@ function handleSaveSettings(_event, payload) {
         !hasLlmProviderName &&
         !hasStillsMarkdownExtractorType &&
         !hasAlwaysRecordWhenActive &&
+        !hasStorageAutoCleanupRetentionDays &&
         !hasWizardCompleted &&
         !hasSkillInstaller
     ) {
@@ -265,6 +273,12 @@ function handleSaveSettings(_event, payload) {
     if (hasAlwaysRecordWhenActive) {
         const nextValue = payload.alwaysRecordWhenActive === true;
         settingsPayload.alwaysRecordWhenActive = nextValue;
+    }
+
+    if (hasStorageAutoCleanupRetentionDays) {
+        settingsPayload.storageAutoCleanupRetentionDays = resolveAutoCleanupRetentionDays(
+            payload.storageAutoCleanupRetentionDays
+        );
     }
 
     if (hasWizardCompleted) {

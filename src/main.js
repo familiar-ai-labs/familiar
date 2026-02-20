@@ -30,6 +30,12 @@ const { getTrayIconPathForMenuBar } = require('./tray/icon');
 const { shouldOpenSettingsOnReady } = require('./launch-intent');
 const { APP_MODE, setAppMode } = require('./app-mode');
 const { initializeProcessOwnership } = require('./startup/ownership');
+const {
+    createAutoSessionCleanupScheduler,
+    DEFAULT_CHECK_INTERVAL_MS,
+    resolveCleanupRetentionDays
+} = require('./storage/auto-session-cleanup');
+const { createRetentionChangeTrigger } = require('./storage/retention-change-trigger');
 
 const trayIconPath = path.join(__dirname, 'icon_white_owl.png');
 
@@ -42,6 +48,8 @@ let screenStillsController = null;
 let presenceMonitor = null;
 let recordingShutdownInProgress = false;
 let recordingOffReminder = null;
+let autoSessionCleanupScheduler = null;
+let retentionChangeTrigger = null;
 const e2eToastEvents = [];
 const E2E_TOAST_EVENT_LIMIT = 20;
 
@@ -125,6 +133,18 @@ const recordingOffReminderDelayMs = (() => {
     return DEFAULT_RECORDING_OFF_REMINDER_DELAY_MS;
 })();
 
+const autoCleanupCheckIntervalMs = (() => {
+    const override = parsePositiveInteger(process.env.FAMILIAR_AUTO_CLEANUP_CHECK_INTERVAL_MS);
+    if (override !== null) {
+        console.log('Auto session cleanup check interval override enabled', {
+            intervalMs: override,
+            reason: 'FAMILIAR_AUTO_CLEANUP_CHECK_INTERVAL_MS'
+        });
+        return override;
+    }
+    return DEFAULT_CHECK_INTERVAL_MS;
+})();
+
 initLogging();
 ensureHomebrewPath({ logger: console });
 
@@ -143,6 +163,15 @@ const updateScreenCaptureFromSettings = () => {
     if (screenStillsController) {
         screenStillsController.updateSettings(payload);
     }
+};
+
+const handleMainSettingsSaved = (nextSettings = null) => {
+    updateScreenCaptureFromSettings();
+
+    if (!retentionChangeTrigger) {
+        return;
+    }
+    retentionChangeTrigger.handle(nextSettings?.storageAutoCleanupRetentionDays);
 };
 
 const attemptScreenCaptureShutdown = (reason) => {
@@ -460,7 +489,7 @@ function createTray() {
 }
 
 const registerMainProcessIpc = () => {
-    registerIpcHandlers({ onSettingsSaved: updateScreenCaptureFromSettings });
+    registerIpcHandlers({ onSettingsSaved: handleMainSettingsSaved });
 
     ipcMain.handle('screenStills:getStatus', () => {
         if (!screenStillsController) {
@@ -585,6 +614,26 @@ if (isPrimaryInstance) {
             updateScreenCaptureFromSettings();
         }
 
+        autoSessionCleanupScheduler = createAutoSessionCleanupScheduler({
+            settingsLoader: loadSettings,
+            settingsSaver: saveSettings,
+            logger: console,
+            checkIntervalMs: autoCleanupCheckIntervalMs
+        });
+        const initialRetentionDays = resolveCleanupRetentionDays(
+            loadSettings()?.storageAutoCleanupRetentionDays
+        );
+        retentionChangeTrigger = createRetentionChangeTrigger({
+            resolveRetentionDays: resolveCleanupRetentionDays,
+            initialRetentionDays,
+            onRetentionChanged: () => {
+                if (autoSessionCleanupScheduler && typeof autoSessionCleanupScheduler.tryRun === 'function') {
+                    void autoSessionCleanupScheduler.tryRun('settings-change');
+                }
+            }
+        });
+        autoSessionCleanupScheduler.start();
+
         let wasOpenedAtLogin = false;
 
         if (process.platform === 'darwin') {
@@ -630,6 +679,7 @@ if (isPrimaryInstance) {
 }
 
 app.on('before-quit', (event) => {
+    autoSessionCleanupScheduler?.stop?.();
     if (recordingOffReminder && typeof recordingOffReminder.stopReminder === 'function') {
         recordingOffReminder.stopReminder();
     }

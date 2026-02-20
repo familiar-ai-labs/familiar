@@ -1,4 +1,11 @@
 (function registerDashboardState(global) {
+  const autoCleanupRetention = global?.FamiliarAutoCleanupRetention
+  const resolveAutoCleanupRetentionDays = autoCleanupRetention?.resolveAutoCleanupRetentionDays
+
+  if (typeof resolveAutoCleanupRetentionDays !== 'function') {
+    throw new Error('FamiliarAutoCleanupRetention.resolveAutoCleanupRetentionDays is unavailable')
+  }
+
   function createDashboardState(options = {}) {
     const elements = options.elements || {}
     const apis = options.apis || {}
@@ -8,6 +15,7 @@
     const llmKeyInputs = elements.llmKeyInputs || []
     const stillsMarkdownExtractorSelects = elements.stillsMarkdownExtractorSelects || []
     const alwaysRecordWhenActiveInputs = elements.alwaysRecordWhenActiveInputs || []
+    const storageAutoCleanupRetentionSelects = elements.storageAutoCleanupRetentionSelects || []
 
     const state = {
       currentContextFolderPath: '',
@@ -16,6 +24,7 @@
       pendingLlmApiKey: '',
       currentStillsMarkdownExtractorType: 'apple_vision_ocr',
       currentAlwaysRecordWhenActive: false,
+      currentStorageAutoCleanupRetentionDays: resolveAutoCleanupRetentionDays(undefined),
       isLlmApiKeySaved: false,
       currentSkillHarness: '',
       currentSkillHarnesses: [],
@@ -100,6 +109,17 @@
       updateWizardUI()
     }
 
+    function setStorageAutoCleanupRetentionDays(value) {
+      const nextValue = resolveAutoCleanupRetentionDays(value)
+      state.currentStorageAutoCleanupRetentionDays = nextValue
+      for (const select of storageAutoCleanupRetentionSelects) {
+        if (select.value !== String(nextValue)) {
+          select.value = String(nextValue)
+        }
+      }
+      updateWizardUI()
+    }
+
     function setSkillHarnesses(values) {
       const nextValues = Array.isArray(values)
         ? values.filter((value) => typeof value === 'string' && value.trim().length > 0)
@@ -165,7 +185,8 @@
         currentLlmApiKey: state.currentLlmApiKey,
         pendingLlmApiKey: state.pendingLlmApiKey,
         currentStillsMarkdownExtractorType: state.currentStillsMarkdownExtractorType,
-        currentAlwaysRecordWhenActive: state.currentAlwaysRecordWhenActive
+        currentAlwaysRecordWhenActive: state.currentAlwaysRecordWhenActive,
+        currentStorageAutoCleanupRetentionDays: state.currentStorageAutoCleanupRetentionDays
       }
     }
 
@@ -177,6 +198,7 @@
       setLlmApiKeySaved,
       setStillsMarkdownExtractorType,
       setAlwaysRecordWhenActiveValue,
+      setStorageAutoCleanupRetentionDays,
       setSkillHarnesses,
       setSkillHarness,
       setSkillInstalled,

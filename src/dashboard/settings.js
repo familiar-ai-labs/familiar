@@ -1,10 +1,12 @@
 (function (global) {
   const normalizeStringArray = global?.FamiliarDashboardListUtils?.normalizeStringArray
   const storageDeleteWindow = global?.FamiliarStorageDeleteWindow
+  const autoCleanupRetention = global?.FamiliarAutoCleanupRetention
   const {
     STORAGE_DELETE_WINDOW_PRESETS,
     DEFAULT_STORAGE_DELETE_WINDOW
   } = storageDeleteWindow
+  const resolveAutoCleanupRetentionDays = autoCleanupRetention?.resolveAutoCleanupRetentionDays
   const isAllowedDeleteWindow = (windowValue) => {
     if (typeof windowValue !== 'string' || windowValue.length === 0) {
       return false
@@ -13,6 +15,9 @@
   }
   if (typeof normalizeStringArray !== 'function') {
     throw new Error('FamiliarDashboardListUtils.normalizeStringArray is unavailable')
+  }
+  if (typeof resolveAutoCleanupRetentionDays !== 'function') {
+    throw new Error('FamiliarAutoCleanupRetention.resolveAutoCleanupRetentionDays is unavailable')
   }
 
   const createSettings = (options = {}) => {
@@ -43,8 +48,26 @@
     const setAlwaysRecordWhenActiveValue = typeof options.setAlwaysRecordWhenActiveValue === 'function'
       ? options.setAlwaysRecordWhenActiveValue
       : () => {}
+    const setStorageAutoCleanupRetentionDays =
+      typeof options.setStorageAutoCleanupRetentionDays === 'function'
+        ? options.setStorageAutoCleanupRetentionDays
+        : () => {}
     const setMessage = typeof options.setMessage === 'function' ? options.setMessage : () => {}
     const updateWizardUI = typeof options.updateWizardUI === 'function' ? options.updateWizardUI : () => {}
+    const confirmAutoCleanupRetentionChange =
+      typeof options.confirmAutoCleanupRetentionChange === 'function'
+        ? options.confirmAutoCleanupRetentionChange
+        : (retentionDays) => {
+            const confirmFn =
+              (typeof globalThis !== 'undefined' && globalThis.window && globalThis.window.confirm) ||
+              (typeof globalThis !== 'undefined' && globalThis.confirm)
+            if (typeof confirmFn !== 'function') {
+              return true
+            }
+            return confirmFn(
+              `Change auto cleanup retention to ${retentionDays} days?\n\nThis will run cleanup using the new retention setting.`
+            )
+          }
 
     const {
       appVersionLabel = null,
@@ -56,6 +79,7 @@
       copyLogStatuses = [],
       deleteFilesButtons = [],
       deleteFilesWindowSelects = [],
+      storageAutoCleanupRetentionSelects = [],
       deleteFilesErrors = [],
       deleteFilesStatuses = [],
       llmProviderSelects = [],
@@ -74,6 +98,14 @@
     const isReady = Boolean(familiar.pickContextFolder && familiar.saveSettings && familiar.getSettings)
     const canCopyLog = typeof familiar.copyCurrentLogToClipboard === 'function'
     const canDeleteFiles = typeof familiar.deleteFilesAt === 'function'
+    const syncStorageAutoCleanupRetentionSelects = (retentionDays) => {
+      const normalizedRetentionDays = resolveAutoCleanupRetentionDays(retentionDays)
+      storageAutoCleanupRetentionSelects.forEach((select) => {
+        if (select.value !== String(normalizedRetentionDays)) {
+          select.value = String(normalizedRetentionDays)
+        }
+      })
+    }
 
     const saveContextFolderPath = async (contextFolderPath) => {
       if (!isReady) {
@@ -110,6 +142,34 @@
       deleteFilesWindowSelects.forEach((select) => {
         select.disabled = !isEnabled
       })
+    }
+
+    const saveStorageAutoCleanupRetentionDays = async (retentionDays) => {
+      if (!isReady) {
+        return false
+      }
+      const normalizedRetentionDays = resolveAutoCleanupRetentionDays(retentionDays)
+      setMessage(deleteFilesStatuses, 'Saving...')
+      setMessage(deleteFilesErrors, '')
+
+      try {
+        const result = await familiar.saveSettings({
+          storageAutoCleanupRetentionDays: normalizedRetentionDays
+        })
+        if (result && result.ok) {
+          setMessage(deleteFilesStatuses, 'Saved.')
+          setStorageAutoCleanupRetentionDays(normalizedRetentionDays)
+          return true
+        }
+        setMessage(deleteFilesStatuses, '')
+        setMessage(deleteFilesErrors, result?.message || 'Failed to save setting.')
+      } catch (error) {
+        console.error('Failed to save auto cleanup retention setting', error)
+        setMessage(deleteFilesStatuses, '')
+        setMessage(deleteFilesErrors, 'Failed to save setting.')
+      }
+
+      return false
     }
 
     const saveLlmApiKey = async (apiKey) => {
@@ -249,6 +309,9 @@
         setLlmApiKeySaved(result.llmProviderApiKey || '')
         setStillsMarkdownExtractorType(result.stillsMarkdownExtractorType || 'apple_vision_ocr')
         setAlwaysRecordWhenActiveValue(result.alwaysRecordWhenActive === true)
+        setStorageAutoCleanupRetentionDays(
+          resolveAutoCleanupRetentionDays(result.storageAutoCleanupRetentionDays)
+        )
         const rawHarnessValue = result?.skillInstaller?.harness
         const legacyHarnesses = result?.skillInstaller?.harnesses
         const savedHarnesses = normalizeStringArray([
@@ -316,6 +379,10 @@
           select.value = DEFAULT_STORAGE_DELETE_WINDOW
         }
       })
+    }
+
+    if (storageAutoCleanupRetentionSelects.length > 0) {
+      syncStorageAutoCleanupRetentionSelects(storageAutoCleanupRetentionSelects[0].value)
     }
 
     if (contextFolderChooseButtons.length > 0) {
@@ -421,6 +488,29 @@
         })
       }
     }
+
+    storageAutoCleanupRetentionSelects.forEach((select) => {
+      select.addEventListener('change', async () => {
+        const nextValue = resolveAutoCleanupRetentionDays(select.value)
+        const { currentStorageAutoCleanupRetentionDays } = getState()
+        if (nextValue === currentStorageAutoCleanupRetentionDays) {
+          syncStorageAutoCleanupRetentionSelects(nextValue)
+          return
+        }
+
+        const isConfirmed = confirmAutoCleanupRetentionChange(nextValue)
+        if (!isConfirmed) {
+          syncStorageAutoCleanupRetentionSelects(currentStorageAutoCleanupRetentionDays)
+          return
+        }
+
+        syncStorageAutoCleanupRetentionSelects(nextValue)
+        const saved = await saveStorageAutoCleanupRetentionDays(nextValue)
+        if (!saved) {
+          setStorageAutoCleanupRetentionDays(currentStorageAutoCleanupRetentionDays)
+        }
+      })
+    })
 
     llmKeyInputs.forEach((input) => {
       input.addEventListener('input', (event) => {

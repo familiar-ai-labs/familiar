@@ -4,6 +4,7 @@ const os = require('node:os');
 
 const { SETTINGS_DIR_NAME, SETTINGS_FILE_NAME } = require('./const');
 const { normalizeStringArray } = require('./utils/list');
+const { resolveAutoCleanupRetentionDays } = require('./storage/auto-cleanup-retention');
 
 const resolveSettingsDir = (settingsDir) =>
     settingsDir || process.env.FAMILIAR_SETTINGS_DIR || path.join(os.homedir(), SETTINGS_DIR_NAME);
@@ -78,6 +79,8 @@ const saveSettings = (settings, options = {}) => {
     const hasLlmProviderVisionModel = Object.prototype.hasOwnProperty.call(settings, 'llmProviderVisionModel');
     const hasStillsMarkdownExtractorType = Object.prototype.hasOwnProperty.call(settings, 'stillsMarkdownExtractorType');
     const hasUpdateLastCheckedAt = Object.prototype.hasOwnProperty.call(settings, 'updateLastCheckedAt');
+    const hasStorageAutoCleanupRetentionDays = Object.prototype.hasOwnProperty.call(settings, 'storageAutoCleanupRetentionDays');
+    const hasStorageAutoCleanupLastRunAt = Object.prototype.hasOwnProperty.call(settings, 'storageAutoCleanupLastRunAt');
     const hasAlwaysRecordWhenActive = Object.prototype.hasOwnProperty.call(settings, 'alwaysRecordWhenActive');
     const hasWizardCompleted = Object.prototype.hasOwnProperty.call(settings, 'wizardCompleted');
     const hasSkillInstaller = Object.prototype.hasOwnProperty.call(settings, 'skillInstaller');
@@ -160,6 +163,27 @@ const saveSettings = (settings, options = {}) => {
             typeof settings.updateLastCheckedAt === 'number' ? settings.updateLastCheckedAt : null;
     } else if (typeof existing.updateLastCheckedAt === 'number') {
         payload.updateLastCheckedAt = existing.updateLastCheckedAt;
+    }
+
+    if (hasStorageAutoCleanupRetentionDays) {
+        payload.storageAutoCleanupRetentionDays = resolveAutoCleanupRetentionDays(
+            settings.storageAutoCleanupRetentionDays
+        );
+    } else if (typeof existing.storageAutoCleanupRetentionDays === 'number') {
+        payload.storageAutoCleanupRetentionDays = resolveAutoCleanupRetentionDays(
+            existing.storageAutoCleanupRetentionDays
+        );
+    }
+
+    if (hasStorageAutoCleanupLastRunAt) {
+        payload.storageAutoCleanupLastRunAt =
+            typeof settings.storageAutoCleanupLastRunAt === 'number' &&
+            Number.isFinite(settings.storageAutoCleanupLastRunAt) &&
+            settings.storageAutoCleanupLastRunAt >= 0
+                ? Math.floor(settings.storageAutoCleanupLastRunAt)
+                : null;
+    } else if (typeof existing.storageAutoCleanupLastRunAt === 'number') {
+        payload.storageAutoCleanupLastRunAt = existing.storageAutoCleanupLastRunAt;
     }
 
     if (hasAlwaysRecordWhenActive) {

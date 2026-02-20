@@ -119,10 +119,14 @@ class TestDocument {
 const flushPromises = () => new Promise((resolve) => setImmediate(resolve))
 
 const storageDeleteWindow = require('../src/storage/delete-window')
+const autoCleanupRetention = require('../src/storage/auto-cleanup-retention')
 
 const loadRenderer = () => {
   if (global.window && !global.window.FamiliarStorageDeleteWindow) {
     global.window.FamiliarStorageDeleteWindow = storageDeleteWindow
+  }
+  if (global.window && !global.window.FamiliarAutoCleanupRetention) {
+    global.window.FamiliarAutoCleanupRetention = autoCleanupRetention
   }
   const rendererPath = path.join(__dirname, '..', 'src', 'dashboard', 'renderer.js')
   const resolvedRendererPath = require.resolve(rendererPath)
@@ -240,6 +244,7 @@ const createElements = () => {
     'updates-progress-label': new TestElement(),
     'storage-delete-files': new TestElement(),
     'storage-delete-window': new TestElement(),
+    'storage-auto-cleanup-retention-days': new TestElement(),
     'storage-delete-files-status': new TestElement(),
     'storage-delete-files-error': new TestElement(),
     'wizard-back': new TestElement(),
@@ -334,9 +339,12 @@ const createElements = () => {
   elements['updates-error'].dataset.settingError = 'updates-error'
   elements['storage-delete-files'].dataset.action = 'storage-delete-files'
   elements['storage-delete-window'].dataset.setting = 'storage-delete-window'
+  elements['storage-auto-cleanup-retention-days'].dataset.setting =
+    'storage-auto-cleanup-retention-days'
   elements['storage-delete-files-status'].dataset.settingStatus = 'storage-delete-files-status'
   elements['storage-delete-files-error'].dataset.settingError = 'storage-delete-files-error'
   elements['storage-delete-window'].value = '15m'
+  elements['storage-auto-cleanup-retention-days'].value = '2'
 
   elements['wizard-back'].dataset.action = 'wizard-back'
   elements['wizard-next'].dataset.action = 'wizard-next'
@@ -945,6 +953,99 @@ test('storage delete button triggers cleanup and shows success message', async (
       'Deleted files from last 1 hour'
     )
     assert.equal(elements['storage-delete-files-error'].textContent, '')
+  } finally {
+    global.document = priorDocument
+    global.window = priorWindow
+  }
+})
+
+test('storage auto cleanup retention select saves normalized retention days', async () => {
+  const saveCalls = []
+  const familiar = createFamiliar({
+    getSettings: async () => ({
+      contextFolderPath: '/tmp/context',
+      wizardCompleted: true,
+      storageAutoCleanupRetentionDays: 2
+    }),
+    saveSettings: async (payload = {}) => {
+      saveCalls.push(payload)
+      return { ok: true }
+    }
+  })
+
+  const elements = createElements()
+  const document = new TestDocument(elements)
+  const priorDocument = global.document
+  const priorWindow = global.window
+  global.document = document
+  global.window = { familiar }
+
+  try {
+    loadRenderer()
+    document.trigger('DOMContentLoaded')
+    await flushPromises()
+
+    elements['storage-auto-cleanup-retention-days'].value = '7'
+    await elements['storage-auto-cleanup-retention-days'].trigger('change')
+    await flushPromises()
+
+    assert.equal(saveCalls.length, 1)
+    assert.equal(saveCalls[0].storageAutoCleanupRetentionDays, 7)
+    assert.equal(elements['storage-auto-cleanup-retention-days'].value, '7')
+
+    elements['storage-auto-cleanup-retention-days'].value = '9'
+    await elements['storage-auto-cleanup-retention-days'].trigger('change')
+    await flushPromises()
+
+    assert.equal(saveCalls.length, 2)
+    assert.equal(saveCalls[1].storageAutoCleanupRetentionDays, 2)
+    assert.equal(elements['storage-auto-cleanup-retention-days'].value, '2')
+  } finally {
+    global.document = priorDocument
+    global.window = priorWindow
+  }
+})
+
+test('storage auto cleanup retention select requires confirmation before saving', async () => {
+  const saveCalls = []
+  const confirmCalls = []
+  const familiar = createFamiliar({
+    getSettings: async () => ({
+      contextFolderPath: '/tmp/context',
+      wizardCompleted: true,
+      storageAutoCleanupRetentionDays: 2
+    }),
+    saveSettings: async (payload = {}) => {
+      saveCalls.push(payload)
+      return { ok: true }
+    }
+  })
+
+  const elements = createElements()
+  const document = new TestDocument(elements)
+  const priorDocument = global.document
+  const priorWindow = global.window
+  global.document = document
+  global.window = {
+    familiar,
+    confirm: (message) => {
+      confirmCalls.push(message)
+      return false
+    }
+  }
+
+  try {
+    loadRenderer()
+    document.trigger('DOMContentLoaded')
+    await flushPromises()
+
+    elements['storage-auto-cleanup-retention-days'].value = '7'
+    await elements['storage-auto-cleanup-retention-days'].trigger('change')
+    await flushPromises()
+
+    assert.equal(saveCalls.length, 0)
+    assert.equal(confirmCalls.length, 1)
+    assert.equal(elements['storage-auto-cleanup-retention-days'].value, '2')
   } finally {
     global.document = priorDocument
     global.window = priorWindow

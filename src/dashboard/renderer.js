@@ -169,6 +169,9 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
   const copyLogStatuses = selectAll('[data-setting-status="copy-log-status"]')
   const deleteFilesButtons = selectAll('[data-action="storage-delete-files"]')
   const deleteFilesWindowSelects = selectAll('[data-setting="storage-delete-window"]')
+  const storageAutoCleanupRetentionSelects = selectAll(
+    '[data-setting="storage-auto-cleanup-retention-days"]'
+  )
   const deleteFilesErrors = selectAll('[data-setting-error="storage-delete-files-error"]')
   const deleteFilesStatuses = selectAll('[data-setting-status="storage-delete-files-status"]')
 
@@ -228,7 +231,8 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
       llmProviderSelects,
       llmKeyInputs,
       stillsMarkdownExtractorSelects,
-      alwaysRecordWhenActiveInputs
+      alwaysRecordWhenActiveInputs,
+      storageAutoCleanupRetentionSelects
     },
     apis
   })
@@ -492,6 +496,7 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
       copyLogStatuses,
       deleteFilesButtons,
       deleteFilesWindowSelects,
+      storageAutoCleanupRetentionSelects,
       deleteFilesErrors,
       deleteFilesStatuses,
       llmProviderSelects,
@@ -516,6 +521,7 @@ document.addEventListener('DOMContentLoaded', function onDOMContentLoaded() {
     setLlmApiKeySaved: state.setLlmApiKeySaved,
     setStillsMarkdownExtractorType: state.setStillsMarkdownExtractorType,
     setAlwaysRecordWhenActiveValue: state.setAlwaysRecordWhenActiveValue,
+    setStorageAutoCleanupRetentionDays: state.setStorageAutoCleanupRetentionDays,
     setMessage,
     updateWizardUI: state.updateWizardUI
   })

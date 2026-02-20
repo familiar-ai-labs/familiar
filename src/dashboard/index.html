@@ -338,6 +338,26 @@
                     Delete files
                   </button>
                 </div>
+                <div class="space-y-1">
+                  <h4 class="text-xs font-semibold text-zinc-900 dark:text-zinc-100">Screenshot retention</h4>
+                  <p class="text-xs text-zinc-500 dark:text-zinc-400">
+                    Maximum number of days to keep screenshots
+                  </p>
+                  <div class="relative w-fit">
+                    <select
+                      id="storage-auto-cleanup-retention-days"
+                      data-setting="storage-auto-cleanup-retention-days"
+                      class="appearance-none bg-white dark:bg-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 text-xs font-medium rounded-md py-2 pl-3 pr-8 outline-none focus:ring-2 focus:ring-zinc-400/20 cursor-pointer transition-all">
+                      <option value="2">2 days</option>
+                      <option value="7">7 days</option>
+                    </select>
+                    <svg viewBox="0 0 24 24"
+                      class="w-3.5 h-3.5 absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none"
+                      fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                      <path d="m6 9 6 6 6-6" />
+                    </svg>
+                  </div>
+                </div>
               </div>
             </div>
             <div>
@@ -596,6 +616,7 @@
   <script src="./list-utils.js"></script>
   <script src="./updates.js"></script>
   <script src="../storage/delete-window.js"></script>
+  <script src="../storage/auto-cleanup-retention.js"></script>
   <script src="../recording-status-indicator.js"></script>
   <script src="./stills.js"></script>
   <script src="./settings.js"></script>
