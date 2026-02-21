@@ -2,11 +2,13 @@
   const normalizeStringArray = global?.FamiliarDashboardListUtils?.normalizeStringArray
   const storageDeleteWindow = global?.FamiliarStorageDeleteWindow
   const autoCleanupRetention = global?.FamiliarAutoCleanupRetention
+  const storageUsageModule = global?.FamiliarStorageUsage
   const {
     STORAGE_DELETE_WINDOW_PRESETS,
     DEFAULT_STORAGE_DELETE_WINDOW
   } = storageDeleteWindow
   const resolveAutoCleanupRetentionDays = autoCleanupRetention?.resolveAutoCleanupRetentionDays
+  const createStorageUsage = storageUsageModule?.createStorageUsage
   const isAllowedDeleteWindow = (windowValue) => {
     if (typeof windowValue !== 'string' || windowValue.length === 0) {
       return false
@@ -80,6 +82,19 @@
       deleteFilesButtons = [],
       deleteFilesWindowSelects = [],
       storageAutoCleanupRetentionSelects = [],
+      storageUsageTotalLabel = null,
+      storageUsageLoadingContainer = null,
+      storageUsageLoadedContainer = null,
+      storageUsageLoadingIndicator = null,
+      storageUsageComputingTag = null,
+      storageUsageScreenshotsValueLabel = null,
+      storageUsageSteelsMarkdownValueLabel = null,
+      storageUsageSystemValueLabel = null,
+      storageUsageScreenshotsBar = null,
+      storageUsageSteelsMarkdownBar = null,
+      storageUsageSystemBar = null,
+      storageUsageStatuses = [],
+      storageUsageErrors = [],
       deleteFilesErrors = [],
       deleteFilesStatuses = [],
       llmProviderSelects = [],
@@ -98,6 +113,35 @@
     const isReady = Boolean(familiar.pickContextFolder && familiar.saveSettings && familiar.getSettings)
     const canCopyLog = typeof familiar.copyCurrentLogToClipboard === 'function'
     const canDeleteFiles = typeof familiar.deleteFilesAt === 'function'
+    const storageUsageApi =
+      typeof createStorageUsage === 'function'
+        ? createStorageUsage({
+            familiar,
+            setMessage,
+            elements: {
+              totalLabel: storageUsageTotalLabel,
+              loadingContainer: storageUsageLoadingContainer,
+              loadedContainer: storageUsageLoadedContainer,
+              loadingIndicator: storageUsageLoadingIndicator,
+              computingTag: storageUsageComputingTag,
+              statusElements: storageUsageStatuses,
+              errorElements: storageUsageErrors,
+              screenshotsValueLabel: storageUsageScreenshotsValueLabel,
+              steelsMarkdownValueLabel: storageUsageSteelsMarkdownValueLabel,
+              systemValueLabel: storageUsageSystemValueLabel,
+              screenshotsBar: storageUsageScreenshotsBar,
+              steelsMarkdownBar: storageUsageSteelsMarkdownBar,
+              systemBar: storageUsageSystemBar
+            }
+          })
+        : null
+
+    const refreshStorageUsage = async () => {
+      if (!storageUsageApi || typeof storageUsageApi.refresh !== 'function') {
+        return null
+      }
+      return storageUsageApi.refresh()
+    }
     const syncStorageAutoCleanupRetentionSelects = (retentionDays) => {
       const normalizedRetentionDays = resolveAutoCleanupRetentionDays(retentionDays)
       storageAutoCleanupRetentionSelects.forEach((select) => {
@@ -338,6 +382,7 @@
           appVersionLabel.textContent = result.appVersion || ''
         }
         updateDeleteFilesButtonState()
+        await refreshStorageUsage()
         return result
       } catch (error) {
         console.error('Failed to load settings', error)
@@ -358,6 +403,7 @@
       setMessage(alwaysRecordWhenActiveErrors, message)
       setMessage(copyLogErrors, message)
       setMessage(deleteFilesErrors, message)
+      setMessage(storageUsageErrors, message)
       copyLogButtons.forEach((button) => {
         button.disabled = true
       })
@@ -398,6 +444,7 @@
               const saved = await saveContextFolderPath(result.path)
               if (saved) {
                 updateDeleteFilesButtonState()
+                await refreshStorageUsage()
               }
             } else if (result && result.error) {
               setMessage(contextFolderStatuses, '')
@@ -475,6 +522,7 @@
               if (result?.ok) {
                 setMessage(deleteFilesStatuses, result.message || 'Deleted files.')
                 console.log('Storage cleanup completed', { requestedAtMs: requestTimeMs, deleteWindow })
+                await refreshStorageUsage()
               } else if (!result?.canceled) {
                 setMessage(deleteFilesErrors, result?.message || 'Failed to delete files.')
               }
@@ -572,6 +620,12 @@
         }
       })
     })
+
+    if (typeof familiar.onSettingsWindowOpened === 'function') {
+      familiar.onSettingsWindowOpened(() => {
+        void refreshStorageUsage()
+      })
+    }
 
     return {
       isReady,

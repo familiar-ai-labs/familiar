@@ -131,6 +131,32 @@ test('resolveDeleteWindow falls back to 15m for unsupported values', async () =>
   })
 })
 
+test('handleGetStorageUsageBreakdown returns storage categories and total', async () => {
+  await withStorageModule(async ({ storageModule }) => {
+    const contextFolderPath = '/tmp/context'
+
+    const result = await storageModule.handleGetStorageUsageBreakdown(
+      {},
+      {},
+      {
+        settingsLoader: () => ({ contextFolderPath }),
+        getStorageUsageBreakdown: () => ({
+          totalBytes: 24,
+          screenshotsBytes: 8,
+          steelsMarkdownBytes: 12,
+          systemBytes: 4
+        })
+      }
+    )
+
+    assert.equal(result.ok, true)
+    assert.equal(result.totalBytes, 24)
+    assert.equal(result.screenshotsBytes, 8)
+    assert.equal(result.steelsMarkdownBytes, 12)
+    assert.equal(result.systemBytes, 4)
+  })
+})
+
 test('handleDeleteFiles deletes matching files inside the selected window', async () => {
   await withStorageModule(async ({ storageModule }) => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'familiar-storage-ipc-'))

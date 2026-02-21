@@ -29,9 +29,15 @@ contextBridge.exposeInMainWorld('familiar', {
     ipcRenderer.on('settings:alwaysRecordWhenActiveChanged', listener)
     return () => ipcRenderer.removeListener('settings:alwaysRecordWhenActiveChanged', listener)
   },
+  onSettingsWindowOpened: (handler) => {
+    const listener = (_event, payload) => handler(payload)
+    ipcRenderer.on('settings:window-opened', listener)
+    return () => ipcRenderer.removeListener('settings:window-opened', listener)
+  },
   openStillsFolder: () => ipcRenderer.invoke('stills:openFolder'),
   deleteFilesAt: ({ requestedAtMs, deleteWindow } = {}) =>
     ipcRenderer.invoke('storage:deleteFiles', { requestedAtMs, deleteWindow }),
+  getStorageUsageBreakdown: () => ipcRenderer.invoke('storage:getUsageBreakdown'),
   copyCurrentLogToClipboard: () => ipcRenderer.invoke('logs:copyCurrentLogToClipboard'),
   onUpdateDownloadProgress: (handler) => {
     const listener = (_event, payload) => handler(payload)

@@ -4,6 +4,7 @@
     { globalKey: 'FamiliarWizard', modulePath: './wizard.js', factory: 'createWizard' },
     { globalKey: 'FamiliarWizardSkill', modulePath: './wizard-skill.js', factory: 'createWizardSkill' },
     { globalKey: 'FamiliarUpdates', modulePath: './updates.js', factory: 'createUpdates' },
+    { globalKey: 'FamiliarStorageUsage', modulePath: './storage-usage.js', factory: 'createStorageUsage' },
     { globalKey: 'FamiliarSettings', modulePath: './settings.js', factory: 'createSettings' },
     { globalKey: 'FamiliarProcessingEngine', modulePath: './processing-engine.js', factory: 'createProcessingEngine' },
     { globalKey: 'FamiliarStills', modulePath: './stills.js', factory: 'createStills' }

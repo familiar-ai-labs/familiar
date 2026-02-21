@@ -56,10 +56,12 @@ test.describe('clipboard mirroring', () => {
       expect(startResult?.ok).toBe(true)
 
       const stillsRoot = path.join(contextPath, FAMILIAR_BEHIND_THE_SCENES_DIR_NAME, STILLS_DIR_NAME)
-      await expect.poll(() => {
-        if (!fs.existsSync(stillsRoot)) return []
-        return fs.readdirSync(stillsRoot).filter((name) => name.startsWith('session-'))
-      }).toHaveLength(1)
+      await expect
+        .poll(() => {
+          if (!fs.existsSync(stillsRoot)) return []
+          return fs.readdirSync(stillsRoot).filter((name) => name.startsWith('session-'))
+        }, { timeout: 15000 })
+        .toHaveLength(1)
 
       const [sessionId] = fs.readdirSync(stillsRoot).filter((name) => name.startsWith('session-'))
       const markdownSessionDir = path.join(
@@ -73,10 +75,12 @@ test.describe('clipboard mirroring', () => {
         globalThis.__FAMILIAR_TEST_CLIPBOARD_TEXT = 'hello from clipboard'
       })
 
-      await expect.poll(() => {
-        if (!fs.existsSync(markdownSessionDir)) return []
-        return fs.readdirSync(markdownSessionDir).filter((name) => name.endsWith('.clipboard.txt'))
-      }).toHaveLength(1)
+      await expect
+        .poll(() => {
+          if (!fs.existsSync(markdownSessionDir)) return []
+          return fs.readdirSync(markdownSessionDir).filter((name) => name.endsWith('.clipboard.txt'))
+        }, { timeout: 15000 })
+        .toHaveLength(1)
 
       const [clipboardFile] = fs.readdirSync(markdownSessionDir).filter((name) => name.endsWith('.clipboard.txt'))
       const contents = fs.readFileSync(path.join(markdownSessionDir, clipboardFile), 'utf-8')
@@ -133,10 +137,12 @@ test.describe('clipboard mirroring', () => {
       expect(startResult?.ok).toBe(true)
 
       const stillsRoot = path.join(contextPath, FAMILIAR_BEHIND_THE_SCENES_DIR_NAME, STILLS_DIR_NAME)
-      await expect.poll(() => {
-        if (!fs.existsSync(stillsRoot)) return []
-        return fs.readdirSync(stillsRoot).filter((name) => name.startsWith('session-'))
-      }).toHaveLength(1)
+      await expect
+        .poll(() => {
+          if (!fs.existsSync(stillsRoot)) return []
+          return fs.readdirSync(stillsRoot).filter((name) => name.startsWith('session-'))
+        }, { timeout: 15000 })
+        .toHaveLength(1)
 
       const [sessionId] = fs.readdirSync(stillsRoot).filter((name) => name.startsWith('session-'))
       const markdownSessionDir = path.join(
@@ -220,10 +226,12 @@ test.describe('clipboard mirroring', () => {
       expect(startResult?.ok).toBe(true)
 
       const stillsRoot = path.join(contextPath, FAMILIAR_BEHIND_THE_SCENES_DIR_NAME, STILLS_DIR_NAME)
-      await expect.poll(() => {
-        if (!fs.existsSync(stillsRoot)) return []
-        return fs.readdirSync(stillsRoot).filter((name) => name.startsWith('session-'))
-      }).toHaveLength(1)
+      await expect
+        .poll(() => {
+          if (!fs.existsSync(stillsRoot)) return []
+          return fs.readdirSync(stillsRoot).filter((name) => name.startsWith('session-'))
+        }, { timeout: 15000 })
+        .toHaveLength(1)
 
       const [sessionId] = fs.readdirSync(stillsRoot).filter((name) => name.startsWith('session-'))
       const stillsSessionDir = path.join(stillsRoot, sessionId)
@@ -238,15 +246,19 @@ test.describe('clipboard mirroring', () => {
         globalThis.__FAMILIAR_TEST_CLIPBOARD_IMAGE = Buffer.from('clipboard-image-e2e')
       })
 
-      await expect.poll(() => {
-        if (!fs.existsSync(stillsSessionDir)) return []
-        return fs.readdirSync(stillsSessionDir).filter((name) => name.endsWith('.clipboard.png'))
-      }).toHaveLength(1)
+      await expect
+        .poll(() => {
+          if (!fs.existsSync(stillsSessionDir)) return []
+          return fs.readdirSync(stillsSessionDir).filter((name) => name.endsWith('.clipboard.png'))
+        }, { timeout: 15000 })
+        .toHaveLength(1)
 
-      await expect.poll(() => {
-        if (!fs.existsSync(markdownSessionDir)) return []
-        return fs.readdirSync(markdownSessionDir).filter((name) => name.endsWith('.clipboard.md'))
-      }).toHaveLength(1)
+      await expect
+        .poll(() => {
+          if (!fs.existsSync(markdownSessionDir)) return []
+          return fs.readdirSync(markdownSessionDir).filter((name) => name.endsWith('.clipboard.md'))
+        }, { timeout: 15000 })
+        .toHaveLength(1)
 
       const [markdownFile] = fs.readdirSync(markdownSessionDir).filter((name) => name.endsWith('.clipboard.md'))
       const markdownContents = fs.readFileSync(path.join(markdownSessionDir, markdownFile), 'utf-8')

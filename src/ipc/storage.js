@@ -12,6 +12,9 @@ const {
   STORAGE_DELETE_WINDOW_PRESETS,
   DEFAULT_STORAGE_DELETE_WINDOW
 } = require('../storage/delete-window')
+const {
+  getStorageUsageBreakdown
+} = require('../storage/usage-breakdown')
 
 const LEADING_TIMESTAMP_PATTERN = /^(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z)/
 const SESSION_ID_PATTERN = /^session-(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z)$/
@@ -593,8 +596,24 @@ async function handleDeleteFiles(event, payload = {}, options = {}) {
   }
 }
 
+async function handleGetStorageUsageBreakdown(_event, _payload = {}, options = {}) {
+  const logger = options.logger || console
+  const settingsLoader = options.settingsLoader || loadSettings
+  const getUsageBreakdown = options.getStorageUsageBreakdown || getStorageUsageBreakdown
+  const settings = settingsLoader()
+  const contextFolderPath =
+    typeof settings?.contextFolderPath === 'string' ? settings.contextFolderPath : ''
+  const usage = getUsageBreakdown({ contextFolderPath, logger })
+
+  return {
+    ok: true,
+    ...usage
+  }
+}
+
 function registerStorageHandlers() {
   ipcMain.handle('storage:deleteFiles', handleDeleteFiles)
+  ipcMain.handle('storage:getUsageBreakdown', handleGetStorageUsageBreakdown)
   console.log('Storage IPC handlers registered')
 }
 
@@ -613,5 +632,6 @@ module.exports = {
   deleteDirectoryIfAllowed,
   resolveNewestSessionId,
   deleteEmptySessionDirectories,
-  pruneQueueRows
+  pruneQueueRows,
+  handleGetStorageUsageBreakdown
 }

@@ -352,6 +352,98 @@
                 class="text-xs text-red-600 dark:text-red-400 hidden" role="alert" aria-live="polite"></p>
             </section>
 
+            <section class="space-y-3">
+              <div class="flex items-center justify-between">
+                <h3 class="section-label">
+                  Usage Breakdown
+                  <span id="storage-usage-computing-tag" class="text-[11px] text-zinc-400 hidden">(Computing)</span>
+                </h3>
+                <div id="storage-usage-loading-indicator" class="items-center gap-1.5 text-zinc-400 hidden">
+                  <svg viewBox="0 0 24 24" class="w-3.5 h-3.5 animate-spin" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                    <path d="M12 3a9 9 0 1 0 9 9" />
+                  </svg>
+                  <span class="text-xs">Calculating...</span>
+                </div>
+                <span id="storage-usage-total" class="text-xs text-zinc-500 dark:text-zinc-400">Total: 0 B</span>
+              </div>
+
+              <div id="storage-usage-loading" class="space-y-3 hidden">
+                <div class="w-full h-2.5 rounded-full bg-zinc-200/60 dark:bg-zinc-800/60 animate-pulse"></div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <div class="flex items-start gap-2">
+                    <span class="mt-1 w-2 h-2 rounded-full bg-zinc-200 dark:bg-zinc-700 animate-pulse"></span>
+                    <div class="space-y-1">
+                      <div class="h-2.5 w-20 bg-zinc-200 dark:bg-zinc-700 rounded animate-pulse"></div>
+                      <div class="h-2 w-12 bg-zinc-100 dark:bg-zinc-800 rounded animate-pulse"></div>
+                    </div>
+                  </div>
+                  <div class="flex items-start gap-2">
+                    <span class="mt-1 w-2 h-2 rounded-full bg-zinc-200 dark:bg-zinc-700 animate-pulse"></span>
+                    <div class="space-y-1">
+                      <div class="h-2.5 w-16 bg-zinc-200 dark:bg-zinc-700 rounded animate-pulse"></div>
+                      <div class="h-2 w-10 bg-zinc-100 dark:bg-zinc-800 rounded animate-pulse"></div>
+                    </div>
+                  </div>
+                  <div class="flex items-start gap-2">
+                    <span class="mt-1 w-2 h-2 rounded-full bg-zinc-200 dark:bg-zinc-700 animate-pulse"></span>
+                    <div class="space-y-1">
+                      <div class="h-2.5 w-24 bg-zinc-200 dark:bg-zinc-700 rounded animate-pulse"></div>
+                      <div class="h-2 w-14 bg-zinc-100 dark:bg-zinc-800 rounded animate-pulse"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div id="storage-usage-loaded" class="space-y-3">
+                <div class="h-2.5 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden flex">
+                  <div
+                    id="storage-usage-bar-screenshots"
+                    class="h-full bg-indigo-500 transition-all duration-300"
+                    style="width: 0%"
+                    title="Screenshots"></div>
+                  <div
+                    id="storage-usage-bar-steels-markdown"
+                    class="h-full bg-teal-500 transition-all duration-300"
+                    style="width: 0%"
+                    title="Markdown"></div>
+                  <div
+                    id="storage-usage-bar-system"
+                    class="h-full bg-zinc-400 dark:bg-zinc-600 transition-all duration-300"
+                    style="width: 0%"
+                    title="System"></div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <div class="flex items-start gap-2">
+                    <span class="mt-1 w-2 h-2 rounded-full bg-indigo-500"></span>
+                    <div class="space-y-0.5">
+                      <p class="text-xs font-medium text-zinc-700 dark:text-zinc-300">Screenshots</p>
+                      <p id="storage-usage-value-screenshots" class="text-xs text-zinc-500 dark:text-zinc-400">0 B</p>
+                    </div>
+                  </div>
+                  <div class="flex items-start gap-2">
+                    <span class="mt-1 w-2 h-2 rounded-full bg-teal-500"></span>
+                    <div class="space-y-0.5">
+                      <p class="text-xs font-medium text-zinc-700 dark:text-zinc-300">Markdown</p>
+                      <p id="storage-usage-value-steels-markdown" class="text-xs text-zinc-500 dark:text-zinc-400">0 B</p>
+                    </div>
+                  </div>
+                  <div class="flex items-start gap-2">
+                    <span class="mt-1 w-2 h-2 rounded-full bg-zinc-400 dark:bg-zinc-600"></span>
+                    <div class="space-y-0.5">
+                      <p class="text-xs font-medium text-zinc-700 dark:text-zinc-300">System</p>
+                      <p id="storage-usage-value-system" class="text-xs text-zinc-500 dark:text-zinc-400">0 B</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <span id="storage-usage-status" class="text-xs text-emerald-600 dark:text-emerald-400 hidden"></span>
+              <p
+                id="storage-usage-error"
+                class="text-xs text-red-600 dark:text-red-400 hidden"
+                role="alert"
+                aria-live="polite"></p>
+            </section>
+
             <h3 class="section-label">Danger Zone</h3>
             <div
               class="bg-zinc-50 dark:bg-zinc-900 border border-red-300 dark:border-red-900/50 rounded-lg overflow-hidden">
@@ -682,6 +774,7 @@
   <script src="./wizard-skill.js"></script>
   <script src="./list-utils.js"></script>
   <script src="./updates.js"></script>
+  <script src="./storage-usage.js"></script>
   <script src="../storage/delete-window.js"></script>
   <script src="../storage/auto-cleanup-retention.js"></script>
   <script src="../recording-status-indicator.js"></script>

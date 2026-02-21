@@ -180,6 +180,14 @@ const createFamiliar = (overrides = {}) => ({
   }),
   checkForUpdates: async () => ({ ok: true, updateInfo: null }),
   deleteFilesAt: async () => ({ ok: true, message: 'Deleted files from last 15 minutes' }),
+  getStorageUsageBreakdown: async () => ({
+    ok: true,
+    totalBytes: 0,
+    screenshotsBytes: 0,
+    steelsMarkdownBytes: 0,
+    systemBytes: 0
+  }),
+  onSettingsWindowOpened: () => () => {},
   ...overrides
 })
 
@@ -247,6 +255,19 @@ const createElements = () => {
     'storage-auto-cleanup-retention-days': new TestElement(),
     'storage-delete-files-status': new TestElement(),
     'storage-delete-files-error': new TestElement(),
+    'storage-usage-total': new TestElement(),
+    'storage-usage-loading': new TestElement(),
+    'storage-usage-loaded': new TestElement(),
+    'storage-usage-loading-indicator': new TestElement(),
+    'storage-usage-computing-tag': new TestElement(),
+    'storage-usage-value-screenshots': new TestElement(),
+    'storage-usage-value-steels-markdown': new TestElement(),
+    'storage-usage-value-system': new TestElement(),
+    'storage-usage-bar-screenshots': new TestElement(),
+    'storage-usage-bar-steels-markdown': new TestElement(),
+    'storage-usage-bar-system': new TestElement(),
+    'storage-usage-status': new TestElement(),
+    'storage-usage-error': new TestElement(),
     'wizard-back': new TestElement(),
     'wizard-next': new TestElement(),
     'wizard-done': new TestElement(),
@@ -953,6 +974,52 @@ test('storage delete button triggers cleanup and shows success message', async (
       'Deleted files from last 1 hour'
     )
     assert.equal(elements['storage-delete-files-error'].textContent, '')
+  } finally {
+    global.document = priorDocument
+    global.window = priorWindow
+  }
+})
+
+test('storage usage refreshes when settings window is opened again', async () => {
+  let windowOpenedHandler = null
+  let usageCallCount = 0
+  const familiar = createFamiliar({
+    getSettings: async () => ({
+      contextFolderPath: '/tmp/context',
+      wizardCompleted: true
+    }),
+    getStorageUsageBreakdown: async () => {
+      usageCallCount += 1
+      return {
+        ok: true,
+        totalBytes: 1024,
+        screenshotsBytes: 512,
+        steelsMarkdownBytes: 256,
+        systemBytes: 256
+      }
+    },
+    onSettingsWindowOpened: (handler) => {
+      windowOpenedHandler = handler
+      return () => {}
+    }
+  })
+
+  const elements = createElements()
+  const document = new TestDocument(elements)
+  const priorDocument = global.document
+  const priorWindow = global.window
+  global.document = document
+  global.window = { familiar }
+
+  try {
+    loadRenderer()
+    document.trigger('DOMContentLoaded')
+    await flushPromises()
+    assert.equal(usageCallCount, 1)
+
+    await windowOpenedHandler?.({ reason: 'tray', at: Date.now() })
+    await flushPromises()
+    assert.equal(usageCallCount, 2)
   } finally {
     global.document = priorDocument
     global.window = priorWindow

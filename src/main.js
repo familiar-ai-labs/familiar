@@ -408,6 +408,12 @@ function openSettingsWindow(options = {}) {
     const reason = options.reason || result.reason;
     if (result.shown) {
         console.log('Settings window shown', { focus: result.focused, reason });
+        if (!settingsWindow.isDestroyed()) {
+            settingsWindow.webContents.send('settings:window-opened', {
+                at: Date.now(),
+                reason
+            });
+        }
     } else {
         console.log('Settings window display skipped', { reason });
     }
